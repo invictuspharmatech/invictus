@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  passwordHash   String
+  name           String
+  role           String    @default("CUSTOMER")
+  phone          String?
+  isAffiliate    Boolean   @default(false)
+  affiliateCode  String?   @unique
+  commissionType String    @default("PERCENT")
+  commissionRate Float     @default(10)
+  payoutType     String    @default("STORE_CREDIT")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  orders         Order[]
+  referredOrders Order[]   @relation("AffiliateOrders")
+  referredUsers  User[]    @relation("ReferredBy")
+  referredById   String?
+  referredBy     User?     @relation("ReferredBy", fields: [referredById], references: [id])
+  affiliateApplications AffiliateApplication[]
+}
+
+model AffiliateApplication {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  note      String?
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+}
+
+model Category {
+  id          String             @id @default(cuid())
+  slug        String             @unique
+  name        String
+  description String?
+  image       String?
+  sortOrder   Int                @default(0)
+  products    ProductCategory[]
+}
+
+model Product {
+  id                   String             @id @default(cuid())
+  sourceId             Int?               @unique
+  slug                 String             @unique
+  name                 String
+  sku                  String?
+  description          String             @default("")
+  shortDescription     String             @default("")
+  regularPrice         Float
+  salePrice            Float?
+  image                String?
+  stockStatus          String             @default("instock")
+  stockQuantity        Int?
+  maxQuantityPerOrder  Int?
+  isFeatured           Boolean            @default(false)
+  isNewArrival         Boolean            @default(false)
+  warehouse            String             @default("WAREHOUSE_2")
+  status               String             @default("publish")
+  categories           ProductCategory[]
+  orderItems           OrderItem[]
+}
+
+model ProductCategory {
+  productId  String
+  categoryId String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+}
+
+model Order {
+  id                 String        @id @default(cuid())
+  orderNumber        String        @unique
+  groupId            String
+  splitIndex         Int           @default(1)
+  warehouse          String
+  userId             String?
+  user               User?         @relation(fields: [userId], references: [id])
+  status             String        @default("PENDING")
+  merchandiseTotal   Float
+  shippingTotal      Float
+  grandTotal         Float
+  customerName       String
+  customerEmail      String
+  shippingLine1      String
+  shippingLine2      String?
+  shippingCity       String
+  shippingState      String
+  shippingPostal     String
+  shippingCountry    String        @default("US")
+  notes              String?
+  affiliateId        String?
+  affiliate          User?         @relation("AffiliateOrders", fields: [affiliateId], references: [id])
+  commissionAmount   Float         @default(0)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  paidAt             DateTime?
+  shippedAt          DateTime?
+  items              OrderItem[]
+}
+
+model OrderItem {
+  id           String   @id @default(cuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id])
+  name         String
+  sku          String?
+  unitPrice    Float
+  quantity     Int
+  lineTotal    Float
+  warehouse    String
+}
+
+model TestResult {
+  id          String @id @default(cuid())
+  productName String
+  category    String
+  imagePath   String
+  sortOrder   Int    @default(0)
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model AccountingReset {
+  id        String   @id @default(cuid())
+  tileKey   String
+  period    String
+  resetAt   DateTime
+  resetById String?
+
+  @@unique([tileKey, period])
+}
+
+model SiteSetting {
+  key   String @id
+  value String
+}

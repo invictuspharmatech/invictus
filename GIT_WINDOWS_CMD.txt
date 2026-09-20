@@ -1,0 +1,185 @@
+Invictus Pharma — move this folder to GitHub (Windows CMD)
+Repo (private): https://github.com/invictuspharmatech/invictus
+
+Use Command Prompt (cmd.exe), not PowerShell.
+Open CMD: Win + R, type cmd, press Enter.
+
+
+============================================================
+0) One-time setup
+============================================================
+
+Install Git for Windows if it is not already installed:
+  https://git-scm.com/download/win
+
+Close and reopen CMD after installing.
+
+Check Git:
+
+  git --version
+
+GitHub account email (private repo owner):
+  invictuspharmatech@proton.me
+
+You need write access to:
+  https://github.com/invictuspharmatech/invictus
+
+Set Git author (run once on this PC):
+
+  git config --global user.name "Invictus Pharma Tech"
+  git config --global user.email "invictuspharmatech@proton.me"
+
+Do NOT commit .env  (passwords / secrets).
+.env is already listed in .gitignore. .env.example is safe to commit.
+
+
+============================================================
+1) First upload (run once)
+============================================================
+
+Go to the project folder (the /d switch is required because D: is not C:):
+
+  cd /d "d:\alpa proj\invictuspharma"
+
+Confirm you are in the right place (you should see package.json, backend, src):
+
+  dir
+
+Start git and make the first commit:
+
+  git init
+  git add .
+  git status
+  git commit -m "Initial commit: Invictus Pharma store"
+
+Name the main branch and point it at GitHub:
+
+  git branch -M main
+  git remote add origin https://github.com/invictuspharmatech/invictus.git
+  git remote -v
+
+Push:
+
+  git push -u origin main
+
+HOW THE PASSWORD / LOGIN WORKS
+You do not type your Proton or GitHub account password into git.
+GitHub blocked that years ago. One of these two things will happen:
+
+A) Browser window (most common on Windows)
+  After "git push", a GitHub / Microsoft Git Credential Manager window opens.
+  Sign in as invictuspharmatech@proton.me and complete 2FA if asked.
+  Windows saves the login. Later pushes usually do not ask again.
+
+B) CMD asks for Username and Password
+  Username: invictuspharmatech@proton.me
+  Password: NOT your Proton/GitHub password.
+            Paste a Personal Access Token (PAT) instead.
+
+  Create a token:
+    1. Open https://github.com/settings/tokens
+    2. Generate new token (classic)
+    3. Note: Invictus git Windows
+    4. Expiration: 90 days (or whatever you prefer)
+    5. Tick the "repo" checkbox (full control of private repos)
+    6. Generate token, copy it once (GitHub will not show it again)
+    7. In CMD, when it asks for Password, right-click to paste the token
+       (characters may not appear — that is normal), then press Enter
+
+  Keep the token in a password manager. Treat it like a password.
+
+Nothing in this project folder stores the GitHub password.
+Do not put the token in GIT_WINDOWS_CMD.txt or in .env.
+
+
+------------------------------------------------------------
+If push is rejected (repo already has a README / license)
+------------------------------------------------------------
+
+GitHub created files you do not have locally. Pull them, then push:
+
+  git pull origin main --allow-unrelated-histories
+  git push -u origin main
+
+If Git opens a merge-message editor:
+  Press Esc, then type :wq and press Enter (Vim).
+
+If it still fails, the GitHub repo may not be empty, or you may not have access.
+Open https://github.com/invictuspharmatech/invictus and confirm you can see it.
+
+
+============================================================
+2) Later: send new changes from CMD
+============================================================
+
+Every time you want to save work to GitHub:
+
+  cd /d "d:\alpa proj\invictuspharma"
+  git status
+  git add .
+  git commit -m "Short description of what changed"
+  git push
+
+Examples of commit messages:
+
+  git commit -m "Fix warehouse accounting filter"
+  git commit -m "Add email notification templates"
+  git commit -m "Update product seed data"
+
+If git commit says "nothing to commit", there is nothing new to push.
+
+If git push says your branch is behind (someone else pushed first):
+
+  git pull
+  git push
+
+
+============================================================
+3) Later: get the latest code from GitHub
+============================================================
+
+  cd /d "d:\alpa proj\invictuspharma"
+  git pull
+
+
+============================================================
+4) Useful checks
+============================================================
+
+See uncommitted files:
+
+  git status
+
+See what changed before you commit:
+
+  git diff
+
+See recent commits:
+
+  git log --oneline -10
+
+See where origin points:
+
+  git remote -v
+
+
+============================================================
+5) SSH instead of HTTPS (optional)
+============================================================
+
+Only if you already use SSH keys with GitHub.
+
+  git remote remove origin
+  git remote add origin git@github.com:invictuspharmatech/invictus.git
+  git push -u origin main
+
+
+============================================================
+Do not do these
+============================================================
+
+- Do not commit .env
+- Do not run: git add .env
+- Do not run: git push --force
+- Do not run: git push --force origin main
+- Do not put MYSQL passwords or AUTH_SECRET into this file or into git

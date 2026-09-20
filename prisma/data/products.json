@@ -1,0 +1,2608 @@
+[
+  {
+    "sourceId": 245,
+    "name": "YK-11 50mg/ml",
+    "sku": "GLP-0120",
+    "description": "YK-11 50mg/ml is a steroidal SARM research compound commonly studied for its potential effects on lean muscle growth, strength, and body composition. Research has also explored its unique interaction with the androgen receptor and its potential influence on myostatin- and follistatin-related pathways, making it an area of ongoing interest in performance and muscle physiology research.",
+    "shortDescription": "YK-11 50mg/ml is a steroidal SARM research compound commonly studied for its potential effects on lean muscle growth, strength, and body composition.",
+    "regularPrice": 85.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 29,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": true,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      }
+    ],
+    "image": "/storage/product-images/yk-11-50mgml.png",
+    "images": [
+      "/storage/product-images/yk-11-50mgml.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 243,
+    "name": "Estradiol Cypionate 10mg/ml",
+    "sku": "GLP-0119",
+    "description": "Estradiol Cypionate 10mg/ml (10ml Vial) is a long-acting injectable estrogen commonly used in hormone replacement research. The cypionate ester provides sustained release, making it a valuable research compound for studies involving estrogen balance, endocrine function, and hormone optimization.",
+    "shortDescription": "Estradiol Cypionate 10mg/ml (10ml Vial) is a long-acting injectable estrogen commonly used in hormone replacement and endocrine research.",
+    "regularPrice": 60.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 40,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": true,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      },
+      {
+        "name": "Women's Line",
+        "id": 20
+      }
+    ],
+    "image": "/storage/product-images/estradiol-cypionate-10mgml.png",
+    "images": [
+      "/storage/product-images/estradiol-cypionate-10mgml.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 242,
+    "name": "5 Amino 1 MQ 50mg",
+    "sku": "GLP-0118",
+    "description": "5-Amino-1MQ 50mg is a research compound commonly studied for its potential effects on cellular metabolism and body composition. Research has explored its interaction with nicotinamide N-methyltransferase (NNMT) and its potential role in energy utilization and metabolic regulation.",
+    "shortDescription": "5-Amino-1MQ 50mg is a research compound commonly studied for its potential effects on metabolism, energy utilization, and body composition through NNMT inhibition.",
+    "regularPrice": 70.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 50,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/product-images/5-amino-1-mq-50mg.png",
+    "images": [
+      "/storage/product-images/5-amino-1-mq-50mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 241,
+    "name": "NAD+ 1000mg",
+    "sku": "GLP-0117",
+    "description": " NAD+ 500mg is a coenzyme commonly used to support cellular energy production and overall metabolic health. With a relatively short half-life, it is typically administered on a consistent schedule. Key Benefits:</strong> 1. Supports cellular energy production 2. Promotes metabolic function 3. Aids in overall wellness and recovery 4. Contributes to improved cellular efficiency Recommended Usage:</strong> Dosing varies based on individual needs and goals, often administered on a consistent schedule. Always consult with a healthcare provider before use. Storage:</strong> Store refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.</p>",
+    "shortDescription": "Nicotinamide adenine dinucleotide for cellular energy.",
+    "regularPrice": 75.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 15,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/product-images/product.png",
+    "images": [
+      "/storage/product-images/product.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 240,
+    "name": "Glutathione 1500mg",
+    "sku": "GLP-0116",
+    "description": "Glutathione 1500mg is a research compound commonly studied for its role as a powerful intracellular antioxidant. Research has explored its potential involvement in reducing oxidative stress, supporting cellular health, and protecting against free radical damage in a variety of biological systems.",
+    "shortDescription": "Glutathione 1500mg is a research compound commonly studied for its antioxidant properties and its potential role in supporting cellular health and reducing oxidative stress.",
+    "regularPrice": 75.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 19,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/product-images/glutathione-1500mg.png",
+    "images": [
+      "/storage/product-images/glutathione-1500mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 239,
+    "name": "Selank 10mg",
+    "sku": "GLP-0115",
+    "description": "Selank 10mg is a research peptide commonly studied for its potential effects on stress response, anxiety-related behaviors, and cognitive function. Research has explored its interaction with neurotransmitter systems and its potential role in supporting emotional well-being, mental clarity, and resilience.",
+    "shortDescription": "Selank 10mg is a research peptide commonly studied for its potential effects on stress response, cognitive function, and emotional well-being",
+    "regularPrice": 60.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 18,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/product-images/selank-10mg.png",
+    "images": [
+      "/storage/product-images/selank-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 238,
+    "name": "Semax 10mg",
+    "sku": "GLP-0114",
+    "description": "Semax 10mg is a research peptide commonly studied for its potential effects on cognitive function, memory, learning, and neuroprotection. It has been the subject of research exploring its influence on neurotrophic factors and brain signaling pathways involved in mental performance and resilience.",
+    "shortDescription": "Semax 10mg is a research peptide commonly studied for its potential effects on cognition, memory, learning, and neuroprotection.",
+    "regularPrice": 60.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 19,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/product-images/semax-10mg.png",
+    "images": [
+      "/storage/product-images/semax-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 237,
+    "name": "PT-141 10mg",
+    "sku": "GLP-0113",
+    "description": "PT141 (Bremelanotide) 10mg is a research peptide commonly studied for its effects on sexual arousal and libido. Unlike therapies that primarily influence blood flow or hormone levels, PT141 acts through melanocortin receptors in the central nervous system, making it an area of interest in research on sexual function and desire.",
+    "shortDescription": "PT141 (Bremelanotide) 10mg is a research peptide commonly studied for its potential effects on libido and sexual arousal through melanocortin receptor activation.",
+    "regularPrice": 60.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 13,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": true,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      },
+      {
+        "name": "Women's Line",
+        "id": 20
+      }
+    ],
+    "image": "/storage/product-images/pt-141-10mg.png",
+    "images": [
+      "/storage/product-images/pt-141-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 235,
+    "name": "Mesterolone (Proviron) 25mg 50ct",
+    "sku": "GLP-0122",
+    "description": "Mesterolone (Proviron) 25mg is an oral compound commonly used to support hormonal balance and overall performance. With a relatively short half-life of approximately 12–13 hours, it allows for consistent daily dosing.\nKey Benefits:\n1. Supports overall hormonal balance\n2. Enhances strength and performance\n3. Promotes a lean, defined appearance\n4. Contributes to overall well-being\nRecommended Usage:\nTypical dosages vary based on individual goals and experience, often administered daily in divided doses. Always consult with a healthcare provider before use.\nStorage:\nStore at room temperature away from light and moisture. Each bottle contains pharmaceutical-grade mesterolone tablets.",
+    "shortDescription": "Ancillary oral for enhanced free testosterone and libido.",
+    "regularPrice": 120.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 2,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": null,
+    "images": [],
+    "status": "active"
+  },
+  {
+    "sourceId": 234,
+    "name": "GW501506 (Cardarine) 10mg 50ct",
+    "sku": "GLP-0111",
+    "description": "GW501516 (Cardarine) 10mg Tablets – 50 Count is a popular research compound often studied for its effects on endurance, stamina, and metabolic function. Convenient tablet dosing makes it easy to incorporate into research protocols requiring consistent administration.",
+    "shortDescription": "GW501516 (Cardarine) 10mg Tablets, 50 Count—a convenient tablet format for research focused on endurance, metabolic performance, and stamina.",
+    "regularPrice": 60.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 3,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": null,
+    "images": [],
+    "status": "active"
+  },
+  {
+    "sourceId": 233,
+    "name": "Lantus (Long-Acting) Solostar (1 Pen) 100iu 3ml",
+    "sku": "GLP-0110",
+    "description": "Lantus (insulin glargine) is a long-acting basal insulin designed to provide steady blood glucose control for up to 24 hours with once-daily dosing in many patients. It is commonly prescribed as part of a healthcare provider-directed diabetes management plan. Each prefilled pen contains 3mL of insulin at a concentration of 100 IU/mL for convenient and accurate dosing.",
+    "shortDescription": "Prefilled long-acting insulin glargine pen containing 3mL at 100 IU/mL",
+    "regularPrice": 50.0,
+    "salePrice": 35.0,
+    "stockStatus": "in_stock",
+    "stockQuantity": 45,
+    "maxQuantityPerOrder": null,
+    "isFeatured": true,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      },
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      },
+      {
+        "name": "On Sale",
+        "id": 17
+      }
+    ],
+    "image": "/storage/product-images/lantus-long-acting-solostar-1-pen-100iu-3ml-1.jpg",
+    "images": [
+      "/storage/product-images/lantus-long-acting-solostar-1-pen-100iu-3ml-1.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 232,
+    "name": "Humalog (Rapid) 1 Kwikpen 100iu 3ml",
+    "sku": "GLP-0109",
+    "description": "Humalog (insulin lispro) is a rapid-acting insulin analog designed to help manage blood glucose levels around mealtimes. It begins working quickly after injection and is commonly used as part of a healthcare provider-directed diabetes treatment plan. Each prefilled KwikPen contains 3mL of insulin at a concentration of 100 IU/mL for convenient, accurate dosing.",
+    "shortDescription": "Prefilled rapid-acting insulin lispro pen containing 3mL at 100 IU/mL",
+    "regularPrice": 50.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 43,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      },
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/product-images/humalog-rapid-kwikpen-100iu-3ml.jpg",
+    "images": [
+      "/storage/product-images/humalog-rapid-kwikpen-100iu-3ml.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 231,
+    "name": "*Limited Time* Test 400 Blend / 10ml vial",
+    "sku": "GLP-B100",
+    "description": " This is a blend of 200mg/ml Testosterone Enanthate and 200mg/ml Testosterone Cypionate. Each milliliter of this blend contains a total of 400mg Testosterone.</p>",
+    "shortDescription": "200mg Testosterone Enanthate, 200mg Testosterone Cypionate per ml",
+    "regularPrice": 70.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 11,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      }
+    ],
+    "image": "/storage/product-images/limited-time-test-400-blend.png",
+    "images": [
+      "/storage/product-images/limited-time-test-400-blend.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 221,
+    "name": "Clen (Generic Clenbuterol) 40mcg 50ct",
+    "sku": "GLP-0106",
+    "description": "Clenbuterol is a long-acting beta-2 adrenergic agonist that has bronchodilator effects. Each package contains 50 tablets, with 40mcg of clenbuterol per tablet.",
+    "shortDescription": "40mcg clenbuterol tablets. Each package contains 50 tablets.",
+    "regularPrice": 40.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 19,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": "/storage/product-images/clen-generic-clenbuterol-40mcg-50ct.png",
+    "images": [
+      "/storage/product-images/clen-generic-clenbuterol-40mcg-50ct.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 220,
+    "name": "Cialis (Generic Tadalafil) 20mg 50ct",
+    "sku": "GLP-0105",
+    "description": "Tadalafil is a long-acting PDE5 inhibitor commonly prescribed for the treatment of erectile dysfunction (ED) and certain urinary symptoms associated with benign prostatic hyperplasia (BPH). Its extended duration of action provides flexibility compared to shorter-acting alternatives. Each package contains 50 tablets, with 20mg of tadalafil per tablet.",
+    "shortDescription": "Long-acting PDE5 inhibitor tablets containing 20mg of tadalafil per tablet. Each package includes 50 tablets.",
+    "regularPrice": 40.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 19,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": "/storage/product-images/cialis-generic-tadalafil-20mg-50ct.png",
+    "images": [
+      "/storage/product-images/cialis-generic-tadalafil-20mg-50ct.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 219,
+    "name": "Aromasin (Generic Exemestane) 25mg 25ct",
+    "sku": "GLP-0104",
+    "description": "Exemestane is a steroidal aromatase inhibitor that works by reducing the body's production of estrogen through irreversible inhibition of the aromatase enzyme. It is commonly prescribed for certain hormone-sensitive conditions and may also be used under medical supervision when estrogen management is indicated. Each package contains 25 tablets, with 25mg of exemestane per tablet.",
+    "shortDescription": "Steroidal aromatase inhibitor tablets containing 25mg of exemestane per tablet. Each package includes 25 tablets.",
+    "regularPrice": 30.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": "/storage/product-images/aromasin-generic-exemestane-25mg-25ct.png",
+    "images": [
+      "/storage/product-images/aromasin-generic-exemestane-25mg-25ct.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 218,
+    "name": "Adex (Generic Anastrozole) 1mg 25ct",
+    "sku": "GLP-0103",
+    "description": "Anastrozole is an aromatase inhibitor that reduces the body's production of estrogen by blocking the conversion of androgens into estrogen. It is commonly prescribed for certain hormone-sensitive conditions and may also be used under medical supervision in other situations where managing estrogen levels is appropriate. Each package contains 25 tablets, with 1mg of anastrozole per tablet.",
+    "shortDescription": "Aromatase inhibitor tablets containing 1mg of anastrozole per tablet. Each package includes 25 tablets.",
+    "regularPrice": 30.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 17,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": "/storage/product-images/adex-anastrozole-1mg-25ct.png",
+    "images": [
+      "/storage/product-images/adex-anastrozole-1mg-25ct.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 217,
+    "name": "T4 40mcg 50ct",
+    "sku": "GLP-0102",
+    "description": "T4 (Levothyroxine Sodium) is a synthetic form of thyroxine, the primary hormone produced by the thyroid gland. It is commonly prescribed to treat hypothyroidism by helping restore and maintain normal thyroid hormone levels. Each package contains 50 tablets for convenient daily dosing as directed by a healthcare professional.",
+    "shortDescription": "Synthetic T4 thyroid hormone tablets. Each package contains 50 tablets with 40mcg of levothyroxine per tablet.",
+    "regularPrice": 40.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": "/storage/product-images/t4-40mcg-50ct.png",
+    "images": [
+      "/storage/product-images/t4-40mcg-50ct.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 216,
+    "name": "T3 25mcg 50ct",
+    "sku": "GLP-0101",
+    "description": "T3 (Liothyronine Sodium) is a synthetic form of the active thyroid hormone triiodothyronine (T3). It is commonly used under medical supervision to treat hypothyroidism and, in some settings, to help restore normal thyroid hormone levels. Each package contains 50 tablets, providing a convenient dosing option for prescribed thyroid hormone replacement.",
+    "shortDescription": "Synthetic T3 thyroid hormone tablets. Each package contains 50 tablets with 25mcg of liothyronine per tablet.",
+    "regularPrice": 40.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": "/storage/product-images/t3-250mg-50ct.png",
+    "images": [
+      "/storage/product-images/t3-250mg-50ct.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 215,
+    "name": "Cabergoline 500mcg (pack of 4 tablets)",
+    "sku": "GLP-0100",
+    "description": "Cabergoline is a long-acting dopamine agonist commonly used to help manage elevated prolactin levels. Its extended half-life allows for convenient dosing, making it a popular option when prolactin control is desired. Each pack contains four 500mcg tablets.",
+    "shortDescription": "Cabergoline 500mcg tablets. Pack of 4. Commonly used for prolactin management.",
+    "regularPrice": 35.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      }
+    ],
+    "image": "/storage/product-images/cabergoline-500mcg-4-pack.jpg",
+    "images": [
+      "/storage/product-images/cabergoline-500mcg-4-pack.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 214,
+    "name": "Progesterone 100mg (pack of 10 capsules)",
+    "sku": "GLP-0099",
+    "description": "Progesterone 100mg capsules provide a convenient oral form of this naturally occurring hormone. Progesterone is commonly prescribed to support hormone balance and is used in a variety of clinical settings as part of individualized treatment plans.",
+    "shortDescription": "Oral progesterone 100mg capsules for hormone support and balance.",
+    "regularPrice": 25.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 68,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": true,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      },
+      {
+        "name": "Women's Line",
+        "id": 20
+      }
+    ],
+    "image": "/storage/product-images/progesterone-100mg-10-pack.jpg",
+    "images": [
+      "/storage/product-images/progesterone-100mg-10-pack.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 213,
+    "name": "Isotretinoin (Accutane) 20mg (pack of 10 capsules)",
+    "sku": "GLP-0098",
+    "description": "Isotretinoin is an oral retinoid commonly prescribed for the treatment of severe, persistent acne that has not responded to other therapies. It works by reducing oil production and helping prevent clogged pores, making it one of the most effective options for long-term acne management when used under medical supervision.",
+    "shortDescription": "Oral Isotretinoin for the treatment of severe, persistent acne.",
+    "regularPrice": 20.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 51,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      }
+    ],
+    "image": "/storage/product-images/isotretinoin-accutane-20mg-10-pack.jpg",
+    "images": [
+      "/storage/product-images/isotretinoin-accutane-20mg-10-pack.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 212,
+    "name": "Methenolone Enanthate (Primo) 150mg/ml",
+    "sku": "GLP-0097",
+    "description": " Methenolone Enanthate (Primo) 150mg/ml is a long-acting anabolic compound commonly used for lean muscle development and physique refinement. With a half-life of approximately 7–10 days, it provides stable blood levels with less frequent dosing. Key Benefits:</strong> 1. Supports lean muscle development and retention 2. Promotes a clean, quality physique appearance 3. Enhances strength and training performance 4. Contributes to overall body composition Recommended Usage:</strong> Typical dosages vary based on individual goals and experience, often administered 1–2 times per week. Always consult with a healthcare provider before use. Storage:</strong> Store at room temperature away from light and moisture. Each vial contains 10ml of pharmaceutical-grade methenolone enanthate in a sterile oil carrier.</p>",
+    "shortDescription": " Premium compound known for quality lean gains with minimal sides.</p>",
+    "regularPrice": 165.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 7,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      }
+    ],
+    "image": "/storage/products/212/methenolone-enanthate-primo-150mgml-1.png",
+    "images": [
+      "/storage/products/212/methenolone-enanthate-primo-150mgml-1.png",
+      "/storage/products/212/methenolone-enanthate-primo-150mgml.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 209,
+    "name": "B12 1mg/ml 20ml",
+    "sku": "GLP-0096",
+    "description": "Vitamin B12 (Methylcobalamin) is a highly bioavailable form of B12 commonly used to support energy production, nervous system function, and overall wellness. Each 20ml multidose vial contains 1mg/ml of methylcobalamin in a convenient injectable format.",
+    "shortDescription": "Methylcobalamin (Vitamin B12) 1mg/ml in a 20ml multidose vial for convenient B12 supplementation.",
+    "regularPrice": 35.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 34,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Aminos",
+        "id": 19
+      }
+    ],
+    "image": "/storage/products/209/b12-1mgml-20ml.png",
+    "images": [
+      "/storage/products/209/b12-1mgml-20ml.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 208,
+    "name": "Fat Blaster 361mg/ml 20ml",
+    "sku": "GLP-0095",
+    "description": "Fat Blaster is a comprehensive injectable amino and vitamin formula featuring L-Carnitine, L-Methionine, L-Inositol, L-Choline, Vitamin B6, and Vitamin B12. Designed to provide a convenient all-in-one solution, Fat Blaster combines 361mg/ml of active ingredients in a 20ml multidose vial.",
+    "shortDescription": "Fat Blaster combines L-Carnitine, MIC nutrients, Vitamin B6, and Vitamin B12 in a convenient 20ml injectable formula.",
+    "regularPrice": 55.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 37,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Aminos",
+        "id": 19
+      }
+    ],
+    "image": "/storage/products/208/fat-blaster-361mgml-20ml.png",
+    "images": [
+      "/storage/products/208/fat-blaster-361mgml-20ml.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 207,
+    "name": "Cabergoline 250mcg (pack of 4 tablets)",
+    "sku": "GLP-0094",
+    "description": "Cabergoline is a long-acting dopamine agonist commonly used to help manage elevated prolactin levels. Its extended half-life allows for convenient dosing, making it a popular option when prolactin control is desired. Each pack contains four 250mcg tablets.",
+    "shortDescription": "Cabergoline 250mcg tablets. Pack of 4. Commonly used for prolactin management.",
+    "regularPrice": 20.0,
+    "salePrice": null,
+    "stockStatus": "out_of_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      }
+    ],
+    "image": "/storage/product-images/cabergoline-250mcg-4-pack.png",
+    "images": [
+      "/storage/product-images/cabergoline-250mcg-4-pack.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 204,
+    "name": "Monster Pump 605mg/ml 20ml",
+    "sku": "GLP-0091",
+    "description": " Monster Pump is an injectable performance blend featuring L-Arginine, L-Citruline, L-Ornithine, L-Glutamine, L-Proline, L-Lysine, L-Taurine, and L-Carnitine. This formula is designed to support nitric oxide production, blood flow, nutrient delivery, and muscular performance during training. Each 20mL vial contains 80mg L-Arginine, 90mg L-Citruline, 90mg L-Ornithine, 30mg L-Glutamine, 40mg L-Proline, 45mg L-Lysine, 30mg L-Taurine, and 200mg L-Carnitine per mL, for a total concentration of 605mg/mL.</p>",
+    "shortDescription": "Nitric oxide and energy support blend formulated to enhance blood flow, nutrient delivery, and workout performance.",
+    "regularPrice": 50.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 14,
+    "maxQuantityPerOrder": null,
+    "isFeatured": true,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Aminos",
+        "id": 19
+      }
+    ],
+    "image": "/storage/products/204/monster-pump-605mgml-20ml.png",
+    "images": [
+      "/storage/products/204/monster-pump-605mgml-20ml.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 201,
+    "name": "Organ Shield 300mg/ml 20ml",
+    "sku": "GLP-0088",
+    "description": " Organ Shield is a comprehensive injectable support formula featuring L-Glutathione, NAC, Vitamin C, and Glycine. These ingredients work together to support antioxidant defenses, cellular energy production, and the body's natural detoxification processes. Each 20mL vial contains 150mg L-Glutathione, 50mg NAC, 50mg Vitamin C, and 50mg Glycine per mL, for a total concentration of 300mg/mL.</p>",
+    "shortDescription": "Comprehensive antioxidant and cellular support blend featuring NAC, NAD+, Vitamin C, and Glutathione.",
+    "regularPrice": 60.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 15,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Aminos",
+        "id": 19
+      }
+    ],
+    "image": "/storage/products/201/organ-shield-300mgml-20ml.png",
+    "images": [
+      "/storage/products/201/organ-shield-300mgml-20ml.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 200,
+    "name": "L-Carnitine 500mg/ml 20ml",
+    "sku": "GLP-0087",
+    "description": "L-Carnitine 500mg/mL is a naturally occurring amino acid derivative that plays a key role in energy metabolism by transporting fatty acids into the mitochondria, where they can be utilized for cellular energy production. Each 20mL vial contains 500mg of L-Carnitine per mL.",
+    "shortDescription": "Amino acid derivative that supports fatty acid transport and energy production at the cellular level.",
+    "regularPrice": 50.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 48,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Aminos",
+        "id": 19
+      }
+    ],
+    "image": "/storage/products/200/l-carnitine-500mgml-20ml-2.png",
+    "images": [
+      "/storage/products/200/l-carnitine-500mgml-20ml-2.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 199,
+    "name": "MK-677 (Ibutamoren) 10mg 50ct",
+    "sku": "GLP-0086",
+    "description": "MK-677 (Ibutamoren) is an orally active growth hormone secretagogue that stimulates the ghrelin receptor, promoting increased growth hormone (GH) and IGF-1 production while commonly increasing appetite and hunger.",
+    "shortDescription": "Orally active growth hormone secretagogue for increasing GH and IGF-1 levels while enhancing appetite and hunger.",
+    "regularPrice": 55.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 11,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": "/storage/product-images/mk-677-ibutamoren.png",
+    "images": [
+      "/storage/product-images/mk-677-ibutamoren.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 198,
+    "name": "Cock Bombs 70mg 50ct",
+    "sku": "GPL-0085",
+    "description": "Cock Bombs contains 50mg sildenafil and 20mg tadalafil per tablet. Both ingredients belong to a class of medications known as PDE5 inhibitors, which work by increasing nitric oxide-mediated vasodilation and enhancing blood flow to erectile tissue. By inhibiting the phosphodiesterase-5 (PDE5) enzyme, sildenafil and tadalafil help maintain higher levels of cGMP, promoting smooth muscle relaxation and improved circulation. Each tablet delivers both active ingredients in a convenient single dose.",
+    "shortDescription": "Dual-action PDE5 inhibitor combining 50mg sildenafil and 20mg tadalafil to enhance blood flow by increasing cGMP-mediated vasodilation.",
+    "regularPrice": 45.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 6,
+    "maxQuantityPerOrder": null,
+    "isFeatured": true,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": "/storage/product-images/cock-bombs.png",
+    "images": [
+      "/storage/product-images/cock-bombs.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 196,
+    "name": "Women's Testosterone Cypionate 50mg/ml",
+    "sku": "GLP-083",
+    "description": "Lady Test C 50mg/ml is a low-dose testosterone cypionate formulation designed for precise and controlled hormone management. With a half-life of approximately 8 days, it provides stable hormone levels while allowing for accurate dosing adjustments.\nKey Benefits:\n1. Supports balanced hormone levels\n2. Promotes lean muscle tone and body composition\n3. Enhances mood, energy, and overall well-being\n4. Allows for precise, lower-dose administration\nRecommended Usage:\nDosing varies based on individual needs and goals. Lower concentration formulations are commonly used for more precise dosing. Always consult with a healthcare provider before use.\nStorage:\nStore at room temperature away from light and moisture. Each vial contains 10ml of pharmaceutical-grade testosterone cypionate in a sterile oil carrier.",
+    "shortDescription": "Low-dose testosterone cypionate formulated for female hormone optimization.",
+    "regularPrice": 40.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      },
+      {
+        "name": "Women's Line",
+        "id": 20
+      }
+    ],
+    "image": "/storage/products/196/womens-testosterone-cypionate-50mgml.png",
+    "images": [
+      "/storage/products/196/womens-testosterone-cypionate-50mgml.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 195,
+    "name": "Tadalafil (Cialis) 10mg (pack of 10 tablets)",
+    "sku": "GLP-0082",
+    "description": "Tadalafil (Cialis) 10mg (10 pack) is an oral compound commonly used to support circulation and overall performance. With a long half-life of approximately 17–18 hours, it provides extended activity with once-daily or as-needed dosing.</br>\n\n Key Benefits:</b></br>\n1. Supports healthy blood flow and circulation</br>\n2. Promotes performance and endurance</br>\n3. Enhances overall function</br>\n4. Provides long-lasting effects</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual needs, often administered daily or as needed. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each pack contains 10 pharmaceutical-grade tadalafil tablets.",
+    "shortDescription": "PDE5 inhibitor for improved blood flow.",
+    "regularPrice": 10.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 43,
+    "maxQuantityPerOrder": 5,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      }
+    ],
+    "image": "/storage/product-images/tadalafil-cialis-10mg-10-pack.png",
+    "images": [
+      "/storage/product-images/tadalafil-cialis-10mg-10-pack.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 193,
+    "name": "Injectable Methandrostenolone (Dbol) 50mg/ml",
+    "sku": "GLP-0080",
+    "description": "Methandrostenolone (Dbol) 50mg is a widely used injectable compound known for supporting muscle development and overall performance. With a relatively short half-life, it allows for consistent daily dosing.\n\nKey Benefits: \n1. Supports muscle size and strength\n2. Enhances training performance\n3. Promotes improved recovery\n4. Contributes to overall physical output\nRecommended Usage:\nTypical dosages vary based on individual goals and experience, often administered daily in divided doses. Always consult with a healthcare provider before use.\n\nStorage:\nStore at room temperature away from light and moisture. Each bottle contains pharmaceutical-grade methandrostenolone.",
+    "shortDescription": "Classic mass-building injectable for rapid strength and size.",
+    "regularPrice": 50.0,
+    "salePrice": null,
+    "stockStatus": "out_of_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      }
+    ],
+    "image": "/storage/products/193/injectable-methandrostenolone-dbol-50mgml.png",
+    "images": [
+      "/storage/products/193/injectable-methandrostenolone-dbol-50mgml.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 192,
+    "name": "Injectable Oxymetholone (Anadrol) 50mg/ml",
+    "sku": "GLP-0079",
+    "description": " Oxymetholone (Anadrol) 50mg/ml is a widely used injectable compound known for supporting muscle development and overall performance. With a relatively short half-life, it allows for consistent daily dosing. Key Benefits: Supports muscle size and strength Enhances training intensity and performance Promotes improved recovery Contributes to overall physical output Recommended Usage: Typical dosages vary based on individual goals and experience, often administered daily. Always consult with a healthcare provider before use. Storage: Store at room temperature away from light and moisture. Each bottle contains pharmaceutical-grade oxymetholone tablets.</p>\nKey Benefits:\nSupports muscle size and strength\nEnhances training intensity and performance\nPromotes improved recovery\nContributes to overall physical output\nRecommended Usage:\n\nTypical dosages vary based on individual goals and experience, often administered daily. Always consult with a healthcare provider before use.\n\nStorage:\n\nStore at room temperature away from light and moisture. Each vial contains pharmaceutical-grade oxymetholone.",
+    "shortDescription": "Powerful mass-building injectable for rapid gains.",
+    "regularPrice": 50.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      }
+    ],
+    "image": "/storage/products/192/injectable-oxymetholone-anadrol-50mgml.png",
+    "images": [
+      "/storage/products/192/injectable-oxymetholone-anadrol-50mgml.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 191,
+    "name": "Bacteriostatic Water 10ml",
+    "sku": "GLP-0078",
+    "description": "Bacteriostatic water is a sterile, multi-username diluent containing 0.9% benzoyl alcohol to help inhibit bacterial growth. Ideal for reconstituting peptides and medications, it allows for safe, repeated withdrawals when handled properly.",
+    "shortDescription": "Sterile bacteriostatic water for safe multi-use reconstitution",
+    "regularPrice": 8.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/191/bacteriostatic-water-10ml.png",
+    "images": [
+      "/storage/products/191/bacteriostatic-water-10ml.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 190,
+    "name": "Great Life Pharma Gift Card",
+    "sku": "GF-0001",
+    "description": " Whether you want to send a gift to a friend, lock in value of an advantageous bitcoin spike, or get some bonus value from a sale - our gift cards are the perfect solution! </p>\n\n Simply enter the email address you want it sent to (your own if you're buying it for yourself), enter all the required fields and add it to your cart as an item for purchase at checkout. It's just that simple!</p>",
+    "shortDescription": "Great Life Pharma Gift Cards!",
+    "regularPrice": 50.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Gift Cards",
+        "id": 16
+      }
+    ],
+    "image": "/storage/products/190/great-life-pharma-gift-card.png",
+    "images": [
+      "/storage/products/190/great-life-pharma-gift-card.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 128,
+    "name": "Oxandrolone (Anavar) 25mg 50ct",
+    "sku": "GLP-0015",
+    "description": "Oxandrolone (Anavar) 25mg is a widely used oral compound known for supporting lean muscle development and overall performance. With a relatively short half-life of approximately 9–10 hours, it allows for consistent daily dosing.\n\n</br> Key Benefits:</b></br>\n1. Supports lean muscle preservation and development\n2. Promotes strength and performance\n3. Enhances overall body composition\n4. Aids in maintaining a defined physique</br>\n Recommended Usage:</br>\n\nTypical dosages vary based on individual goals and experience, often administered daily. Always consult with a healthcare provider before use.\n\n</br> Storage:</b>\n\nStore at room temperature away from light and moisture. Each bottle contains pharmaceutical-grade oxandrolone tablets.",
+    "shortDescription": "Mid-dose Anavar for enhanced results.",
+    "regularPrice": 70.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": "/storage/products/128/oxandrolone-anavar-25mg.png",
+    "images": [
+      "/storage/products/128/oxandrolone-anavar-25mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 127,
+    "name": "Oxandrolone (Anavar) 10mg 50ct",
+    "sku": "GLP-0014",
+    "description": "Oxandrolone (Anavar) 10mg is a widely used oral compound known for its role in supporting lean muscle development and overall performance. With a relatively short half-life of approximately 9–10 hours, it allows for consistent daily dosing.</br>\n\n Key Benefits:</b></br>\n1. Supports lean muscle preservation and development\n2. Promotes strength and performance\n3. Enhances overall body composition\n4. Aids in maintaining a defined physique</b>\n Recommended Usage:</b></br>\n\nTypical dosages vary based on individual goals and experience, often administered daily. Always consult with a healthcare provider before use.\n\n</br> Storage:</b></br>\n\nStore at room temperature away from light and moisture. Each bottle contains pharmaceutical-grade oxandrolone tablets.",
+    "shortDescription": "Mild oral anabolic with excellent strength and lean mass gains.",
+    "regularPrice": 50.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": "/storage/products/127/oxandrolone-anavar-10mg.png",
+    "images": [
+      "/storage/products/127/oxandrolone-anavar-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 126,
+    "name": "Drostanolone Enanthate (Mast E) 200mg/ml",
+    "sku": "GLP-0033",
+    "description": "Drostanolone Enanthate (Mast E) 200mg/ml is a long-acting anabolic compound commonly used for physique refinement and performance enhancement. With a half-life of approximately 5–7 days, it provides stable blood levels with less frequent dosing compared to shorter esters.</br>\n\n Key Benefits:</b></br>\n1. Promotes a harder, more defined appearance</br>\n2. Supports lean muscle retention</br>\n3. Enhances strength and training intensity</br>\n4. Contributes to overall physique conditioning</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual goals and experience, often administered 1–2 times per week. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each vial contains 10ml of pharmaceutical-grade drostanolone enanthate in a sterile oil carrier.",
+    "shortDescription": "Long-acting masteron for sustained hardening effects.",
+    "regularPrice": 120.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 29,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      }
+    ],
+    "image": "/storage/products/126/drostanolone-enanthate-mast-e-200mgml-2.png",
+    "images": [
+      "/storage/products/126/drostanolone-enanthate-mast-e-200mgml-2.png",
+      "/storage/products/126/drostanolone-enanthate-mast-e-200mgml.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 125,
+    "name": "Methenolone Enanthate (Primo) 100mg/ml",
+    "sku": "GLP-0034",
+    "description": "Methenolone Enanthate (Primo) 100mg/ml is a long-acting anabolic compound commonly used for lean muscle development and physique refinement. With a half-life of approximately 7–10 days, it provides stable blood levels with less frequent dosing.</br>\n\n Key Benefits:</b></br>\n1. Supports lean muscle development and retention</br>\n2. Promotes a clean, quality physique appearance</br>\n3. Enhances strength and training performance</br>\n4. Contributes to overall body composition</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual goals and experience, often administered 1–2 times per week. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each vial contains 10ml of pharmaceutical-grade methenolone enanthate in a sterile oil carrier.",
+    "shortDescription": "Premium compound known for quality lean gains with minimal sides.",
+    "regularPrice": 120.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 19,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      }
+    ],
+    "image": "/storage/products/125/methenolone-enanthate-primo-100mgml-1.png",
+    "images": [
+      "/storage/products/125/methenolone-enanthate-primo-100mgml-1.png",
+      "/storage/product-images/methenolone-enanthate-primo-100mgml-1.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 124,
+    "name": "Sustanon 250mg/ml",
+    "sku": "GLP-0026",
+    "description": "Sustanon 250mg/ml is a blended testosterone formulation containing multiple esters designed to provide both fast-acting and sustained hormone release. This combination delivers stable testosterone levels while reducing the frequency of injections.</br>\n\n Key Benefits:</b></br>\n1. Promotes lean muscle mass and strength</br>\n2. Provides both rapid onset and sustained release</br>\n3. Supports recovery and overall performance</br>\n4. Enhances mood, energy, and libido</br>\n\n Recommended Usage:</b></br>\nTypical dosages range from 100–250mg per week depending on individual goals and experience. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each vial contains 10ml of pharmaceutical-grade testosterone blend in a sterile oil carrier.",
+    "shortDescription": "Blend of four testosterone esters for sustained release.",
+    "regularPrice": 60.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      }
+    ],
+    "image": "/storage/products/124/sustanon-250mgml.png",
+    "images": [
+      "/storage/products/124/sustanon-250mgml.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 123,
+    "name": "Testosterone Proprionate 100mg/ml",
+    "sku": "GLP-0025",
+    "description": "Testosterone Propionate 100mg/ml is a fast-acting testosterone ester commonly used for hormone replacement therapy and performance applications. With a short half-life of approximately 2–3 days, it allows for more frequent dosing and rapid adjustments to hormone levels.</br>\n\n Key Benefits:</b></br>\n1. Promotes lean muscle mass and strength</br>\n2. Supports faster recovery between sessions</br>\n3. Enhances mood, energy, and libido</br>\n4. Provides greater control over hormone levels</br>\n\n Recommended Usage:</b></br>\nDue to its shorter half-life, dosing is typically administered every other day or as needed based on individual goals. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each vial contains 10ml of pharmaceutical-grade testosterone propionate in a sterile oil carrier.",
+    "shortDescription": "Fast-acting testosterone ester with quick release profile.",
+    "regularPrice": 50.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      }
+    ],
+    "image": "/storage/products/123/testosterone-proprionate-100mgml-1.png",
+    "images": [
+      "/storage/products/123/testosterone-proprionate-100mgml-1.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 122,
+    "name": "Drostanolone Propionate (Mast P) 100mg/ml",
+    "sku": "GLP-0032",
+    "description": "Drostanolone Propionate (Mast P) 100mg/ml is a fast-acting anabolic compound commonly used for physique refinement and performance enhancement. With a short half-life of approximately 2–3 days, it allows for rapid onset and precise control through frequent dosing.</br>\n\n Key Benefits:</b></br>\n1. Promotes a harder, more defined appearance</br>\n2. Supports lean muscle retention</br>\n3. Enhances strength and training intensity</br>\n4. Contributes to overall physique conditioning</br>\n\n Recommended Usage:</b></br>\nDue to its short half-life, dosing is typically administered every other day or as needed based on individual goals and experience. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each vial contains 10ml of pharmaceutical-grade drostanolone propionate in a sterile oil carrier.",
+    "shortDescription": "Fast-acting masteron for hardening and definition.",
+    "regularPrice": 80.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      }
+    ],
+    "image": "/storage/products/122/drostanolone-propionate-mast-p-100mgml-2.png",
+    "images": [
+      "/storage/products/122/drostanolone-propionate-mast-p-100mgml-2.png",
+      "/storage/products/122/drostanolone-propionate-mast-p-100mgml.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 121,
+    "name": "Trenbolone Enanthate 200mg/ml",
+    "sku": "GLP-0031",
+    "description": "Trenbolone Enanthate 200mg/ml is a long-acting anabolic compound known for its strong effects on physique and performance. With a half-life of approximately 5–7 days, it provides more stable blood levels with less frequent dosing compared to shorter esters.</br>\n\n Key Benefits:</b></br>\n1. Promotes lean muscle development and strength</br>\n2. Enhances training intensity and recovery</br>\n3. Supports nutrient efficiency and body composition</br>\n4. Contributes to a harder, more defined appearance</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual goals and experience, often administered 1–2 times per week. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each vial contains 10ml of trenbolone enanthate in a sterile oil carrier.",
+    "shortDescription": "Long-acting trenbolone ester with less frequent dosing.",
+    "regularPrice": 80.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      }
+    ],
+    "image": "/storage/products/121/trenbolone-enanthate-200mgml-2.png",
+    "images": [
+      "/storage/products/121/trenbolone-enanthate-200mgml-2.png",
+      "/storage/products/121/trenbolone-enanthate-200mgml-1.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 120,
+    "name": "Trenbolone Acetate 100mg/ml",
+    "sku": "GLP-0030",
+    "description": "Trenbolone Acetate 100mg/ml is a fast-acting anabolic compound known for its potent effects on physique and performance. With a short half-life of approximately 2–3 days, it allows for rapid onset and precise control through frequent dosing.</br>\n\n Key Benefits:</b></br>\n1. Promotes lean muscle development and strength</br>\n2. Enhances training intensity and recovery</br>\n3. Supports nutrient efficiency and body composition</br>\n4. Contributes to a harder, more defined appearance</br>\n\n Recommended Usage:</b></br>\nDue to its short half-life, dosing is typically administered every other day or as needed based on individual goals and experience. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each vial contains 10ml of trenbolone acetate in a sterile oil carrier.",
+    "shortDescription": "Fast-acting trenbolone for advanced users.",
+    "regularPrice": 70.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      }
+    ],
+    "image": "/storage/products/120/trenbolone-acetate-100mgml-1.png",
+    "images": [
+      "/storage/products/120/trenbolone-acetate-100mgml-1.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 119,
+    "name": "Boldenone Undecylenate (EQ) 300mg/ml",
+    "sku": "GLP-0029",
+    "description": "Boldenone Undecylenate 300mg/ml is a long-acting anabolic compound commonly used for performance and physique enhancement. With a half-life of approximately 10–14 days, it provides stable blood levels with less frequent dosing.\n\nKey Benefits:\nSupports lean muscle development and strength\nEnhances endurance and training capacity\nPromotes appetite and nutrient utilization\nContributes to overall performance output\nRecommended Usage:\n\nTypical dosages vary based on individual goals and experience, often administered once or twice per week. Always consult with a healthcare provider before use.\n\nStorage:\n\nStore at room temperature away from light and moisture. Each vial contains 10ml of boldenone undecylenate in a sterile oil carrier.",
+    "shortDescription": "Long-acting compound known for lean mass and vascularity.",
+    "regularPrice": 65.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      }
+    ],
+    "image": "/storage/products/119/boldenone-undecylenate-eq-300mgml-2.png",
+    "images": [
+      "/storage/products/119/boldenone-undecylenate-eq-300mgml-1.png",
+      "/storage/products/119/boldenone-undecylenate-eq-300mgml-2.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 118,
+    "name": "Nandrolone Decanoate 250mg/ml",
+    "sku": "GLP0028",
+    "description": "Nandrolone Decanoate 250mg/ml is a long-acting nandrolone ester commonly used for performance and recovery support. With a half-life of approximately 6–12 days, it provides sustained release and stable blood levels with less frequent dosing.</br>\n\n Key Benefits:</b></br>\n1. Supports joint comfort and recovery</br>\n2. Promotes lean muscle development</br>\n3. Enhances protein synthesis and nitrogen retention</br>\n4. Aids in overall strength and performance</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual goals and experience, often administered once or twice per week. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each vial contains 10ml of pharmaceutical-grade nandrolone decanoate in a sterile oil carrier.",
+    "shortDescription": "Long-acting nandrolone for joint support and muscle growth.",
+    "regularPrice": 70.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      }
+    ],
+    "image": "/storage/products/118/nandrolone-decanoate-250mgml-1.png",
+    "images": [
+      "/storage/products/118/nandrolone-decanoate-250mgml-1.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 117,
+    "name": "Nandrolone Phenylproprionate (NPP) 100mg/ml",
+    "sku": "GLP-0027",
+    "description": "NPP 100mg/ml (Nandrolone Phenylpropionate) is a fast-acting nandrolone ester commonly used for performance and recovery support. With a shorter half-life of approximately 2–4 days, it allows for more consistent blood levels with frequent dosing.</br>\n\n Key Benefits:</b></br>\n1. Supports joint comfort and recovery</br>\n2. Promotes lean muscle development</br>\n3. Enhances protein synthesis and nitrogen retention</br>\n4. Aids in overall performance and training output</br>\n\n Recommended Usage:</b></br>\nDue to its shorter half-life, dosing is typically administered multiple times per week based on individual goals and experience. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each vial contains 10ml of pharmaceutical-grade nandrolone phenylpropionate in a sterile oil carrier.",
+    "shortDescription": "Fast-acting nandrolone ester for lean muscle support.",
+    "regularPrice": 65.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      }
+    ],
+    "image": "/storage/products/117/nandrolone-phenylproprionate-npp-100mgml-2.png",
+    "images": [
+      "/storage/products/117/nandrolone-phenylproprionate-npp-100mgml-2.png",
+      "/storage/products/117/nandrolone-phenylproprionate-npp-100mgml-1.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 116,
+    "name": "Testosterone Enanthate 250mg/ml",
+    "sku": "GLP-0024",
+    "description": "Testosterone Enanthate 250mg/ml is a long-acting testosterone ester commonly used for hormone replacement therapy and performance applications. With a half-life of approximately 5–7 days, it provides stable hormone levels with less frequent dosing.</br>\n\n Key Benefits:</b></br>\n1. Promotes lean muscle mass and strength</br>\n2. Supports recovery and overall performance</br>\n3. Enhances mood, energy, and libido</br>\n4. Helps maintain healthy hormone levels</br>\n\n Recommended Usage:</b></br>\nFor TRT purposes, typical dosages range from 100–200mg per week. Performance users may utilize higher dosages based on experience level and goals. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each vial contains 10ml of pharmaceutical-grade testosterone cypionate in a sterile oil carrier.",
+    "shortDescription": "Long-acting testosterone ester for stable hormone levels.",
+    "regularPrice": 55.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      }
+    ],
+    "image": "/storage/products/116/testosterone-enanthate-250mgml-2.png",
+    "images": [
+      "/storage/products/116/testosterone-enanthate-250mgml-2.png",
+      "/storage/products/116/testosterone-enanthate-250mgml-1.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 115,
+    "name": "Testosterone Cypionate 250mg/ml",
+    "sku": "GLP-0023",
+    "description": "Testosterone Cypionate 250mg/ml is a long-acting testosterone ester commonly used for hormone replacement therapy and performance applications. With a half-life of approximately 8 days, it provides stable hormone levels with less frequent dosing.</br>\n\n Key Benefits:</b></br>\n1. Promotes lean muscle mass and strength</br>\n2. Supports recovery and overall performance</br>\n3. Enhances mood, energy, and libido</br>\n4. Helps maintain healthy hormone levels</br>\n\n Recommended Usage:</b></br>\nFor TRT purposes, typical dosages range from 100–200mg per week. Performance users may utilize higher dosages based on experience level and goals. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each vial contains 10ml of pharmaceutical-grade testosterone cypionate in a sterile oil carrier.",
+    "shortDescription": "Popular long-acting testosterone ester with excellent stability.",
+    "regularPrice": 55.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Oils",
+        "id": 2
+      }
+    ],
+    "image": "/storage/products/115/testosterone-cypionate-250mgml-1.png",
+    "images": [
+      "/storage/products/115/testosterone-cypionate-250mgml-1.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 48,
+    "name": "TB500 10mg",
+    "sku": "GLP-0056",
+    "description": "TB500 10mg is a peptide commonly used to support recovery and overall tissue health. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports recovery and tissue repair</br>\n2. Promotes joint and muscle health</br>\n3. Aids in overall healing processes</br>\n4. Contributes to improved recovery capacity</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered on a scheduled basis. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Thymosin Beta-4 for recovery and tissue regeneration.",
+    "regularPrice": 80.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/48/tb500-10mg.png",
+    "images": [
+      "/storage/products/48/tb500-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 47,
+    "name": "BPC157 10mg",
+    "sku": "GLP-0055",
+    "description": "BPC157 10mg is a peptide commonly used to support recovery and overall tissue health. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports recovery and tissue repair</br>\n2. Promotes joint and muscle health</br>\n3. Aids in overall healing processes</br>\n4. Contributes to improved recovery capacity</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered daily. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Body Protection Compound for tissue repair and healing.",
+    "regularPrice": 55.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/47/bpc157-10mg.png",
+    "images": [
+      "/storage/products/47/bpc157-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 46,
+    "name": "Retatrutide 30mg",
+    "sku": "GLP-0054",
+    "description": "Retatrutide 30mg is a long-acting peptide commonly used to support appetite regulation and metabolic health. With an extended half-life, it allows for convenient weekly administration.</br>\n\n Key Benefits:</b></br>\n1. Supports appetite control and portion regulation</br>\n2. Promotes weight management</br>\n3. Aids in metabolic function</br>\n4. Contributes to overall wellness</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered once weekly. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "High-dose triple agonist peptide.",
+    "regularPrice": 160.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/46/retatrutide-30mg.png",
+    "images": [
+      "/storage/products/46/retatrutide-30mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 45,
+    "name": "Retatrutide 20mg",
+    "sku": "GLP-0053",
+    "description": "Retatrutide 20mg is a long-acting peptide commonly used to support appetite regulation and metabolic health. With an extended half-life, it allows for convenient weekly administration.</br>\n\n Key Benefits:</b></br>\n1. Supports appetite control and portion regulation</br>\n2. Promotes weight management</br>\n3. Aids in metabolic function</br>\n4. Contributes to overall wellness</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered once weekly. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Mid-dose triple agonist peptide.",
+    "regularPrice": 140.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/45/retatrutide-20mg.png",
+    "images": [
+      "/storage/products/45/retatrutide-20mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 44,
+    "name": "Retatrutide 10mg",
+    "sku": "GLP-0052",
+    "description": "Retatrutide 10mg is a long-acting peptide commonly used to support appetite regulation and metabolic health. With an extended half-life, it allows for convenient weekly administration.</br>\n\n Key Benefits:</b></br>\n1. Supports appetite control and portion regulation</br>\n2. Promotes weight management</br>\n3. Aids in metabolic function</br>\n4. Contributes to overall wellness</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered once weekly. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Triple agonist peptide for advanced metabolic support.",
+    "regularPrice": 100.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/44/retatrutide-10mg.png",
+    "images": [
+      "/storage/products/44/retatrutide-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 43,
+    "name": "Tirzepatide 30mg",
+    "sku": "GLP-0051",
+    "description": "Tirzepatide 30mg is a long-acting peptide commonly used to support appetite regulation and metabolic health. With a half-life of approximately 5–7 days, it allows for convenient once-weekly administration.</br>\n\n Key Benefits:</b></br>\n1. Supports appetite control and portion regulation</br>\n2. Promotes weight management</br>\n3. Aids in metabolic function</br>\n4. Contributes to overall wellness</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered once weekly. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "High-dose dual GIP/GLP-1 receptor agonist.",
+    "regularPrice": 130.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/43/tirzepatide-30mg.png",
+    "images": [
+      "/storage/products/43/tirzepatide-30mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 42,
+    "name": "Tirzepatide 20mg",
+    "sku": "GLP-0050",
+    "description": "Tirzepatide 20mg is a long-acting peptide commonly used to support appetite regulation and metabolic health. With a half-life of approximately 5–7 days, it allows for convenient once-weekly administration.</br>\n\n Key Benefits:</b></br>\n1. Supports appetite control and portion regulation</br>\n2. Promotes weight management</br>\n3. Aids in metabolic function</br>\n4. Contributes to overall wellness</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered once weekly. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Dual GIP/GLP-1 receptor agonist for weight management.",
+    "regularPrice": 100.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/42/tirzepatide-20mg.png",
+    "images": [
+      "/storage/products/42/tirzepatide-20mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 41,
+    "name": "Semaglutide 10mg",
+    "sku": "GLP-0049",
+    "description": "Semaglutide 10mg is a long-acting peptide commonly used to support appetite regulation and metabolic health. With a half-life of approximately 7 days, it allows for convenient once-weekly administration.</br>\n\n Key Benefits:</b></br>\n1. Supports appetite control and portion regulation</br>\n2. Promotes weight management</br>\n3. Aids in metabolic function</br>\n4. Contributes to overall wellness</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered once weekly. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "GLP-1 receptor agonist for appetite control and metabolic health.",
+    "regularPrice": 60.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/41/semaglutide-10mg.png",
+    "images": [
+      "/storage/products/41/semaglutide-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 40,
+    "name": "Somatropin (HGH) 100iu kit (10x10iu vials)",
+    "sku": "GLP-0048",
+    "description": "Somatropin (HGH) 100iu Kit (10×10iu vials) is a recombinant human growth hormone formulation commonly used to support recovery, body composition, and overall wellness. With a relatively short half-life of approximately 2–3 hours, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports recovery and tissue repair</br>\n2. Promotes lean body composition</br>\n3. Enhances overall performance and well-being</br>\n4. Aids in maintaining optimal growth hormone levels</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered daily. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated after reconstitution and protect from light. Each kit contains 10 vials of 10iu pharmaceutical-grade somatropin.",
+    "shortDescription": "Human growth hormone for recovery and body composition.",
+    "regularPrice": 165.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 33,
+    "maxQuantityPerOrder": 5,
+    "isFeatured": true,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/40/somatropin-hgh-100iu-kit-10x10iu-vials.png",
+    "images": [
+      "/storage/products/40/somatropin-hgh-100iu-kit-10x10iu-vials.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 39,
+    "name": "DSIP 10mg",
+    "sku": "GLP-0077",
+    "description": "DSIP 10mg is a peptide commonly used to support sleep quality and overall recovery. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports improved sleep quality</br>\n2. Promotes recovery and relaxation</br>\n3. Aids in overall well-being</br>\n4. Contributes to balanced rest cycles</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered on a consistent schedule. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Delta sleep-inducing peptide for sleep quality.",
+    "regularPrice": 70.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/39/dsip-10mg.png",
+    "images": [
+      "/storage/products/39/dsip-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 38,
+    "name": "SS-31 10mg",
+    "sku": "GLP-0076",
+    "description": "SS-31 10mg is a mitochondrial-targeted peptide commonly used to support cellular energy and overall performance. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports mitochondrial function</br>\n2. Promotes cellular energy production</br>\n3. Aids in overall recovery and performance</br>\n4. Contributes to improved cellular efficiency</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered on a consistent schedule. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Mitochondrial-targeted peptide for cellular health.",
+    "regularPrice": 75.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/38/ss-31-10mg.png",
+    "images": [
+      "/storage/products/38/ss-31-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 37,
+    "name": "CJC no DAC w/ Ipamorelin 10mg",
+    "sku": "GLP-0075",
+    "description": "CJC-1295 (no DAC) w/ Ipamorelin 10mg is a dual-peptide formulation commonly used to support natural growth hormone release and recovery. With relatively short half-lives, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports natural growth hormone levels</br>\n2. Promotes recovery and tissue repair</br>\n3. Aids in improved sleep quality</br>\n4. Contributes to overall well-being</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered on a consistent schedule. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Growth hormone releasing blend for synergistic effect.",
+    "regularPrice": 70.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/37/cjc-no-dac-w-ipamorelin-10mg.png",
+    "images": [
+      "/storage/products/37/cjc-no-dac-w-ipamorelin-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 36,
+    "name": "BPC/TB Blend 10mg/10mg",
+    "sku": "GLP-0074",
+    "description": "BPC/TB Blend 10mg/10mg is a dual-peptide formulation combining BPC157 and TB500, commonly used to support recovery and overall tissue health. With relatively short half-lives, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports recovery and tissue repair</br>\n2. Promotes joint and muscle health</br>\n3. Aids in overall healing processes</br>\n4. Contributes to improved recovery capacity</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered on a consistent schedule. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Higher-dose synergistic blend of BPC157 and TB500 for recovery.",
+    "regularPrice": 90.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/36/bpctb-blend-10mg10mg.png",
+    "images": [
+      "/storage/products/36/bpctb-blend-10mg10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 35,
+    "name": "BPC/TB Blend 5mg/5mg",
+    "sku": "GLP-0072",
+    "description": "BPC/TB Blend 5mg/5mg is a dual-peptide formulation combining BPC157 and TB500, commonly used to support recovery and overall tissue health. With relatively short half-lives, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports recovery and tissue repair</br>\n2. Promotes joint and muscle health</br>\n3. Aids in overall healing processes</br>\n4. Contributes to improved recovery capacity</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered on a consistent schedule. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Synergistic blend of BPC157 and TB500 for recovery.",
+    "regularPrice": 70.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/35/bpctb-blend-5mg5mg.png",
+    "images": [
+      "/storage/products/35/bpctb-blend-5mg5mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 34,
+    "name": "KissPeptin 10mg",
+    "sku": "GLP-0073",
+    "description": "Kisspeptin 10mg is a peptide commonly used to support natural hormone signaling and overall endocrine function. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports natural hormone signaling</br>\n2. Promotes overall endocrine balance</br>\n3. Aids in maintaining healthy function</br>\n4. Contributes to overall well-being</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered on a consistent schedule. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Neuropeptide for hormonal regulation.",
+    "regularPrice": 70.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/34/kisspeptin-10mg.png",
+    "images": [
+      "/storage/products/34/kisspeptin-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 33,
+    "name": "SLU-PP-332 20mg (oral) (50ct)",
+    "sku": "GLP-0071",
+    "description": "SLU-PP-332 20mg (oral) (50ct) is an oral compound commonly used to support metabolic activity and overall wellness. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports metabolic function</br>\n2. Promotes energy utilization</br>\n3. Aids in overall wellness</br>\n4. Contributes to improved cellular efficiency</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered daily. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each bottle contains 50 oral doses of pharmaceutical-grade SLU-PP-332.",
+    "shortDescription": "High-dose oral peptide formulation.",
+    "regularPrice": 160.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/product-images/slu-pp-332-20mg-oral-50ct.png",
+    "images": [
+      "/storage/product-images/slu-pp-332-20mg-oral-50ct.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 32,
+    "name": "SLU-PP-332 500mcg (oral) (50ct)",
+    "sku": "GLP-0070",
+    "description": "SLU-PP-332 500mcg (oral) (50ct) is an oral peptide commonly used to support metabolic function and overall wellness. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports metabolic function</br>\n2. Promotes energy utilization</br>\n3. Aids in overall wellness</br>\n4. Contributes to improved cellular efficiency</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered daily. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each bottle contains 50 oral doses of pharmaceutical-grade SLU-PP-332.",
+    "shortDescription": "Oral peptide formulation for convenience.",
+    "regularPrice": 90.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/product-images/slu-pp-332-500mcg-oral-50ct.png",
+    "images": [
+      "/storage/product-images/slu-pp-332-500mcg-oral-50ct.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 31,
+    "name": "KPV 10mg",
+    "sku": "GLP-0069",
+    "description": "KPV 10mg is a peptide commonly used to support recovery and overall wellness. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports recovery and overall wellness</br>\n2. Promotes balanced inflammatory response</br>\n3. Aids in gut and tissue health</br>\n4. Contributes to improved overall function</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered on a consistent schedule. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Anti-inflammatory peptide for gut and skin health.",
+    "regularPrice": 65.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/31/kpv-10mg.png",
+    "images": [
+      "/storage/products/31/kpv-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 30,
+    "name": "NAD+ 500mg",
+    "sku": "GLP-0068",
+    "description": "NAD+ 500mg is a coenzyme commonly used to support cellular energy production and overall metabolic health. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports cellular energy production</br>\n2. Promotes metabolic function</br>\n3. Aids in overall wellness and recovery</br>\n4. Contributes to improved cellular efficiency</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered on a consistent schedule. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Nicotinamide adenine dinucleotide for cellular energy.",
+    "regularPrice": 65.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/30/nad-500mg.png",
+    "images": [
+      "/storage/products/30/nad-500mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 29,
+    "name": "Mots-C 10mg",
+    "sku": "GLP-0067",
+    "description": "MOTS-C 10mg is a mitochondrial-derived peptide commonly used to support metabolic function and overall performance. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports metabolic function</br>\n2. Promotes energy utilization</br>\n3. Aids in overall performance and endurance</br>\n4. Contributes to improved cellular efficiency</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered on a scheduled basis. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Mitochondrial peptide for metabolic regulation.",
+    "regularPrice": 60.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/29/mots-c-10mg.png",
+    "images": [
+      "/storage/products/29/mots-c-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 28,
+    "name": "Sermorelin 10mg",
+    "sku": "GLP-0066",
+    "description": "Sermorelin 10mg is a peptide commonly used to support natural growth hormone release and overall wellness. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports natural growth hormone levels</br>\n2. Promotes recovery and overall well-being</br>\n3. Aids in improved sleep quality</br>\n4. Contributes to healthy aging processes</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered daily. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "GHRH analog for natural growth hormone stimulation",
+    "regularPrice": 60.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/28/sermorelin-10mg.png",
+    "images": [
+      "/storage/products/28/sermorelin-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 27,
+    "name": "Tesamorelin 10mg",
+    "sku": "GLP-0065",
+    "description": "Tesamorelin 10mg is a peptide commonly used to support natural growth hormone release and metabolic health. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports natural growth hormone levels</br>\n2. Promotes fat metabolism and body composition</br>\n3. Aids in recovery and overall wellness</br>\n4. Contributes to improved metabolic function</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered daily. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "GHRH analog for visceral fat reduction.",
+    "regularPrice": 70.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/27/tesamorelin-10mg.png",
+    "images": [
+      "/storage/products/27/tesamorelin-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 26,
+    "name": "Ipamorelin 10mg",
+    "sku": "GLP-0063",
+    "description": "Ipamorelin 10mg is a peptide commonly used to support natural growth hormone release and recovery. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports natural growth hormone levels</br>\n2. Promotes recovery and tissue repair</br>\n3. Aids in improved sleep quality</br>\n4. Contributes to overall well-being</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered daily. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Growth hormone secretagogue for natural GH release.",
+    "regularPrice": 60.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/26/ipamorelin-10mg.png",
+    "images": [
+      "/storage/products/26/ipamorelin-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 25,
+    "name": "HCG 5000ius",
+    "sku": "GLP-0062",
+    "description": "HCG 5000iu is a peptide hormone commonly used to support natural hormone function and overall balance. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports natural hormone production</br>\n2. Promotes overall hormonal balance</br>\n3. Aids in maintaining healthy function</br>\n4. Contributes to overall well-being</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered multiple times per week. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated after reconstitution and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Human Chorionic Gonadotropin for hormonal support.",
+    "regularPrice": 50.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/25/hcg-5000ius.png",
+    "images": [
+      "/storage/products/25/hcg-5000ius.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 24,
+    "name": "MT2 10mg",
+    "sku": "GLP-0061",
+    "description": "MT2 (Melanotan II) 10mg is a peptide commonly used to support skin pigmentation and overall appearance. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports skin pigmentation</br>\n2. Promotes a more even appearance</br>\n3. Aids in overall skin aesthetics</br>\n4. Contributes to long-lasting results</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered on a consistent schedule. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Melanotan II for tanning and skin pigmentation.",
+    "regularPrice": 60.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/24/mt2-10mg.png",
+    "images": [
+      "/storage/products/24/mt2-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 23,
+    "name": "KLOW80 80mg",
+    "sku": "GLP-0060",
+    "description": "KLOW80 80mg is a multi-peptide blend commonly used to support recovery, tissue repair, and overall wellness. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports recovery and tissue repair</br>\n2. Promotes skin quality and overall appearance</br>\n3. Aids in regeneration processes</br>\n4. Contributes to improved recovery capacity</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered on a consistent schedule. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Advanced peptide blend for skin health.",
+    "regularPrice": 120.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/23/klow80-80mg.png",
+    "images": [
+      "/storage/products/23/klow80-80mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 22,
+    "name": "GLOW70 70mg",
+    "sku": "GLP-0059",
+    "description": "GLOW70 70mg is a peptide blend commonly used to support skin health, recovery, and overall tissue quality. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports skin quality and appearance</br>\n2. Promotes tissue repair and recovery</br>\n3. Aids in overall regeneration processes</br>\n4. Contributes to improved hair and skin health</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered on a consistent schedule. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Skin rejuvenation peptide blend.",
+    "regularPrice": 100.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/22/glow70-70mg.png",
+    "images": [
+      "/storage/products/22/glow70-70mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 21,
+    "name": "GHK-Cu 100mg",
+    "sku": "GLP-0058",
+    "description": "GHK-Cu 100mg is a copper-binding peptide commonly used to support skin health, recovery, and overall tissue quality. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports skin quality and appearance</br>\n2. Promotes tissue repair and recovery</br>\n3. Aids in overall regeneration processes</br>\n4. Contributes to improved hair and skin health</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered on a consistent schedule. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "High-dose copper peptide for enhanced results.",
+    "regularPrice": 75.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/21/ghk-cu-100mg.png",
+    "images": [
+      "/storage/products/21/ghk-cu-100mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 20,
+    "name": "GHK-Cu 50mg",
+    "sku": "GLP-0057",
+    "description": "GHK-Cu 50mg is a copper-binding peptide commonly used to support skin health, recovery, and overall tissue quality. With a relatively short half-life, it is typically administered on a consistent schedule.</br>\n\n Key Benefits:</b></br>\n1. Supports skin quality and appearance</br>\n2. Promotes tissue repair and recovery</br>\n3. Aids in overall regeneration processes</br>\n4. Contributes to improved hair and skin health</br>\n\n Recommended Usage:</b></br>\nDosing varies based on individual needs and goals, often administered on a consistent schedule. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore refrigerated and protect from light. Reconstitute with appropriate diluent prior to use.",
+    "shortDescription": "Copper peptide for skin health and tissue repair.",
+    "regularPrice": 60.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Peptides & GLPs",
+        "id": 15
+      }
+    ],
+    "image": "/storage/products/20/ghk-cu-50mg.png",
+    "images": [
+      "/storage/products/20/ghk-cu-50mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 19,
+    "name": "Sildenafil (Viagra) 100mg (pack of 10 tablets)",
+    "sku": "GLP-0045",
+    "description": "Sildenafil (Viagra) 100mg (10 pack) is an oral compound commonly used to support circulation and performance. With a half-life of approximately 3–5 hours, it provides reliable, shorter-duration activity when needed.</br>\n\n Key Benefits:</b></br>\n1. Supports healthy blood flow and circulation</br>\n2. Promotes performance and endurance</br>\n3. Enhances overall function</br>\n4. Provides fast-acting effects</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual needs, often administered as needed. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each pack contains 10 pharmaceutical-grade sildenafil tablets.",
+    "shortDescription": "PDE5 inhibitor for enhanced blood flow.",
+    "regularPrice": 15.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      }
+    ],
+    "image": "/storage/products/19/sildenafil-viagra-100mg-10-pack.jpg",
+    "images": [
+      "/storage/products/19/sildenafil-viagra-100mg-10-pack.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 18,
+    "name": "Ezetimibe 10mg (pack of 10 tablets)",
+    "sku": "GLP-0047",
+    "description": "Ezetimibe 10mg (10 pack) is an oral compound commonly used to support cholesterol management and overall cardiovascular health. With a half-life of approximately 22 hours, it provides consistent once-daily activity.</br>\n\n Key Benefits:</b></br>\n1. Supports healthy cholesterol levels</br>\n2. Promotes cardiovascular health</br>\n3. Aids in lipid management</br>\n4. Contributes to overall wellness</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual needs, often administered once daily. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each pack contains 10 pharmaceutical-grade ezetimibe tablets.",
+    "shortDescription": "Cholesterol absorption inhibitor for lipid management.",
+    "regularPrice": 15.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 10,
+    "maxQuantityPerOrder": 5,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      }
+    ],
+    "image": "/storage/products/18/ezetimibe-10mg-10-pack.jpg",
+    "images": [
+      "/storage/products/18/ezetimibe-10mg-10-pack.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 17,
+    "name": "Metformin 500mg (pack of 20 tablets)",
+    "sku": "GLP-0046",
+    "description": "Metformin 500mg (10 pack) is an oral compound commonly used to support metabolic health and glucose regulation. With a half-life of approximately 6 hours, it provides consistent daily activity.</br>\n\n Key Benefits:</b></br>\n1. Supports healthy blood sugar levels</br>\n2. Promotes metabolic function</br>\n3. Aids in insulin sensitivity</br>\n4. Contributes to overall wellness</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual needs, often administered daily in divided doses. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each pack contains 10 pharmaceutical-grade metformin tablets.",
+    "shortDescription": "Blood sugar management and insulin sensitivity.",
+    "regularPrice": 20.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 1,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      }
+    ],
+    "image": "/storage/products/17/metformin-500mg-10-pack.jpg",
+    "images": [
+      "/storage/products/17/metformin-500mg-10-pack.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 16,
+    "name": "Clomiphene (Clomid) 50mg (pack of 10 tablets)",
+    "sku": "GLP-0035",
+    "description": "Clomiphene (Clomid) 50mg (10 pack) is an oral compound commonly used to support natural hormone function and recovery. With a half-life of approximately 5–7 days, it provides sustained activity with consistent dosing.</br>\n\n Key Benefits:</b></br>\n1. Supports natural hormone production</br>\n2. Aids in hormonal recovery and balance</br>\n3. Promotes overall well-being</br>\n4. Contributes to maintaining healthy levels</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual needs and goals, often administered daily. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each pack contains 10 pharmaceutical-grade clomiphene tablets.",
+    "shortDescription": "Selective estrogen receptor modulator for PCT.",
+    "regularPrice": 15.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      }
+    ],
+    "image": "/storage/products/16/clomiphene-clomid-50mg-10-pack.jpg",
+    "images": [
+      "/storage/products/16/clomiphene-clomid-50mg-10-pack.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 15,
+    "name": "Tadalafil (Cialis) 20mg (pack of 10 tablets)",
+    "sku": "GLP-0044",
+    "description": "Tadalafil (Cialis) 20mg (10 pack) is an oral compound commonly used to support circulation and overall performance. With a long half-life of approximately 17–18 hours, it provides extended activity with once-daily or as-needed dosing.</br>\n\n Key Benefits:</b></br>\n1. Supports healthy blood flow and circulation</br>\n2. Promotes performance and endurance</br>\n3. Enhances overall function</br>\n4. Provides long-lasting effects</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual needs, often administered daily or as needed. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each pack contains 10 pharmaceutical-grade tadalafil tablets.",
+    "shortDescription": " High dose PDE5 inhibitor for improved blood flow.</p>",
+    "regularPrice": 15.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 55,
+    "maxQuantityPerOrder": 2,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      }
+    ],
+    "image": "/storage/products/15/tadalafil-cialis-20mg-10-pack.jpg",
+    "images": [
+      "/storage/products/15/tadalafil-cialis-20mg-10-pack.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 14,
+    "name": "Clenbuterol (Clen) 40mcg (pack of 10 tablets)",
+    "sku": "GLP-0043",
+    "description": "Clenbuterol (Clen) 40mcg (10 pack) is an oral compound commonly used to support metabolic activity and overall performance. With a half-life of approximately 30–35 hours, it provides sustained activity with consistent dosing.</br>\n\n Key Benefits:</b></br>\n1. Supports metabolic activity</br>\n2. Promotes energy and training intensity</br>\n3. Aids in overall performance output</br>\n4. Contributes to a leaner physique</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual goals and experience, often administered daily. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each pack contains 10 pharmaceutical-grade clenbuterol tablets.",
+    "shortDescription": "Thermogenic compound for fat loss support.",
+    "regularPrice": 20.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      }
+    ],
+    "image": "/storage/products/14/clenbuterol-clen-40mcg-10-pack.jpg",
+    "images": [
+      "/storage/products/14/clenbuterol-clen-40mcg-10-pack.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 13,
+    "name": "Hydrochlorothiazide (HCTZ) 25mg (pack of 10 tablets)",
+    "sku": "GLP-0042",
+    "description": "Hydrochlorothiazide (HCTZ) 25mg (15 pack) is an oral compound commonly used to support fluid balance and cardiovascular health. With a duration of action of approximately 6–12 hours, it provides consistent daily activity.</br>\n\n Key Benefits:</b></br>\n1. Supports fluid balance</br>\n2. Promotes healthy blood pressure levels</br>\n3. Aids in reducing water retention</br>\n4. Contributes to overall cardiovascular wellness</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual needs, often administered once daily. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each pack contains 15 pharmaceutical-grade hydrochlorothiazide tablets.",
+    "shortDescription": "Diuretic for water retention and blood pressure.",
+    "regularPrice": 15.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 27,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      }
+    ],
+    "image": "/storage/products/13/hydrochlorothiazide-hctz-25mg-15-pack.jpg",
+    "images": [
+      "/storage/products/13/hydrochlorothiazide-hctz-25mg-15-pack.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 12,
+    "name": "Nebivolol 5mg (pack of 10 tablets)",
+    "sku": "GLP-0041",
+    "description": "Nebivolol 5mg (10 pack) is an oral compound commonly used to support cardiovascular health and overall wellness. With a half-life of approximately 10–12 hours, it provides consistent daily activity.</br>\n\n Key Benefits:</b></br>\n1. Supports healthy blood pressure levels</br>\n2. Promotes cardiovascular function</br>\n3. Aids in overall heart health</br>\n4. Contributes to improved circulation</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual needs, often administered once daily. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each pack contains 10 pharmaceutical-grade nebivolol tablets.",
+    "shortDescription": "Beta-blocker for heart rate and blood pressure.",
+    "regularPrice": 20.0,
+    "salePrice": null,
+    "stockStatus": "out_of_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      }
+    ],
+    "image": "/storage/products/12/nebivolol-5mg-10-pack.jpg",
+    "images": [
+      "/storage/products/12/nebivolol-5mg-10-pack.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 11,
+    "name": "Telmisartan 80mg (pack of 15 tablets)",
+    "sku": "GLP-0040",
+    "description": " Telmisartan 80mg (15 pack) is an oral compound commonly used to support cardiovascular health and overall wellness. With a half-life of approximately 24 hours, it provides consistent, once-daily activity. Key Benefits:</strong> 1. Supports healthy blood pressure levels 2. Promotes cardiovascular health 3. May aid in nutrient utilization 4. Contributes to overall wellness Recommended Usage:</strong> Typical dosages vary based on individual needs, often administered once daily. Always consult with a healthcare provider before use. Storage:</strong> Store at room temperature away from light and moisture. Each pack contains 15 pharmaceutical-grade telmisartan tablets.</p>",
+    "shortDescription": "ARB for blood pressure and cardiovascular health.",
+    "regularPrice": 20.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 3,
+    "maxQuantityPerOrder": 5,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      }
+    ],
+    "image": "/storage/product-images/telmisartan-80mg-15-pack.jpg",
+    "images": [
+      "/storage/product-images/telmisartan-80mg-15-pack.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 10,
+    "name": "Modafinil 200mg (pack of 10 tablets)",
+    "sku": "GLP-0039",
+    "description": "Modafinil 200mg (10 pack) is an oral compound commonly used to support alertness, focus, and mental performance. With a half-life of approximately 12–15 hours, it provides sustained effects throughout the day.</br>\n\n Key Benefits:</b></br>\n1. Supports wakefulness and alertness</br>\n2. Enhances focus and cognitive performance</br>\n3. Promotes sustained mental energy</br>\n4. Aids in overall productivity</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual needs, often administered once daily. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each pack contains 10 pharmaceutical-grade modafinil tablets.",
+    "shortDescription": "Cognitive enhancer for focus and wakefulness.",
+    "regularPrice": 20.0,
+    "salePrice": null,
+    "stockStatus": "out_of_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": 4,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      }
+    ],
+    "image": "/storage/products/10/modafinil-100mg-10-pack.jpg",
+    "images": [
+      "/storage/products/10/modafinil-100mg-10-pack.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 9,
+    "name": "Exemestane (Aromasin) 25mg (pack of 10 tablets)",
+    "sku": "GLP-0038",
+    "description": "Exemestane (Aromasin) 25mg (10 pack) is an oral compound commonly used to support estrogen management and hormonal balance. With a half-life of approximately 24 hours, it provides consistent activity with regular dosing.</br>\n\n Key Benefits:</b></br>\n1. Supports estrogen management</br>\n2. Helps maintain balanced hormone levels</br>\n3. Promotes overall well-being</br>\n4. Contributes to a more controlled hormonal environment</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual needs and goals, often administered daily or as needed. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each pack contains 10 pharmaceutical-grade exemestane tablets.",
+    "shortDescription": "Steroidal aromatase inhibitor for estrogen management.",
+    "regularPrice": 20.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 5,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      }
+    ],
+    "image": "/storage/product-images/exemestane-aromasin-25mg-10-pack.jpg",
+    "images": [
+      "/storage/product-images/exemestane-aromasin-25mg-10-pack.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 8,
+    "name": "Anastrozole (Adex) 1mg (pack of 10 tablets)",
+    "sku": "GLP-0037",
+    "description": "Anastrozole (Adex) 1mg (10 pack) is an oral compound commonly used to support estrogen management and hormonal balance. With a half-life of approximately 48 hours, it provides consistent activity with flexible dosing.</br>\n\n Key Benefits:</b></br>\n1. Supports estrogen management</br>\n2. Helps maintain balanced hormone levels</br>\n3. Promotes overall well-being</br>\n4. Contributes to a more controlled hormonal environment</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual needs and goals, often administered as needed. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each pack contains 10 pharmaceutical-grade anastrozole tablets.",
+    "shortDescription": "Aromatase inhibitor for estrogen control.",
+    "regularPrice": 20.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 12,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      }
+    ],
+    "image": "/storage/product-images/anastrozole-adex-1mg-10-pack.jpg",
+    "images": [
+      "/storage/product-images/anastrozole-adex-1mg-10-pack.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 7,
+    "name": "Tamoxifen Citrate (Nolva) 20mg (pack of 10 tablets)",
+    "sku": "GLP-0036",
+    "description": "Tamoxifen Citrate (Nolva) 20mg (10 pack) is an oral compound commonly used to support hormonal balance. With a half-life of approximately 5–7 days, it provides sustained activity with consistent dosing.</br>\n\n Key Benefits:</b></br>\n1. Supports overall hormonal balance</br>\n2. Aids in maintaining healthy levels</br>\n3. Promotes overall well-being</br>\n4. Contributes to hormonal support</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual needs and goals, often administered daily. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each pack contains 10 pharmaceutical-grade tamoxifen citrate tablets.",
+    "shortDescription": "Essential PCT compound for estrogen management.",
+    "regularPrice": 15.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 57,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "PCT / Medications",
+        "id": 13
+      }
+    ],
+    "image": "/storage/products/7/tamoxifen-citrate-nolva-20mg-10-pack.jpg",
+    "images": [
+      "/storage/products/7/tamoxifen-citrate-nolva-20mg-10-pack.jpg"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 6,
+    "name": "Mesterolone (Proviron) 10mg 50ct",
+    "sku": "GLP-0021",
+    "description": "Mesterolone (Proviron) 10mg is an oral compound commonly used to support hormonal balance and overall performance. With a relatively short half-life of approximately 12–13 hours, it allows for consistent daily dosing.</br>\n\n Key Benefits:</b></br>\n1. Supports overall hormonal balance</br>\n2. Enhances strength and performance</br>\n3. Promotes a lean, defined appearance</br>\n4. Contributes to overall well-being</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual goals and experience, often administered daily in divided doses. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each bottle contains pharmaceutical-grade mesterolone tablets.",
+    "shortDescription": "Ancillary oral for enhanced free testosterone and libido.",
+    "regularPrice": 80.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": "/storage/products/6/mesterolone-proviron-10mg.png",
+    "images": [
+      "/storage/products/6/mesterolone-proviron-10mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 5,
+    "name": "Oxandrolone (Anavar) 50mg 50ct",
+    "sku": "GLP-0016",
+    "description": "Oxandrolone (Anavar) 50mg is a widely used oral compound known for supporting lean muscle development and overall performance. With a relatively short half-life of approximately 9–10 hours, it allows for consistent daily dosing.\n\n</br> Key Benefits:</b></br>\n1. Supports lean muscle preservation and development</br>\n2. Promotes strength and performance</br>\n3. Enhances overall body composition</br>\n4. Aids in maintaining a defined physique</br>\n Recommended Usage:</b></br>\n\nTypical dosages vary based on individual goals and experience, often administered daily. Always consult with a healthcare provider before use.\n\n</br> Storage:</b>\n\nStore at room temperature away from light and moisture. Each bottle contains pharmaceutical-grade oxandrolone tablets.",
+    "shortDescription": "High-dose Anavar for experienced users.",
+    "regularPrice": 100.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": "/storage/products/5/oxandrolone-anavar-50mg.png",
+    "images": [
+      "/storage/products/5/oxandrolone-anavar-50mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 4,
+    "name": "Superdrol 10mg 50ct",
+    "sku": "GLP-0020",
+    "description": "Methyldrostanolone (Superdrol) 10mg is a potent oral compound commonly used for supporting strength and physique development. With a relatively short half-life of approximately 6–8 hours, it allows for consistent daily dosing.</br>\n\n Key Benefits:</b></br>\n1. Supports strength and power output</br>\n2. Promotes lean muscle development</br>\n3. Enhances training intensity</br>\n4. Contributes to overall physique conditioning</br>\n\n Recommended Usage:</b></br>\nTypical dosages vary based on individual goals and experience, often administered daily. Always consult with a healthcare provider before use.</br>\n\n Storage:</b></br>\nStore at room temperature away from light and moisture. Each bottle contains pharmaceutical-grade methyldrostanolone tablets.",
+    "shortDescription": "Potent oral for dry, hard gains.",
+    "regularPrice": 80.0,
+    "salePrice": null,
+    "stockStatus": "in_stock",
+    "stockQuantity": 4,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": "/storage/products/4/anadrol-50mg.png",
+    "images": [
+      "/storage/products/4/anadrol-50mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 3,
+    "name": "Oxymetholone (Anadrol) 50mg 50ct",
+    "sku": "GLP-0019",
+    "description": " Oxymetholone (Anadrol) 50mg is a widely used oral compound known for supporting muscle development and overall performance. With a relatively short half-life of approximately 8–9 hours, it allows for consistent daily dosing. Key Benefits: Supports muscle size and strength Enhances training intensity and performance Promotes improved recovery Contributes to overall physical output Recommended Usage: Typical dosages vary based on individual goals and experience, often administered daily. Always consult with a healthcare provider before use. Storage: Store at room temperature away from light and moisture. Each bottle contains pharmaceutical-grade oxymetholone tablets.</p>",
+    "shortDescription": "Powerful mass-building oral for rapid gains.",
+    "regularPrice": 80.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": "/storage/products/3/oxymetholone-anadrol-50mg.png",
+    "images": [
+      "/storage/products/3/oxymetholone-anadrol-50mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 2,
+    "name": "Stanozolol (Winstrol) 50mg 50ct",
+    "sku": "GLP-0018",
+    "description": "Stanozolol (Winstrol) 50mg is a widely used oral compound known for supporting physique refinement and overall performance. With a relatively short half-life of approximately 8–9 hours, it allows for consistent daily dosing.</br>\n\n Key Benefits:</b></br>\n1. Supports a lean, defined appearance</br>\n2. Promotes strength and performance</br>\n3. Helps preserve lean muscle</br>\n4. Contributes to overall physique conditioning</br>\n Recommended Usage:</b></br>\n\nTypical dosages vary based on individual goals and experience, often administered daily. Always consult with a healthcare provider before use.\n\n</br> Storage:</b></br>\n\nStore at room temperature away from light and moisture. Each bottle contains pharmaceutical-grade stanozolol tablets.",
+    "shortDescription": "Popular cutting compound for hardness and vascularity.",
+    "regularPrice": 80.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": "/storage/products/2/stanozolol-winstrol-50mg.png",
+    "images": [
+      "/storage/products/2/stanozolol-winstrol-50mg.png"
+    ],
+    "status": "active"
+  },
+  {
+    "sourceId": 1,
+    "name": "Methandrostenolone (Dbol) 50mg 50ct",
+    "sku": "GLP-0017",
+    "description": "Methandrostenolone (Dbol) 50mg is a widely used oral compound known for supporting muscle development and overall performance. With a relatively short half-life of approximately 3–6 hours, it allows for consistent daily dosing.\n\n</br> Key Benefits:</b>\n1. Supports muscle size and strength</br>\n2. Enhances training performance</br>\n3. Promotes improved recovery</br>\n4. Contributes to overall physical output\n</br> Recommended Usage:</b></br>\n\nTypical dosages vary based on individual goals and experience, often administered daily in divided doses. Always consult with a healthcare provider before use.\n\n</br> Storage:</b></br>\n\nStore at room temperature away from light and moisture. Each bottle contains pharmaceutical-grade methandrostenolone tablets.",
+    "shortDescription": "Classic mass-building oral for rapid strength and size.",
+    "regularPrice": 80.0,
+    "salePrice": null,
+    "stockStatus": "always_in_stock",
+    "stockQuantity": 0,
+    "maxQuantityPerOrder": null,
+    "isFeatured": false,
+    "isNewArrival": false,
+    "weight": null,
+    "categories": [
+      {
+        "name": "Orals",
+        "id": 3
+      }
+    ],
+    "image": "/storage/products/1/methandrostenolone-dbol-50mg.png",
+    "images": [
+      "/storage/products/1/methandrostenolone-dbol-50mg.png"
+    ],
+    "status": "active"
+  }
+]

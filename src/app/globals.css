@@ -1,0 +1,182 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0406;
+  --foreground: #e8c56a;
+  --primary: #e8c56a;
+  --primary-foreground: #140808;
+  --secondary: #3a1414;
+  --muted: #241010;
+  --muted-foreground: #c4a06a;
+  --accent: #d4a84b;
+  --accent-foreground: #140808;
+  --card: #16080a;
+  --card-foreground: #e8c56a;
+  --border: #6b3220;
+  --ring: #d4a84b;
+  --ink: #080203;
+  --paper: #e8c56a;
+  --signal: #e0b24a;
+  --brand-red: #b42318;
+  --brand-red-deep: #3a0c0c;
+  --radius: 0rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-signal: var(--signal);
+  --color-brand-red: var(--brand-red);
+  --color-brand-red-deep: var(--brand-red-deep);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-cinzel);
+  --font-display: var(--font-cinzel);
+  --color-signal-foreground: var(--accent-foreground);
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+}
+
+* {
+  border-color: color-mix(in oklab, var(--border) 55%, transparent);
+}
+
+html {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+body {
+  min-height: 100vh;
+  background-color: var(--background);
+  background-image:
+    linear-gradient(135deg, oklch(0.25 0.12 25 / 0.14), transparent 42%),
+    linear-gradient(rgba(20, 30, 50, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 30, 50, 0.035) 1px, transparent 1px);
+  background-size: auto, 48px 48px, 48px 48px;
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 40%, transparent);
+  color: var(--primary-foreground);
+}
+
+.display-font {
+  font-family: var(--font-cinzel), serif;
+}
+
+.hairline {
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+}
+
+.gold-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  padding: 0.75rem 1.25rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 600;
+  transition: opacity 160ms ease;
+}
+
+.gold-btn:hover {
+  opacity: 0.88;
+}
+
+.ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  color: var(--foreground);
+  padding: 0.75rem 1.25rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: color-mix(in oklab, var(--brand-red-deep) 55%, transparent);
+}
+
+.field {
+  width: 100%;
+  background: color-mix(in oklab, var(--ink) 70%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  color: var(--foreground);
+  padding: 0.7rem 0.85rem;
+  outline: none;
+}
+
+.field:focus {
+  border-color: var(--accent);
+}
+
+.tile {
+  background: color-mix(in oklab, var(--card) 88%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 65%, transparent);
+  padding: 1.25rem;
+}
+
+.brand-gradient {
+  color: var(--paper);
+  background-image: linear-gradient(
+    115deg,
+    var(--brand-red-deep) 0%,
+    var(--brand-red) 48%,
+    var(--signal) 100%
+  );
+}
+
+.brand-text-gradient {
+  background: linear-gradient(115deg, var(--brand-red) 0%, var(--signal) 72%);
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.animate-marquee {
+  animation: 24s linear infinite marquee;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translate(0);
+  }
+  to {
+    transform: translate(-25%);
+  }
+}
