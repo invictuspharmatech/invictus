@@ -1,0 +1,25 @@
+# Copy to the MASTER (this live shop server), then restart mysqld:
+#   sudo cp deploy/mysql/99-invictus-master.cnf /etc/mysql/mariadb.conf.d/
+#   sudo systemctl restart mariadb
+# MySQL 8 drop-in folder is often /etc/mysql/mysql.conf.d/
+#
+# App uses the Unix socket. Open 3306 only to the SLAVE IP (firewall).
+
+[mysqld]
+server-id = 1
+bind-address = 0.0.0.0
+
+log_bin = mysql-bin
+binlog_format = ROW
+expire_logs_days = 7
+log_slave_updates = 1
+
+skip_name_resolve = 1
+max_connections = 150
+innodb_file_per_table = 1
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+
+# Oracle MySQL 8 only (MariaDB will refuse unknown options — leave commented):
+# gtid_mode = ON
+# enforce_gtid_consistency = ON

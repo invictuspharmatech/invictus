@@ -5,3 +5,5 @@ PyJWT>=2.9
 Pillow>=10.0
 PyMySQL>=1.1
 cryptography>=42.0
+gunicorn>=22.0
+python-dotenv>=1.0

@@ -1,0 +1,492 @@
+Invictus Pharma — SOP: deploy to the live Linux server
+Version: 1.0
+Repo: https://github.com/invictuspharmatech/invictus
+Default domain in configs: invictuspharma.net
+GitHub login: invictuspharmatech@proton.me
+
+Read this top to bottom. Do not skip a step.
+Do not run these steps on your Windows PC except where it says Windows.
+
+What this setup is
+  - Next.js + Django in Docker (like ELP)
+  - nginx in Docker on ports 80 and 443
+  - MySQL/MariaDB on the HOST machine (systemd), not in Docker
+  - Shop always writes to this host (MASTER)
+  - Optional second server = SLAVE for backup / failover
+
+
+------------------------------------------------------------------------
+0) Fill this in before you start (write it down)
+------------------------------------------------------------------------
+
+Live domain (if not invictuspharma.net):  _______________________
+Server public IPv4:                       _______________________
+SSH user (usually root or ubuntu):        _______________________
+
+MYSQL_PASSWORD (shop DB user):            _______________________
+  Use this same value in .env AND in CREATE USER below.
+
+PUT_YOUR_SERVER_IP (same as public IPv4): _______________________
+
+SMTP (later, in CMS — not in .env):
+  Host:     _______________________   (example smtp.zoho.com.au)
+  User:     _______________________
+  Password: _______________________
+
+Optional replica (skip section 17 if none):
+  Slave server IP:                        _______________________
+  PUT_YOUR_REPL_PASSWORD:                 _______________________
+
+Do NOT invent new AUTH_SECRET or DJANGO_SECRET_KEY. Copy them from
+.env.example. Changing them later logs everyone out.
+
+
+------------------------------------------------------------------------
+1) Windows PC — code is on GitHub
+------------------------------------------------------------------------
+
+On the PC, project folder must already be pushed (see GIT_WINDOWS_CMD.txt).
+
+  cd /d "d:\alpa proj\invictuspharma"
+  git add .
+  git commit -m "Production Docker and host MySQL"
+  git push
+
+If git push is not set up yet, finish GIT_WINDOWS_CMD.txt first, then come back.
+
+
+------------------------------------------------------------------------
+2) SSH into the live server
+------------------------------------------------------------------------
+
+From Windows CMD (or any SSH client):
+
+  ssh YOUR_SSH_USER@PUT_YOUR_SERVER_IP
+
+All remaining steps are on the Linux server unless marked Windows.
+
+
+------------------------------------------------------------------------
+3) Ubuntu packages
+------------------------------------------------------------------------
+
+  sudo apt update
+  sudo apt upgrade -y
+  sudo apt install -y ca-certificates curl git ufw
+
+
+------------------------------------------------------------------------
+4) Install Docker Engine + Compose plugin
+------------------------------------------------------------------------
+
+Official Docker install (Ubuntu):
+
+  sudo apt install -y docker.io docker-compose-v2
+  sudo systemctl enable --now docker
+  docker --version
+  docker compose version
+
+If "docker compose" is not found, install the Compose plugin from
+https://docs.docker.com/engine/install/ubuntu/ then retry.
+
+Add your SSH user to docker (skip if you are always using sudo):
+
+  sudo usermod -aG docker $USER
+  Log out and SSH back in.
+
+
+------------------------------------------------------------------------
+5) Firewall
+------------------------------------------------------------------------
+
+  sudo ufw default deny incoming
+  sudo ufw default allow outgoing
+  sudo ufw allow OpenSSH
+  sudo ufw allow 80/tcp
+  sudo ufw allow 443/tcp
+  sudo ufw enable
+  sudo ufw status
+
+Do NOT open 3306 to the world.
+If you add a replica later, allow 3306 only from the slave IP (step 17).
+
+
+------------------------------------------------------------------------
+6) Folders
+------------------------------------------------------------------------
+
+  sudo mkdir -p /var/www/invictus
+  sudo mkdir -p /var/www/certbot
+  sudo mkdir -p /var/www/invictus/data/media
+  sudo mkdir -p /var/www/invictus/data/static
+  sudo mkdir -p /var/backups/invictus-mysql
+  sudo chown -R $USER:$USER /var/www/invictus
+
+
+------------------------------------------------------------------------
+7) Clone the private repo
+------------------------------------------------------------------------
+
+  cd /var/www/invictus
+  git clone https://github.com/invictuspharmatech/invictus.git .
+
+If the folder is not empty, clone into a temp dir and move files, or:
+
+  git init
+  git remote add origin https://github.com/invictuspharmatech/invictus.git
+  git fetch origin
+  git checkout -b main origin/main
+
+GitHub will ask you to sign in (browser or Personal Access Token).
+Use invictuspharmatech@proton.me. Do not use your other GitHub user.
+
+Confirm you see docker-compose.yml, Dockerfile, backend, src:
+
+  ls
+
+
+------------------------------------------------------------------------
+8) Install MariaDB on the HOST (not Docker)
+------------------------------------------------------------------------
+
+  sudo apt install -y mariadb-server
+  sudo mysql_secure_installation
+
+Copy the master config (needed even if the slave comes later):
+
+  sudo cp /var/www/invictus/deploy/mysql/99-invictus-master.cnf /etc/mysql/mariadb.conf.d/
+  sudo systemctl restart mariadb
+  sudo systemctl enable mariadb
+  sudo systemctl status mariadb
+
+Confirm the socket exists (Ubuntu/Debian):
+
+  ls -l /var/run/mysqld/mysqld.sock
+
+If this file is missing, do not start Docker yet — MariaDB is not running.
+
+
+------------------------------------------------------------------------
+9) Create the database and shop user
+------------------------------------------------------------------------
+
+  sudo mysql
+
+Paste (change ONLY the password string):
+
+  CREATE DATABASE IF NOT EXISTS invictuspharma CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  CREATE USER IF NOT EXISTS 'invictus'@'localhost' IDENTIFIED BY 'PUT_YOUR_MYSQL_PASSWORD';
+  GRANT ALL PRIVILEGES ON invictuspharma.* TO 'invictus'@'localhost';
+  FLUSH PRIVILEGES;
+  EXIT;
+
+Check:
+
+  sudo mysql -u invictus -p -e "SHOW DATABASES;"
+  (type the same MYSQL_PASSWORD)
+
+
+------------------------------------------------------------------------
+10) Create .env on the server
+------------------------------------------------------------------------
+
+  cd /var/www/invictus
+  cp .env.example .env
+  nano .env
+
+Change these lines. Leave AUTH_SECRET and DJANGO_SECRET_KEY unchanged.
+
+  MYSQL_PASSWORD=          → your real DB password from step 9
+  PUT_YOUR_SERVER_IP       → this server IPv4 (inside DJANGO_ALLOWED_HOSTS)
+  PUBLIC_SITE_URL=https://invictuspharma.net
+  NEXT_PUBLIC_SITE_URL=https://invictuspharma.net
+  CORS_ALLOWED_ORIGINS=https://invictuspharma.net,https://www.invictuspharma.net
+  DJANGO_ALLOWED_HOSTS=invictuspharma.net,www.invictuspharma.net,THE_IP,127.0.0.1,localhost
+  COOKIE_SECURE=0
+  MYSQL_HOST=/run/mysqld/mysqld.sock
+  MYSQL_USER=invictus
+  MYSQL_DATABASE=invictuspharma
+
+If the live domain is NOT invictuspharma.net, replace that name in .env
+AND in these two files:
+
+  nano deploy/nginx.docker.conf
+  nano deploy/nginx.docker.ssl.conf
+
+Save. .env must never be committed to git.
+
+
+------------------------------------------------------------------------
+11) First start (HTTP)
+------------------------------------------------------------------------
+
+  cd /var/www/invictus
+  docker compose build
+  docker compose up -d
+  docker compose ps
+
+Wait until backend, frontend, and nginx are healthy / running.
+
+  docker compose logs -f backend
+
+You should see migrate + collectstatic, then gunicorn.
+Stop following logs: Ctrl+C (containers keep running).
+
+If backend is restarting:
+
+  docker compose logs backend
+  Typical cause: wrong MYSQL_PASSWORD or missing /var/run/mysqld/mysqld.sock
+
+
+------------------------------------------------------------------------
+12) Create the first admin user
+------------------------------------------------------------------------
+
+Django CMS login (django-admin):
+
+  docker compose exec backend python manage.py createsuperuser
+
+Follow the prompts (email + password you will remember).
+
+Optional demo catalog and staff accounts (ONLY on an empty new database):
+
+  docker compose exec backend python manage.py seed_store
+
+Seed staff examples (change these passwords after first login):
+  super@invictuspharma.net
+  admin1@invictuspharma.net
+  w1@invictuspharma.net
+  w2@invictuspharma.net
+
+
+------------------------------------------------------------------------
+13) Smoke test in the browser
+------------------------------------------------------------------------
+
+Open:
+
+  http://PUT_YOUR_SERVER_IP
+
+You should see the storefront.
+
+  Staff UI:      http://PUT_YOUR_SERVER_IP/admin
+  Django admin:  http://PUT_YOUR_SERVER_IP/django-admin/
+
+If the page is a domain error, add the IP to DJANGO_ALLOWED_HOSTS in .env
+and run:
+
+  docker compose up -d --force-recreate backend frontend
+
+
+------------------------------------------------------------------------
+14) DNS
+------------------------------------------------------------------------
+
+At your domain registrar, create A records:
+
+  invictuspharma.net      → PUT_YOUR_SERVER_IP
+  www.invictuspharma.net  → PUT_YOUR_SERVER_IP
+
+Wait until both names resolve (can take minutes to hours):
+
+  ping invictuspharma.net
+
+Then open http://invictuspharma.net and confirm the shop loads.
+
+
+------------------------------------------------------------------------
+15) HTTPS (Let's Encrypt)
+------------------------------------------------------------------------
+
+  sudo apt install -y certbot
+  sudo mkdir -p /var/www/certbot
+
+  sudo certbot certonly --webroot -w /var/www/certbot \
+    -d invictuspharma.net -d www.invictuspharma.net
+
+If certbot fails, DNS is not pointing here yet. Fix DNS and retry.
+Do not switch nginx to SSL until certbot succeeds.
+
+Edit docker-compose.yml. Find the nginx volume line:
+
+  ./deploy/nginx.docker.conf:/etc/nginx/conf.d/default.conf:ro
+
+Change it to:
+
+  ./deploy/nginx.docker.ssl.conf:/etc/nginx/conf.d/default.conf:ro
+
+Save, then:
+
+  cd /var/www/invictus
+  docker compose up -d nginx
+
+In .env set:
+
+  COOKIE_SECURE=1
+
+Then:
+
+  docker compose up -d --force-recreate backend frontend
+
+Open https://invictuspharma.net — padlock must work.
+Renewal: certbot installs a timer on Ubuntu. Confirm:
+
+  sudo systemctl list-timers | findstr certbot
+  (on Linux: sudo systemctl list-timers | grep certbot)
+
+
+------------------------------------------------------------------------
+16) Email (CMS — not .env)
+------------------------------------------------------------------------
+
+Log in to https://invictuspharma.net/admin
+Open CMS → Email (or /admin/cms/email).
+
+Enter real SMTP host, port 587, TLS, username, password.
+Send a test message.
+
+Do not put the SMTP password in .env or in git.
+
+
+------------------------------------------------------------------------
+17) Daily database backup on the host
+------------------------------------------------------------------------
+
+  sudo chmod +x /var/www/invictus/deploy/mysql/backup-host.sh
+  sudo /var/www/invictus/deploy/mysql/backup-host.sh
+
+Confirm a .sql.gz file appeared:
+
+  ls -lh /var/backups/invictus-mysql
+
+Cron (every day 02:15):
+
+  echo '15 2 * * * root /var/www/invictus/deploy/mysql/backup-host.sh >> /var/log/invictus-mysql-backup.log 2>&1' | sudo tee /etc/cron.d/invictus-mysql-backup
+  sudo chmod 644 /etc/cron.d/invictus-mysql-backup
+
+Restore (disaster only):
+
+  gunzip -c /var/backups/invictus-mysql/invictuspharma_YYYY-MM-DD_HHMM.sql.gz | sudo mysql invictuspharma
+
+
+------------------------------------------------------------------------
+18) Optional: master → slave on a second server
+------------------------------------------------------------------------
+
+Skip this entire step if you do not have a replica yet.
+
+On MASTER (this shop server) in sudo mysql:
+
+  CREATE USER IF NOT EXISTS 'repl'@'PUT_SLAVE_IP' IDENTIFIED BY 'PUT_YOUR_REPL_PASSWORD';
+  GRANT REPLICATION SLAVE ON *.* TO 'repl'@'PUT_SLAVE_IP';
+  FLUSH PRIVILEGES;
+  SHOW MASTER STATUS;
+
+  sudo ufw allow from PUT_SLAVE_IP to any port 3306 proto tcp
+
+Dump current data:
+
+  sudo mysqldump --single-transaction --master-data=2 --routines --triggers --events invictuspharma | gzip > /tmp/invictus-seed.sql.gz
+
+Copy /tmp/invictus-seed.sql.gz to the slave.
+
+On SLAVE:
+
+  sudo apt install -y mariadb-server
+  sudo cp 99-invictus-slave.cnf /etc/mysql/mariadb.conf.d/
+  sudo systemctl restart mariadb
+  gunzip -c invictus-seed.sql.gz | sudo mysql
+  (create empty invictuspharma first if needed)
+
+  CHANGE MASTER TO
+    MASTER_HOST='PUT_MASTER_IP',
+    MASTER_USER='repl',
+    MASTER_PASSWORD='PUT_YOUR_REPL_PASSWORD',
+    MASTER_USE_GTID=slave_pos;
+  START SLAVE;
+  SHOW SLAVE STATUS\G
+
+Slave_IO_Running and Slave_SQL_Running must both be Yes.
+
+Do NOT set shop MYSQL_HOST to the slave. The live site always uses the master.
+
+
+------------------------------------------------------------------------
+19) Day-2: ship new code
+------------------------------------------------------------------------
+
+On Windows after you change code:
+
+  cd /d "d:\alpa proj\invictuspharma"
+  git add .
+  git commit -m "Describe the change"
+  git push
+
+On the server:
+
+  cd /var/www/invictus
+  git pull
+  docker compose build
+  docker compose up -d
+
+If you only changed .env:
+
+  docker compose up -d --force-recreate
+
+
+------------------------------------------------------------------------
+20) Useful checks
+------------------------------------------------------------------------
+
+  docker compose ps
+  docker compose logs --tail=80 backend
+  docker compose logs --tail=80 frontend
+  docker compose logs --tail=80 nginx
+  curl -I http://127.0.0.1/api/health/
+  sudo mysql -u invictus -p -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='invictuspharma';"
+
+Stop stack (site down):
+
+  cd /var/www/invictus
+  docker compose down
+
+Start again:
+
+  docker compose up -d
+
+MariaDB stays up — it is not part of docker compose down.
+
+
+------------------------------------------------------------------------
+21) What you must never do
+------------------------------------------------------------------------
+
+  - Do not commit .env
+  - Do not put MySQL or SMTP passwords in git
+  - Do not run a MySQL container for this project
+  - Do not point MYSQL_HOST at the slave
+  - Do not git push --force to main
+  - Do not change AUTH_SECRET after go-live unless you intend to log everyone out
+
+
+------------------------------------------------------------------------
+22) Go-live checklist (tick on paper)
+------------------------------------------------------------------------
+
+  [ ] Code is on GitHub main
+  [ ] SSH to server works
+  [ ] Docker + compose installed
+  [ ] UFW allows 22, 80, 443 only (3306 not public)
+  [ ] MariaDB running, socket exists
+  [ ] Database invictuspharma + user invictus@localhost
+  [ ] .env MYSQL_PASSWORD matches CREATE USER
+  [ ] .env PUT_YOUR_SERVER_IP replaced
+  [ ] docker compose ps all healthy
+  [ ] Storefront loads on http://IP
+  [ ] /admin and /django-admin/ work
+  [ ] DNS A records point here
+  [ ] HTTPS padlock works
+  [ ] COOKIE_SECURE=1 after HTTPS
+  [ ] SMTP test mail sent from CMS
+  [ ] backup-host.sh ran once and cron exists
+  [ ] (optional) slave replicating

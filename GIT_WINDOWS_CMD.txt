@@ -108,6 +108,51 @@ If it still fails, the GitHub repo may not be empty, or you may not have access.
 Open https://github.com/invictuspharmatech/invictus and confirm you can see it.
 
 
+------------------------------------------------------------
+If you see: remote: Repository not found
+------------------------------------------------------------
+
+The GitHub USER exists (invictuspharmatech). Git does not create the repo for you.
+You must create it in the browser first, while logged in as invictuspharmatech@proton.me:
+
+  1. Open https://github.com/new
+  2. Owner: invictuspharmatech
+  3. Repository name: invictus
+  4. Choose Private
+  5. Leave these UNCHECKED: Add a README, Add .gitignore, Choose a license
+     (you already have code on this PC)
+  6. Click Create repository
+
+Then in CMD, point THIS project at the new GitHub user without
+logging out your other GitHub account on this PC:
+
+  cd /d "d:\alpa proj\invictuspharma"
+  git remote set-url origin https://invictuspharmatech@github.com/invictuspharmatech/invictus.git
+  git config --local credential.useHttpPath true
+  git push -u origin main
+
+Do NOT run: git credential-manager github logout
+That would sign out the other user.
+
+When a login window appears:
+  - Choose "Add a GitHub account" / sign in with browser
+  - Use invictuspharmatech@proton.me
+  - Do not pick your old GitHub user
+
+The username in the URL (invictuspharmatech@github.com) tells Git to use
+the new account for this repo only. Other folders keep using the old saved login.
+
+If CMD asks for Username / Password:
+  Username: invictuspharmatech
+  Password: Personal Access Token from the NEW account (not the old one)
+  Create the token while logged into GitHub as invictuspharmatech@proton.me
+  https://github.com/settings/tokens  (tick "repo")
+
+Confirm in the browser while logged in as the NEW user
+(must NOT be 404):
+  https://github.com/invictuspharmatech/invictus
+
+
 ============================================================
 2) Later: send new changes from CMD
 ============================================================

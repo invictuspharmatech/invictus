@@ -33,6 +33,17 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.backend.example
+
+# python / docker data
+__pycache__/
+*.pyc
+/backend/staticfiles/
+/backend/media/
+/data/media/*
+/data/static/*
+!/data/media/.gitkeep
+!/data/static/.gitkeep
 
 /prisma/dev.db
 /prisma/dev.db-journal

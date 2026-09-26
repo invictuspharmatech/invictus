@@ -3,9 +3,26 @@ import os
 
 import pymysql
 
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
+
 pymysql.install_as_MySQLdb()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+if load_dotenv:
+    load_dotenv(BASE_DIR / ".env")
+    load_dotenv(BASE_DIR.parent / ".env")
+
+
+def env_first(*keys: str, default: str = "") -> str:
+    for key in keys:
+        value = os.environ.get(key)
+        if value is not None and value != "":
+            return value
+    return default
+
 
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY",
@@ -17,7 +34,13 @@ AUTH_SECRET = os.environ.get(
 )
 
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if host.strip()
+]
+DJANGO_ADMIN_PATH = os.environ.get("DJANGO_ADMIN_PATH", "admin").strip("/") + "/"
+PUBLIC_SITE_URL = os.environ.get("PUBLIC_SITE_URL", "http://localhost:3000").rstrip("/")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -67,11 +90,11 @@ TEMPLATES = [
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": os.environ.get("MYSQL_DATABASE", "invictuspharma"),
-        "USER": os.environ.get("MYSQL_USER", "root"),
-        "PASSWORD": os.environ.get("MYSQL_PASSWORD", ""),
-        "HOST": os.environ.get("MYSQL_HOST", "127.0.0.1"),
-        "PORT": os.environ.get("MYSQL_PORT", "3306"),
+        "NAME": env_first("MYSQL_DATABASE", "DB_NAME", default="invictuspharma"),
+        "USER": env_first("MYSQL_USER", "DB_USER", default="root"),
+        "PASSWORD": env_first("MYSQL_PASSWORD", "DB_PASSWORD", default=""),
+        "HOST": env_first("MYSQL_HOST", "DB_HOST", default="127.0.0.1"),
+        "PORT": env_first("MYSQL_PORT", "DB_PORT", default="3306"),
         "OPTIONS": {
             "charset": "utf8mb4",
             "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
@@ -88,18 +111,27 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_ROOT = Path(os.environ.get("STATIC_ROOT", BASE_DIR / "staticfiles"))
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", BASE_DIR / "media"))
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "0") == "1"
+if COOKIE_SECURE:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    CSRF_COOKIE_SAMESITE = "Lax"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+_default_cors = "http://localhost:3000,http://127.0.0.1:3000"
+if PUBLIC_SITE_URL:
+    _default_cors = f"{_default_cors},{PUBLIC_SITE_URL}"
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
-    for origin in os.environ.get(
-        "CORS_ALLOWED_ORIGINS",
-        "http://localhost:3000,http://127.0.0.1:3000",
-    ).split(",")
+    for origin in os.environ.get("CORS_ALLOWED_ORIGINS", _default_cors).split(",")
     if origin.strip()
 ]
 CORS_ALLOW_CREDENTIALS = True

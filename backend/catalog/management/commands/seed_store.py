@@ -11,13 +11,13 @@ from cms.models import Banner, FAQItem, NavigationLink, Page, SiteSetting
 from orders.models import Order, OrderItem
 
 STAFF = [
-    ("super@invictuspharma.com", "Super User", User.Role.SUPERUSER, "InvictusSuper!2026"),
-    ("admin1@invictuspharma.com", "Admin One", User.Role.ADMIN, "AdminOne!2026"),
-    ("admin2@invictuspharma.com", "Admin Two", User.Role.ADMIN, "AdminTwo!2026"),
-    ("admin3@invictuspharma.com", "Admin Three", User.Role.ADMIN, "AdminThree!2026"),
-    ("admin4@invictuspharma.com", "Admin Four", User.Role.ADMIN, "AdminFour!2026"),
-    ("w1@invictuspharma.com", "Warehouse 1", User.Role.WAREHOUSE_1, "WarehouseOne!2026"),
-    ("w2@invictuspharma.com", "Warehouse 2", User.Role.WAREHOUSE_2, "WarehouseTwo!2026"),
+    ("super@invictuspharma.net", "Super User", User.Role.SUPERUSER, "InvictusSuper!2026"),
+    ("admin1@invictuspharma.net", "Admin One", User.Role.ADMIN, "AdminOne!2026"),
+    ("admin2@invictuspharma.net", "Admin Two", User.Role.ADMIN, "AdminTwo!2026"),
+    ("admin3@invictuspharma.net", "Admin Three", User.Role.ADMIN, "AdminThree!2026"),
+    ("admin4@invictuspharma.net", "Admin Four", User.Role.ADMIN, "AdminFour!2026"),
+    ("w1@invictuspharma.net", "Warehouse 1", User.Role.WAREHOUSE_1, "WarehouseOne!2026"),
+    ("w2@invictuspharma.net", "Warehouse 2", User.Role.WAREHOUSE_2, "WarehouseTwo!2026"),
 ]
 
 WAREHOUSE_ONE = {"peptides-glps", "peptides-and-glps", "aminos", "peptides"}

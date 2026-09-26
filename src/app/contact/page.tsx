@@ -47,7 +47,7 @@ export default function ContactPage() {
             Our team understands the performance community and is here for product questions,
             order inquiries, or general support.
           </p>
-          <p className="mt-6 text-sm">Email: support@invictuspharma.com</p>
+          <p className="mt-6 text-sm">Email: support@invictuspharma.net</p>
           <p className="mt-2 text-sm text-muted-foreground">Response time: 24–48 hours on business days</p>
         </div>
       </div>

@@ -29,31 +29,31 @@ const prisma = new PrismaClient();
 
 const STAFF = [
   {
-    email: "super@invictuspharma.com",
+    email: "super@invictuspharma.net",
     name: "Super User",
     role: Role.SUPERUSER,
     password: "InvictusSuper!2026",
   },
   {
-    email: "admin1@invictuspharma.com",
+    email: "admin1@invictuspharma.net",
     name: "Admin One",
     role: Role.ADMIN,
     password: "AdminOne!2026",
   },
   {
-    email: "admin2@invictuspharma.com",
+    email: "admin2@invictuspharma.net",
     name: "Admin Two",
     role: Role.ADMIN,
     password: "AdminTwo!2026",
   },
   {
-    email: "admin3@invictuspharma.com",
+    email: "admin3@invictuspharma.net",
     name: "Admin Three",
     role: Role.ADMIN,
     password: "AdminThree!2026",
   },
   {
-    email: "admin4@invictuspharma.com",
+    email: "admin4@invictuspharma.net",
     name: "Admin Four",
     role: Role.ADMIN,
     password: "AdminFour!2026",

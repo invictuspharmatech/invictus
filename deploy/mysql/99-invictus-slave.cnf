@@ -1,0 +1,23 @@
+# Copy to the SLAVE (backup / replica server), then restart mysqld.
+# Do not point the shop .env MYSQL_HOST at this machine.
+
+[mysqld]
+server-id = 2
+bind-address = 127.0.0.1
+read_only = 1
+
+log_bin = mysql-bin
+relay_log = relay-bin
+binlog_format = ROW
+expire_logs_days = 7
+log_slave_updates = 1
+
+skip_name_resolve = 1
+replicate-do-db = invictuspharma
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+
+# Oracle MySQL 8 only:
+# super_read_only = 1
+# gtid_mode = ON
+# enforce_gtid_consistency = ON
