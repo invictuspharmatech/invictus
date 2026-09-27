@@ -39,6 +39,9 @@ ALLOWED_HOSTS = [
     for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
     if host.strip()
 ]
+for docker_host in ("backend", "frontend", "nginx"):
+    if docker_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(docker_host)
 DJANGO_ADMIN_PATH = os.environ.get("DJANGO_ADMIN_PATH", "admin").strip("/") + "/"
 PUBLIC_SITE_URL = os.environ.get("PUBLIC_SITE_URL", "http://localhost:3000").rstrip("/")
 

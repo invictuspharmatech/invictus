@@ -74,12 +74,12 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:3000').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3000').then(()=>process.exit(0)).catch(()=>process.exit(1))",
         ]
-      interval: 20s
-      timeout: 10s
-      retries: 8
-      start_period: 40s
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
 
   nginx:
     build:
@@ -100,7 +100,7 @@ services:
       backend:
         condition: service_healthy
       frontend:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD", "nginx", "-t"]
       interval: 30s

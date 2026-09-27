@@ -2,6 +2,16 @@ import { cookies } from "next/headers";
 
 const BASE = process.env.DJANGO_API_URL ?? "http://127.0.0.1:8000";
 
+function publicHostHeader(): string | null {
+  const raw = process.env.PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  if (!raw) return null;
+  try {
+    return new URL(raw).host;
+  } catch {
+    return null;
+  }
+}
+
 export class DjangoError extends Error {
   status: number;
   payload: unknown;
@@ -27,6 +37,10 @@ export async function djangoFetch(path: string, init: DjangoInit = {}): Promise<
   }
   if (token) {
     headers.set("authorization", `Bearer ${token}`);
+  }
+  const publicHost = publicHostHeader();
+  if (publicHost && !headers.has("host")) {
+    headers.set("host", publicHost);
   }
   return fetch(djangoUrl(path), { cache: "no-store", ...rest, headers });
 }
