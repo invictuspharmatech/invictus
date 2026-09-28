@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/site/PageHeader";
@@ -9,15 +9,25 @@ import { Suspense } from "react";
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    params.get("error") ? "Invalid email or password." : null,
+  );
   const next = params.get("next") || "/account";
+
+  useEffect(() => {
+    if (!params.get("email") && !params.get("password")) return;
+    const clean = next && next !== "/account" ? `/login?next=${encodeURIComponent(next)}` : "/login";
+    router.replace(clean);
+  }, [params, next, router]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError(null);
     const form = new FormData(event.currentTarget);
     const response = await fetch("/api/auth/login", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      credentials: "same-origin",
+      headers: { "content-type": "application/json", accept: "application/json" },
       body: JSON.stringify({
         email: form.get("email"),
         password: form.get("password"),
@@ -33,9 +43,23 @@ function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="tile mx-auto max-w-md space-y-4">
-      <input className="field" name="email" type="email" placeholder="Email" required />
-      <input className="field" name="password" type="password" placeholder="Password" required />
+    <form method="post" action="/api/auth/login" onSubmit={onSubmit} className="tile mx-auto max-w-md space-y-4">
+      <input
+        className="field"
+        name="email"
+        type="email"
+        placeholder="Email"
+        autoComplete="username"
+        required
+      />
+      <input
+        className="field"
+        name="password"
+        type="password"
+        placeholder="Password"
+        autoComplete="current-password"
+        required
+      />
       {error ? <p className="text-sm text-brand-red">{error}</p> : null}
       <button className="gold-btn w-full" type="submit">
         Sign in

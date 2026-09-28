@@ -33,7 +33,7 @@ export default function RegisterPage() {
   return (
     <div className="px-4 pb-20">
       <PageHeader title="Create an account" />
-      <form onSubmit={onSubmit} className="tile mx-auto max-w-md space-y-4">
+      <form method="post" action="/api/auth/register" onSubmit={onSubmit} className="tile mx-auto max-w-md space-y-4">
         <input className="field" name="name" placeholder="Name" required />
         <input className="field" name="email" type="email" placeholder="Email" required />
         <input className="field" name="password" type="password" placeholder="Password" minLength={8} required />

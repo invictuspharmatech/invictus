@@ -173,6 +173,12 @@ Examples of commit messages:
 
 If git commit says "nothing to commit", there is nothing new to push.
 
+On the live server after that push:
+
+  cd ~/IVP
+  ./deploy.sh
+
+
 If git push says your branch is behind (someone else pushed first):
 
   git pull

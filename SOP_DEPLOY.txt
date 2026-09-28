@@ -422,14 +422,16 @@ On Windows after you change code:
   git commit -m "Describe the change"
   git push
 
-On the server:
+On the server (one command after the first chmod):
 
-  cd /var/www/invictus
-  git pull
-  docker compose build
-  docker compose up -d
+  cd ~/IVP
+  chmod +x deploy.sh
+  ./deploy.sh
 
-If you only changed .env:
+That pulls GitHub, rebuilds images, restarts containers, and checks /api/health/.
+Host MySQL and .env are left alone.
+
+If you only changed .env (no git):
 
   docker compose up -d --force-recreate
 
