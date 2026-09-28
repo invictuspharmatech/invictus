@@ -17,14 +17,31 @@ fi
 
 echo "==> $(date -Is)  updating ${ROOT}"
 
-if [[ -n "$(git status --porcelain)" ]]; then
-  echo "Server has uncommitted files. Commit or stash them before deploy:"
-  git status --short
+if [[ -f /etc/letsencrypt/live/invictuspharma.net/fullchain.pem ]]; then
+  cp deploy/compose.ssl.override.yml docker-compose.override.yml
+  echo "==> HTTPS override in place (docker-compose.override.yml)"
+fi
+
+# Local edits to tracked files block git pull. HTTPS belongs in the override file.
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  git restore --worktree --staged -- deploy.sh docker-compose.yml 2>/dev/null \
+    || git checkout -- deploy.sh docker-compose.yml
+fi
+
+DIRTY="$(git status --porcelain)"
+if [[ -n "${DIRTY}" ]]; then
+  echo "Server still has local changes (not deploy.sh / docker-compose.yml):"
+  echo "${DIRTY}"
+  echo "Move those aside, then run ./deploy.sh again."
   exit 1
 fi
 
 echo "==> git pull"
 git pull --ff-only
+
+if [[ -f /etc/letsencrypt/live/invictuspharma.net/fullchain.pem ]]; then
+  cp deploy/compose.ssl.override.yml docker-compose.override.yml
+fi
 
 echo "==> docker compose build"
 docker compose build
@@ -36,8 +53,9 @@ echo "==> status"
 docker compose ps
 
 echo "==> health"
-if curl -fsS --max-time 10 "http://127.0.0.1/api/health/" ; then
+if docker compose exec -T backend python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/', timeout=8)"; then
   echo
+  echo "backend /api/health/ ok"
 else
   echo
   echo "Health check failed. Recent backend logs:"
@@ -46,4 +64,4 @@ else
 fi
 
 echo "==> done. Site should be live."
-echo "    Frontend image rebuilds with this script; wait a minute then hard-refresh the browser."
+echo "    Hard-refresh the browser after a frontend rebuild."

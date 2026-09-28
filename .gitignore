@@ -48,6 +48,9 @@ __pycache__/
 /prisma/dev.db
 /prisma/dev.db-journal
 
+# Live-server HTTPS overlay (do not commit)
+/docker-compose.override.yml
+
 # vercel
 .vercel
 
