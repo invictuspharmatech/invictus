@@ -3,17 +3,49 @@ import { redirect } from "next/navigation";
 import { requireStaff } from "@/lib/auth";
 import { Logo } from "@/components/site/Logo";
 import { LogoutButton } from "@/components/shop/LogoutButton";
+import { AdminNav, type AdminNavItem } from "@/components/admin/AdminNav";
 import { isFullAdmin, roleLabel } from "@/lib/roles";
 
-const ALL_LINKS = [
-  { href: "/admin", label: "Overview", adminOnly: false },
-  { href: "/admin/orders", label: "Orders", adminOnly: false },
-  { href: "/admin/products", label: "Products", adminOnly: false },
-  { href: "/admin/transfers", label: "Transfers", adminOnly: false },
-  { href: "/admin/cms", label: "CMS", adminOnly: true },
-  { href: "/admin/accounting", label: "Accounting", adminOnly: true },
-  { href: "/admin/affiliates", label: "Affiliates", adminOnly: true },
-  { href: "/admin/users", label: "Users", adminOnly: true },
+const ADMIN_NAV: AdminNavItem[] = [
+  { href: "/admin", label: "Overview" },
+  { href: "/admin/orders", label: "Orders" },
+  {
+    href: "/admin/products",
+    label: "Catalog",
+    children: [
+      { href: "/admin/products", label: "Products" },
+      { href: "/admin/cms/test-results", label: "Test results" },
+    ],
+  },
+  {
+    href: "/admin/transfers",
+    label: "Warehouses",
+    children: [
+      { href: "/admin/transfers", label: "Transfers & requests" },
+      { href: "/admin/cms/warehouses", label: "Warehouse settings" },
+    ],
+  },
+  {
+    href: "/admin/cms",
+    label: "CMS",
+    children: [
+      { href: "/admin/cms/pages", label: "Pages" },
+      { href: "/admin/cms/faq", label: "FAQ" },
+      { href: "/admin/cms/banners", label: "Banners / promo bar" },
+      { href: "/admin/cms/email", label: "Email & notifications" },
+      { href: "/admin/cms/settings", label: "Site settings" },
+    ],
+  },
+  { href: "/admin/accounting", label: "Accounting" },
+  { href: "/admin/affiliates", label: "Affiliates" },
+  { href: "/admin/users", label: "Users" },
+];
+
+const WAREHOUSE_NAV: AdminNavItem[] = [
+  { href: "/admin", label: "Overview" },
+  { href: "/admin/orders", label: "Orders" },
+  { href: "/admin/products", label: "Inventory" },
+  { href: "/admin/transfers", label: "Transfers" },
 ];
 
 export default async function AdminLayout({
@@ -24,7 +56,7 @@ export default async function AdminLayout({
   const staff = await requireStaff();
   if (!staff) redirect("/login?next=/admin");
   const admin = isFullAdmin(staff.role);
-  const links = ALL_LINKS.filter((link) => admin || !link.adminOnly);
+  const items = admin ? ADMIN_NAV : WAREHOUSE_NAV;
 
   return (
     <div className="min-h-screen bg-background">
@@ -43,17 +75,7 @@ export default async function AdminLayout({
             <LogoutButton />
           </div>
         </div>
-        <nav className="mx-auto flex max-w-7xl gap-5 overflow-x-auto px-4 pb-3 sm:px-6">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        <AdminNav items={items} />
       </header>
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">{children}</div>
     </div>

@@ -58,6 +58,14 @@ export async function djangoJson<T>(path: string, init: DjangoInit = {}): Promis
   return payload as T;
 }
 
+export async function djangoJsonSafe<T>(path: string, fallback: T): Promise<T> {
+  try {
+    return await djangoJson<T>(path);
+  } catch {
+    return fallback;
+  }
+}
+
 export async function djangoJsonOptional<T>(path: string, init: DjangoInit = {}): Promise<T | null> {
   try {
     return await djangoJson<T>(path, init);

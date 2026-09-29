@@ -427,11 +427,20 @@ def admin_overview_view(request):
     else:
         warehouse = "BOTH"
     open_total = open_qs.aggregate(total=Sum("grand_total"))["total"] or 0
+    if warehouse == Order.Warehouse.WAREHOUSE_1:
+        low_stock = Product.objects.filter(stock_quantity_w1__lte=5).count()
+    elif warehouse == Order.Warehouse.WAREHOUSE_2:
+        low_stock = Product.objects.filter(stock_quantity_w2__lte=5).count()
+    else:
+        low_stock = Product.objects.filter(stock_quantity__lte=5).count()
     orders = orders_qs[:8]
     return Response(
         {
             "productCount": Product.objects.count(),
             "openOrderValue": open_total,
+            "openOrderCount": open_qs.count(),
+            "orderCount": orders_qs.exclude(status__in=[Order.Status.PENDING, Order.Status.CANCELLED]).count(),
+            "lowStockCount": low_stock,
             "pendingAffiliates": AffiliateApplication.objects.filter(status="pending").count(),
             "userCount": user_count_qs.count(),
             "warehouse": warehouse,

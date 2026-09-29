@@ -71,10 +71,10 @@ export default async function HomePage() {
               alt="Invictus Pharma"
               width={220}
               height={220}
-              className="h-32 w-32 shrink-0 object-contain sm:h-40 sm:w-40"
+              className="h-64 w-64 shrink-0 object-contain sm:h-80 sm:w-80"
               priority
             />
-            <h1 className="max-w-3xl font-serif text-6xl leading-[0.9] tracking-[-0.055em] text-balance sm:text-8xl lg:text-[7.2rem]">
+            <h1 className="max-w-3xl font-serif text-3xl leading-[0.95] tracking-[-0.04em] text-balance sm:text-4xl lg:text-[3.6rem]">
               The standard is <em className="brand-text-gradient not-italic">higher.</em>
             </h1>
           </div>

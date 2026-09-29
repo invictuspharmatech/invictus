@@ -11,6 +11,7 @@ from cms.models import Banner, FAQItem, NavigationLink, Page, SiteSetting
 from orders.models import Order, OrderItem
 
 STAFF = [
+    # Invictus-only staff. Never import Great Life customers or mailing lists.
     ("super@invictuspharma.net", "Super User", User.Role.SUPERUSER, "InvictusSuper!2026"),
     ("admin1@invictuspharma.net", "Admin One", User.Role.ADMIN, "AdminOne!2026"),
     ("admin2@invictuspharma.net", "Admin Two", User.Role.ADMIN, "AdminTwo!2026"),
@@ -311,11 +312,11 @@ class Command(BaseCommand):
                     )
 
             Banner.objects.update_or_create(
-                title="Specimen / 001",
+                title="Same-day processing on paid orders received before 2pm ET",
                 defaults={
-                    "subtitle": "A considered collection of performance essentials, selected with the discipline of a laboratory.",
+                    "subtitle": "Bitcoin checkout · $100 minimum · $20 shipping per warehouse",
                     "href": "/products",
-                    "cta_label": "Shop the catalog",
+                    "cta_label": "Shop",
                     "is_active": True,
                     "sort_order": 1,
                 },

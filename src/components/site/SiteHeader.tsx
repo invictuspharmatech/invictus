@@ -1,34 +1,71 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, Search, ShoppingCart, X } from "lucide-react";
-import { Logo } from "@/components/site/Logo";
+import { Menu, ShoppingCart, X } from "lucide-react";
 import { useCart } from "@/components/shop/CartProvider";
+import { HeaderSearch } from "@/components/site/HeaderSearch";
+import { PromoTicker } from "@/components/site/PromoTicker";
 import { isStaff } from "@/lib/roles";
+import { NAV_LINK_CLASS, SHOP_CATEGORIES, TOOL_LINKS } from "@/lib/storefront-nav";
 import type { SessionUser } from "@/lib/types";
 
-const NAV = [
-  { href: "/products", label: "Products" },
-  { href: "/test-results", label: "Test Results" },
-  { href: "/about", label: "About" },
-  { href: "/faq", label: "FAQ" },
-];
+function Wordmark() {
+  return (
+    <Link href="/" className="shrink-0 text-foreground">
+      <span className="block font-mono text-[20px] font-bold leading-none tracking-[0.18em]">
+        INVICTUS PHARMA
+      </span>
+    </Link>
+  );
+}
 
-const EXTRA = [
-  { href: "/bitcoin-tutorial", label: "Bitcoin Tutorial" },
-  { href: "/peptide-calculator", label: "Peptide Calculator" },
-  { href: "/peptide-protocol", label: "Peptide Protocol" },
-  { href: "/crashed-gear-protocol", label: "Crashed Gear Protocol" },
-  { href: "/affiliate", label: "Affiliate" },
-];
+function Dropdown({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="group relative">
+      <button type="button" className={NAV_LINK_CLASS}>
+        {label}
+      </button>
+      <div className="invisible absolute left-0 top-full z-50 min-w-56 border border-border bg-background py-1 opacity-0 shadow-xl transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+        {children}
+      </div>
+    </div>
+  );
+}
 
-export function SiteHeader({ session }: { session: SessionUser | null }) {
+function DropLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="block px-4 py-2.5 font-mono text-[16px] uppercase tracking-[0.12em] text-muted-foreground hover:bg-card hover:text-signal"
+    >
+      {label}
+    </Link>
+  );
+}
+
+export function SiteHeader({
+  session,
+  shopLinks,
+  promoItems,
+}: {
+  session: SessionUser | null;
+  shopLinks: { href: string; label: string }[];
+  promoItems: string[];
+}) {
   const pathname = usePathname();
   const { count } = useCart();
   const staff = session ? isStaff(session.role) : false;
   const [open, setOpen] = useState(false);
+  const shop = shopLinks.length > 0 ? shopLinks : SHOP_CATEGORIES;
+  const accountHref = session ? (staff ? "/admin" : "/account") : "/login";
 
   if (pathname.startsWith("/admin")) {
     return null;
@@ -36,75 +73,53 @@ export function SiteHeader({ session }: { session: SessionUser | null }) {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-10">
-        <Logo />
-        <nav className="hidden items-center gap-8 lg:flex">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-muted-foreground transition hover:text-signal"
-            >
-              {item.label}
-            </Link>
-          ))}
-          <div className="group relative">
-            <button
-              type="button"
-              className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-muted-foreground transition hover:text-signal"
-            >
-              Tools
-            </button>
-            <div className="invisible absolute left-0 top-full z-50 min-w-56 border border-border bg-background opacity-0 shadow-xl transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
-              {EXTRA.filter((item) => item.href !== "/affiliate").map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="block px-4 py-2.5 font-mono text-[10px] uppercase tracking-[.16em] text-muted-foreground hover:bg-card hover:text-signal"
-                >
-                  {item.label}
-                </Link>
-              ))}
+      <PromoTicker items={promoItems} />
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-3 lg:px-10">
+        <Wordmark />
+        <nav className="hidden flex-1 flex-wrap items-center justify-end gap-x-6 gap-y-2 lg:flex">
+          <HeaderSearch />
+          <Link href="/" className={NAV_LINK_CLASS}>
+            Home
+          </Link>
+          <Dropdown label="Shop">
+            {shop.map((item) => (
+              <DropLink key={item.href + item.label} href={item.href} label={item.label} />
+            ))}
+          </Dropdown>
+          <Dropdown label="FAQ">
+            <DropLink href="/faq" label="FAQ" />
+            <div className="group/tools relative">
+              <p className="px-4 py-2.5 font-mono text-[16px] uppercase tracking-[0.12em] text-muted-foreground">
+                Tools & resources
+              </p>
+              <div className="invisible absolute left-full top-0 z-50 min-w-56 border border-border bg-background py-1 opacity-0 shadow-xl transition group-hover/tools:visible group-hover/tools:opacity-100">
+                {TOOL_LINKS.map((item) => (
+                  <DropLink key={item.href} href={item.href} label={item.label} />
+                ))}
+              </div>
             </div>
-          </div>
-          <Link
-            href="/affiliate"
-            className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-muted-foreground transition hover:text-signal"
-          >
-            Affiliate
+          </Dropdown>
+          <Link href="/contact" className={NAV_LINK_CLASS}>
+            Contact
+          </Link>
+          <Link href={accountHref} className={NAV_LINK_CLASS}>
+            My account
+          </Link>
+          <Link href="/cart" className={`${NAV_LINK_CLASS} relative inline-flex items-center gap-2`}>
+            <ShoppingCart className="size-5" />
+            Cart
+            {count > 0 ? (
+              <span className="grid min-w-5 place-items-center bg-primary px-1 font-mono text-[12px] text-primary-foreground">
+                {count}
+              </span>
+            ) : null}
           </Link>
         </nav>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/search"
-            aria-label="Search products"
-            className="hidden p-2 text-muted-foreground transition hover:text-signal sm:block"
-          >
-            <Search className="size-4" />
-          </Link>
-          {session ? (
-            <Link
-              href={staff ? "/admin" : "/account"}
-              className="hidden border-b border-border px-2 py-2 font-mono text-[10px] font-bold uppercase tracking-[.16em] text-muted-foreground transition hover:border-signal hover:text-signal sm:block"
-            >
-              {staff ? "Admin" : "Account"}
-            </Link>
-          ) : (
-            <Link
-              href="/login"
-              className="hidden border-b border-border px-2 py-2 font-mono text-[10px] font-bold uppercase tracking-[.16em] text-muted-foreground transition hover:border-signal hover:text-signal sm:block"
-            >
-              Sign in
-            </Link>
-          )}
-          <Link
-            href="/cart"
-            aria-label={`Cart with ${count} items`}
-            className="relative p-2 text-foreground transition hover:text-signal"
-          >
-            <ShoppingCart className="size-4" />
+        <div className="flex items-center gap-2 lg:hidden">
+          <Link href="/cart" aria-label={`Cart with ${count} items`} className="relative p-2">
+            <ShoppingCart className="size-6" />
             {count > 0 ? (
-              <span className="absolute right-0 top-0 grid min-w-4 place-items-center bg-primary px-1 font-mono text-[9px] text-primary-foreground">
+              <span className="absolute right-0 top-0 grid min-w-4 place-items-center bg-primary px-1 font-mono text-[11px] text-primary-foreground">
                 {count}
               </span>
             ) : null}
@@ -112,25 +127,58 @@ export function SiteHeader({ session }: { session: SessionUser | null }) {
           <button
             type="button"
             aria-label={open ? "Close menu" : "Open menu"}
-            className="p-2 lg:hidden"
+            className="p-2"
             onClick={() => setOpen((value) => !value)}
           >
-            {open ? <X className="size-5" /> : <Menu className="size-5" />}
+            {open ? <X className="size-6" /> : <Menu className="size-6" />}
           </button>
         </div>
       </div>
       {open ? (
-        <div className="border-t border-border bg-background px-6 py-4 lg:hidden">
-          {[...NAV, ...EXTRA].map((item) => (
+        <div className="space-y-3 border-t border-border bg-background px-6 py-4 lg:hidden">
+          <form action="/search" className="flex gap-2">
+            <input className="field" name="q" placeholder="Search" />
+            <button className="gold-btn" type="submit">
+              Go
+            </button>
+          </form>
+          <Link href="/" className={`block py-1 ${NAV_LINK_CLASS}`} onClick={() => setOpen(false)}>
+            Home
+          </Link>
+          <p className={NAV_LINK_CLASS}>Shop</p>
+          {shop.map((item) => (
             <Link
-              key={item.href}
+              key={item.href + item.label}
               href={item.href}
-              className="block py-2 font-mono text-[11px] font-bold uppercase tracking-[.18em] text-muted-foreground"
+              className="block py-1 pl-3 font-mono text-[16px] uppercase tracking-[0.12em] text-muted-foreground"
               onClick={() => setOpen(false)}
             >
               {item.label}
             </Link>
           ))}
+          <Link href="/faq" className={`block py-1 ${NAV_LINK_CLASS}`} onClick={() => setOpen(false)}>
+            FAQ
+          </Link>
+          {TOOL_LINKS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="block py-1 pl-3 font-mono text-[16px] uppercase tracking-[0.12em] text-muted-foreground"
+              onClick={() => setOpen(false)}
+            >
+              {item.label}
+            </Link>
+          ))}
+          <Link href="/contact" className={`block py-1 ${NAV_LINK_CLASS}`} onClick={() => setOpen(false)}>
+            Contact
+          </Link>
+          <Link
+            href={accountHref}
+            className={`block py-1 ${NAV_LINK_CLASS}`}
+            onClick={() => setOpen(false)}
+          >
+            My account
+          </Link>
         </div>
       ) : null}
     </header>

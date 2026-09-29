@@ -24,6 +24,9 @@ export default async function AdminHomePage({
   const overview = await djangoAuthed<{
     productCount: number;
     openOrderValue: number;
+    openOrderCount: number;
+    orderCount: number;
+    lowStockCount: number;
     pendingAffiliates: number;
     userCount: number;
     warehouse: string;
@@ -56,18 +59,29 @@ export default async function AdminHomePage({
         </div>
       ) : null}
       <div className="mt-8 grid gap-4 md:grid-cols-4">
-        <Stat label="Catalog" value={String(overview.productCount)} href="/admin/products" />
+        <Stat label="Orders" value={String(overview.orderCount)} href="/admin/orders" />
+        <Stat
+          label="Open orders"
+          value={String(overview.openOrderCount)}
+          href="/admin/orders"
+        />
         <Stat
           label="Open order value"
           value={formatMoney(overview.openOrderValue)}
           href="/admin/orders"
         />
-        <Stat
-          label="Pending affiliates"
-          value={String(overview.pendingAffiliates)}
-          href="/admin/affiliates"
-        />
-        <Stat label="Visible users" value={String(overview.userCount)} href="/admin/users" />
+        <Stat label="Catalog SKUs" value={String(overview.productCount)} href="/admin/products" />
+        <Stat label="Low stock" value={String(overview.lowStockCount)} href="/admin/products" />
+        {admin ? (
+          <>
+            <Stat
+              label="Pending affiliates"
+              value={String(overview.pendingAffiliates)}
+              href="/admin/affiliates"
+            />
+            <Stat label="Store users" value={String(overview.userCount)} href="/admin/users" />
+          </>
+        ) : null}
       </div>
       <section className="tile mt-8">
         <div className="flex items-center justify-between">
