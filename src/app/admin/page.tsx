@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { djangoAuthed } from "@/lib/django";
 import { requireStaff } from "@/lib/auth";
 import { AccountingWarehouse, WarehouseCode } from "@/lib/enums";
