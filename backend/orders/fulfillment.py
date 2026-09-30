@@ -78,7 +78,11 @@ def recalc_merchandise(order: Order) -> None:
 
 def apply_group_shipping(group_id: str) -> None:
     shipping = float(settings.SHIPPING_USD)
-    orders = list(Order.objects.filter(group_id=group_id).exclude(status=Order.Status.CANCELLED))
+    orders = list(
+        Order.objects.filter(group_id=group_id).exclude(
+            status__in=[Order.Status.CANCELLED, Order.Status.FAILED]
+        )
+    )
     live = []
     empty = []
     for order in orders:
@@ -100,7 +104,7 @@ def apply_group_shipping(group_id: str) -> None:
 def sibling_order(source: Order, warehouse: str) -> Order:
     existing = (
         Order.objects.filter(group_id=source.group_id, warehouse=warehouse)
-        .exclude(status=Order.Status.CANCELLED)
+        .exclude(status__in=[Order.Status.CANCELLED, Order.Status.FAILED])
         .first()
     )
     if existing:

@@ -30,13 +30,26 @@ export default async function AdminOrdersPage() {
                 <p className="text-sm text-muted-foreground">
                   {warehouseLabel(order.warehouse)} · {order.customerName} · {order.customerEmail}
                 </p>
-                <p className="text-xs text-muted-foreground">Group {order.groupId}</p>
+                <p className="text-xs text-muted-foreground">
+                  Group {order.groupId}
+                  {order.paymentStatus ? ` · payment ${order.paymentStatus.toLowerCase()}` : ""}
+                </p>
               </div>
               <div className="text-right">
                 <p>{formatMoney(order.grandTotal)}</p>
                 <p className="text-xs text-muted-foreground">
                   Merch {formatMoney(order.merchandiseTotal)} · Ship {formatMoney(order.shippingTotal)}
                 </p>
+                {order.btcInvoice?.checkoutLink ? (
+                  <a
+                    className="mt-2 inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground"
+                    href={order.btcInvoice.checkoutLink}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open BTCPay invoice
+                  </a>
+                ) : null}
               </div>
             </div>
             <ul className="mt-3 text-sm text-muted-foreground">

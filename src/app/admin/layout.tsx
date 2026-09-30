@@ -33,6 +33,7 @@ const ADMIN_NAV: AdminNavItem[] = [
       { href: "/admin/cms/faq", label: "FAQ" },
       { href: "/admin/cms/banners", label: "Banners / promo bar" },
       { href: "/admin/cms/email", label: "Email & notifications" },
+      { href: "/admin/cms/btcpay", label: "BTCPay / Bitcoin" },
       { href: "/admin/cms/settings", label: "Site settings" },
     ],
   },

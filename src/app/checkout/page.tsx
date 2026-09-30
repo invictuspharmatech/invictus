@@ -9,6 +9,15 @@ import { MIN_ORDER_USD, SHIPPING_USD, formatMoney } from "@/lib/constants";
 import { warehouseLabel } from "@/lib/warehouse";
 import { WarehouseCode } from "@/lib/enums";
 
+type CheckoutOrder = {
+  id: string;
+  orderNumber: string;
+  warehouse: string;
+  grandTotal: number;
+  checkoutLink?: string | null;
+  payUrl?: string | null;
+};
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, merchandiseTotal, clear } = useCart();
@@ -17,10 +26,7 @@ export default function CheckoutPage() {
 
   const groups = useMemo(
     () =>
-      [
-        WarehouseCode.WAREHOUSE_1,
-        WarehouseCode.WAREHOUSE_2,
-      ]
+      [WarehouseCode.WAREHOUSE_1, WarehouseCode.WAREHOUSE_2]
         .map((warehouse) => ({
           warehouse,
           items: items.filter((item) => item.warehouse === warehouse),
@@ -58,15 +64,25 @@ export default function CheckoutPage() {
     const data = (await response.json()) as {
       error?: string;
       groupId?: string;
-      orders?: { orderNumber: string }[];
+      checkoutLink?: string | null;
+      orders?: CheckoutOrder[];
     };
     setPending(false);
     if (!response.ok) {
       setError(data.error || "Checkout failed.");
       return;
     }
+    const orders = data.orders || [];
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("invictus-checkout-pay", JSON.stringify(orders));
+    }
     clear();
-    router.push(`/account/orders?placed=${data.groupId ?? ""}`);
+    const checkoutLink = data.checkoutLink || orders.find((order) => order.checkoutLink)?.checkoutLink;
+    if (checkoutLink && orders.length === 1) {
+      window.location.assign(checkoutLink);
+      return;
+    }
+    router.push(`/checkout/complete?group=${encodeURIComponent(data.groupId || "")}`);
   }
 
   if (items.length === 0) {
@@ -84,7 +100,7 @@ export default function CheckoutPage() {
     <div className="mx-auto max-w-5xl px-4 pb-20 sm:px-6">
       <PageHeader
         title="Checkout"
-        lede={`$${MIN_ORDER_USD} minimum. Bitcoin is the accepted payment method. Mixed-warehouse carts become two orders.`}
+        lede={`$${MIN_ORDER_USD} minimum. Bitcoin is the accepted payment method. After you place the order you will be sent to BTCPay Server to complete payment. Mixed-warehouse carts become two orders.`}
       />
       <form onSubmit={onSubmit} className="grid gap-8 lg:grid-cols-2">
         <div className="tile space-y-4">
@@ -141,7 +157,7 @@ export default function CheckoutPage() {
           </p>
           {error ? <p className="mt-3 text-sm text-brand-red">{error}</p> : null}
           <button className="gold-btn mt-6 w-full" type="submit" disabled={pending}>
-            {pending ? "Placing orders…" : "Place order"}
+            {pending ? "Opening Bitcoin payment…" : "Place order and pay with Bitcoin"}
           </button>
         </div>
       </form>

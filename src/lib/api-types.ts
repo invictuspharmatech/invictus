@@ -42,6 +42,19 @@ export type ApiOrderItem = {
   warehouse: string;
 };
 
+export type ApiBtcInvoice = {
+  invoiceId: string;
+  status: string;
+  amount: number;
+  currency: string;
+  cryptoCode: string;
+  cryptoAmount: string;
+  paymentAddress: string;
+  expiresAt: string | null;
+  checkoutLink: string | null;
+  checkoutClosed: boolean;
+};
+
 export type ApiOrder = {
   id: string;
   orderNumber: string;
@@ -49,6 +62,8 @@ export type ApiOrder = {
   splitIndex: number;
   warehouse: string;
   status: string;
+  paymentStatus?: string;
+  paymentMethod?: string;
   merchandiseTotal: number;
   shippingTotal: number;
   grandTotal: number;
@@ -57,6 +72,23 @@ export type ApiOrder = {
   commissionAmount: number;
   createdAt: string;
   items: ApiOrderItem[];
+  btcInvoice?: ApiBtcInvoice | null;
+};
+
+export type ApiBtcPaySettings = {
+  serverUrl: string;
+  apiKey: string | null;
+  storeId: string;
+  webhookSecret: string | null;
+  isConfigured: boolean;
+  webhookUrl: string;
+  invoiceExpirationMinutes: number;
+  defaultCustomerMessage: string;
+  webhookStatus: {
+    configured: boolean;
+    message: string;
+    webhookId?: string;
+  };
 };
 
 export type ApiPage = {

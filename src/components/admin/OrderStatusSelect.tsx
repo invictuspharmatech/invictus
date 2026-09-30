@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 
 const OPTIONS: OrderStatus[] = [
   OrderStatus.PENDING,
+  OrderStatus.ON_HOLD,
   OrderStatus.PAID,
   OrderStatus.PROCESSING,
   OrderStatus.SHIPPED,
   OrderStatus.DELIVERED,
   OrderStatus.CANCELLED,
+  OrderStatus.FAILED,
 ];
 
 export function OrderStatusSelect({
@@ -36,7 +38,7 @@ export function OrderStatusSelect({
     >
       {OPTIONS.map((option) => (
         <option key={option} value={option}>
-          {option.toLowerCase()}
+          {option.toLowerCase().replaceAll("_", " ")}
         </option>
       ))}
     </select>

@@ -20,10 +20,13 @@ EMAIL_SPLIT_RE = re.compile(r"[\s,;]+")
 TAG_RE = re.compile(r"<[^>]+>")
 
 STATUS_EVENTS = {
+    "ON_HOLD": "order_on_hold",
     "PROCESSING": "order_processing",
     "SHIPPED": "order_shipped",
     "DELIVERED": "order_delivered",
     "CANCELLED": "order_cancelled",
+    "FAILED": "order_failed",
+    "PAID": "order_paid",
 }
 
 
@@ -89,6 +92,13 @@ def warehouse_label(code: str | None) -> str:
 
 def order_context(order) -> dict[str, Any]:
     items = list(order.items.all())
+    pay_now_url = ""
+    try:
+        from orders.pay_token import checkout_url
+
+        pay_now_url = checkout_url(order)
+    except Exception:
+        pay_now_url = ""
     return {
         "site_name": SITE_NAME,
         "order_number": order.order_number,
@@ -103,6 +113,7 @@ def order_context(order) -> dict[str, Any]:
         "merchandise_total": f"{order.merchandise_total:.2f}",
         "shipping_total": f"{order.shipping_total:.2f}",
         "items": ", ".join(f"{item.name} × {item.quantity}" for item in items),
+        "pay_now_url": pay_now_url,
         "shipping_address": ", ".join(
             part
             for part in [

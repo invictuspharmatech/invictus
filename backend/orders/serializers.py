@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from orders.btcpay import serialize_invoice
 from orders.models import ContactMessage, FulfillmentRequest, Order, OrderItem
 
 
@@ -33,7 +34,10 @@ class OrderSerializer(serializers.ModelSerializer):
     customerEmail = serializers.EmailField(source="customer_email")
     commissionAmount = serializers.FloatField(source="commission_amount")
     createdAt = serializers.DateTimeField(source="created_at")
+    paymentStatus = serializers.CharField(source="payment_status")
+    paymentMethod = serializers.CharField(source="payment_method")
     items = OrderItemSerializer(many=True, read_only=True)
+    btcInvoice = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -44,6 +48,8 @@ class OrderSerializer(serializers.ModelSerializer):
             "splitIndex",
             "warehouse",
             "status",
+            "paymentStatus",
+            "paymentMethod",
             "merchandiseTotal",
             "shippingTotal",
             "grandTotal",
@@ -52,7 +58,11 @@ class OrderSerializer(serializers.ModelSerializer):
             "commissionAmount",
             "createdAt",
             "items",
+            "btcInvoice",
         ]
+
+    def get_btcInvoice(self, obj):
+        return serialize_invoice(obj.btc_invoice)
 
 
 class ContactSerializer(serializers.ModelSerializer):

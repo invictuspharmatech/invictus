@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import timedelta
+import logging
 
 from django.conf import settings
 from django.db import transaction
@@ -35,6 +36,10 @@ from orders.fulfillment import (
 )
 from orders.models import AccountingReset, ContactMessage, FulfillmentRequest, Order, OrderItem
 from orders.serializers import FulfillmentRequestSerializer, OrderSerializer
+from orders.btcpay import BtcPayError, create_invoice, is_configured, serialize_invoice
+from orders.pay_token import checkout_url
+
+logger = logging.getLogger(__name__)
 
 
 COUNTED = [
@@ -93,6 +98,13 @@ def checkout_view(request):
     required = ["name", "email", "line1", "city", "state", "postal"]
     if any(not data.get(field) for field in required):
         return Response({"error": "Shipping details are required."}, status=400)
+    if not is_configured():
+        return Response(
+            {
+                "error": "Bitcoin checkout is not configured. Connect BTCPay Server in Admin → CMS → BTCPay."
+            },
+            status=503,
+        )
 
     product_ids = [item.get("productId") for item in items]
     with transaction.atomic():
@@ -172,7 +184,9 @@ def checkout_view(request):
                 split_index=index + 1,
                 warehouse=warehouse,
                 user=session_user if session_user and not getattr(session_user, "is_anonymous", False) else None,
-                status=Order.Status.PAID,
+                status=Order.Status.PENDING,
+                payment_status=Order.PaymentStatus.PENDING,
+                payment_method="btc",
                 merchandise_total=merch,
                 shipping_total=0,
                 grand_total=merch,
@@ -186,7 +200,6 @@ def checkout_view(request):
                 notes=data.get("notes") or "",
                 affiliate=affiliate,
                 commission_amount=commission_amount,
-                paid_at=timezone.now(),
             )
             for line in group_lines:
                 OrderItem.objects.create(
@@ -202,13 +215,37 @@ def checkout_view(request):
             created.append(order)
 
         apply_group_shipping(group_id)
-        payload = []
-        for order in created:
-            order.refresh_from_db()
-            send_order_event("order_placed", order)
-            payload.append({"orderNumber": order.order_number, "warehouse": order.warehouse})
 
-    return Response({"ok": True, "groupId": group_id, "orders": payload})
+    payload = []
+    checkout_link = None
+    invoice_error = None
+    for order in created:
+        order.refresh_from_db()
+        invoice_payload = None
+        try:
+            invoice = create_invoice(order)
+            invoice_payload = serialize_invoice(invoice)
+            link = invoice_payload.get("checkoutLink") if invoice_payload else None
+            if not checkout_link and link:
+                checkout_link = link
+        except BtcPayError as exc:
+            logger.exception("BTCPay invoice failed for %s", order.order_number)
+            invoice_error = str(exc)
+            invoice_payload = {"error": str(exc)}
+        send_order_event("order_placed", order)
+        payload.append(
+            {
+                "id": str(order.id),
+                "orderNumber": order.order_number,
+                "warehouse": order.warehouse,
+                "grandTotal": order.grand_total,
+                "checkoutLink": (invoice_payload or {}).get("checkoutLink"),
+                "payUrl": checkout_url(order),
+                "invoice": invoice_payload,
+            }
+        )
+
+    return Response({"ok": True, "groupId": group_id, "checkoutLink": checkout_link, "orders": payload, "error": invoice_error})
 
 
 @api_view(["POST"])
@@ -243,7 +280,7 @@ def account_orders_view(request):
         Order.objects.filter(user=request.user)
         | Order.objects.filter(customer_email=request.user.email)
     )
-    qs = qs.prefetch_related("items").distinct()
+    qs = qs.prefetch_related("items", "btc_invoices").distinct()
     return Response(OrderSerializer(qs, many=True).data)
 
 
@@ -294,7 +331,7 @@ def account_summary_view(request):
 @api_view(["GET"])
 @permission_classes([IsPortalStaff])
 def admin_orders_view(request):
-    qs = Order.objects.prefetch_related("items").all()
+    qs = Order.objects.prefetch_related("items", "btc_invoices").all()
     warehouse = managed_warehouse(request.user)
     if warehouse:
         qs = qs.filter(warehouse=warehouse)
@@ -417,7 +454,14 @@ def admin_overview_view(request):
     if request.user.role != User.Role.SUPERUSER:
         user_count_qs = user_count_qs.exclude(role=User.Role.SUPERUSER)
     orders_qs = Order.objects.all()
-    open_qs = Order.objects.filter(status__in=[Order.Status.PAID, Order.Status.PROCESSING])
+    open_qs = Order.objects.filter(
+        status__in=[
+            Order.Status.PENDING,
+            Order.Status.ON_HOLD,
+            Order.Status.PAID,
+            Order.Status.PROCESSING,
+        ]
+    )
     warehouse = managed_warehouse(request.user) or parse_accounting_warehouse(
         request.GET.get("warehouse")
     )
@@ -439,7 +483,14 @@ def admin_overview_view(request):
             "productCount": Product.objects.count(),
             "openOrderValue": open_total,
             "openOrderCount": open_qs.count(),
-            "orderCount": orders_qs.exclude(status__in=[Order.Status.PENDING, Order.Status.CANCELLED]).count(),
+            "orderCount": orders_qs.exclude(
+                status__in=[
+                    Order.Status.PENDING,
+                    Order.Status.ON_HOLD,
+                    Order.Status.CANCELLED,
+                    Order.Status.FAILED,
+                ]
+            ).count(),
             "lowStockCount": low_stock,
             "pendingAffiliates": AffiliateApplication.objects.filter(status="pending").count(),
             "userCount": user_count_qs.count(),

@@ -15,11 +15,13 @@ export type WarehouseCode = (typeof WarehouseCode)[keyof typeof WarehouseCode];
 
 export const OrderStatus = {
   PENDING: "PENDING",
+  ON_HOLD: "ON_HOLD",
   PAID: "PAID",
   PROCESSING: "PROCESSING",
   SHIPPED: "SHIPPED",
   DELIVERED: "DELIVERED",
   CANCELLED: "CANCELLED",
+  FAILED: "FAILED",
 } as const;
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 

@@ -5,6 +5,7 @@ import { readSession } from "@/lib/auth";
 import { PageHeader } from "@/components/site/PageHeader";
 import { formatMoney } from "@/lib/constants";
 import { warehouseLabel } from "@/lib/warehouse";
+import { PayOrderButton } from "@/components/shop/PayOrderButton";
 import type { ApiOrder } from "@/lib/api-types";
 
 export default async function OrdersPage({
@@ -22,7 +23,8 @@ export default async function OrdersPage({
       <PageHeader title="My orders" />
       {placed ? (
         <p className="mb-6 tile text-sm">
-          Order placed. If your cart spanned both warehouses, you will see two order numbers below.
+          Order placed. Complete Bitcoin payment if you were not redirected to BTCPay Server. Split
+          warehouse carts create two invoices.
         </p>
       ) : null}
       <div className="space-y-4">
@@ -33,6 +35,7 @@ export default async function OrdersPage({
                 <h2 className="text-lg">{order.orderNumber}</h2>
                 <p className="text-sm text-muted-foreground">
                   {warehouseLabel(order.warehouse)} · {order.status.toLowerCase()}
+                  {order.paymentStatus ? ` · payment ${order.paymentStatus.toLowerCase()}` : ""}
                 </p>
               </div>
               <p>{formatMoney(order.grandTotal)}</p>
@@ -44,6 +47,12 @@ export default async function OrdersPage({
                 </li>
               ))}
             </ul>
+            <PayOrderButton
+              orderId={order.id}
+              checkoutLink={order.btcInvoice?.checkoutLink}
+              paymentStatus={order.paymentStatus}
+              status={order.status}
+            />
           </article>
         ))}
       </div>

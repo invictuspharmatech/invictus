@@ -7,6 +7,7 @@ DEFAULT_TEMPLATES = [
         "body": """<p>Hi {{customer_name}},</p>
 <p>Thank you for your order <strong>{{order_number}}</strong>.</p>
 <p>Items: {{items}}<br>Merchandise: ${{merchandise_total}}<br>Shipping: ${{shipping_total}}<br>Total: ${{grand_total}}</p>
+<p>Pay with Bitcoin: <a href="{{pay_now_url}}">{{pay_now_url}}</a></p>
 <p>Ship to: {{shipping_address}}</p>
 <p>Warehouse: {{warehouse}}</p>
 <p>— {{site_name}}</p>""",
@@ -14,6 +15,33 @@ DEFAULT_TEMPLATES = [
         "notify_user": True,
         "notify_warehouse_manager": True,
         "sort_order": 10,
+    },
+    {
+        "event_key": "order_paid",
+        "name": "Payment received",
+        "description": "Sent when a Bitcoin payment settles on BTCPay Server.",
+        "subject": "Payment received for {{order_number}}",
+        "body": """<p>Hi {{customer_name}},</p>
+<p>We received your Bitcoin payment for <strong>{{order_number}}</strong>.</p>
+<p>Total: ${{grand_total}}</p>
+<p>— {{site_name}}</p>""",
+        "notify_admin": True,
+        "notify_user": True,
+        "notify_warehouse_manager": True,
+        "sort_order": 15,
+    },
+    {
+        "event_key": "order_on_hold",
+        "name": "Order on hold",
+        "description": "Sent when Bitcoin payment is seen but not yet confirmed.",
+        "subject": "Order {{order_number}} is on hold",
+        "body": """<p>Hi {{customer_name}},</p>
+<p>We received a Bitcoin payment for <strong>{{order_number}}</strong> and are waiting for confirmations.</p>
+<p>— {{site_name}}</p>""",
+        "notify_admin": True,
+        "notify_user": True,
+        "notify_warehouse_manager": False,
+        "sort_order": 16,
     },
     {
         "event_key": "order_processing",
@@ -67,6 +95,19 @@ DEFAULT_TEMPLATES = [
         "notify_user": True,
         "notify_warehouse_manager": True,
         "sort_order": 50,
+    },
+    {
+        "event_key": "order_failed",
+        "name": "Order failed",
+        "description": "Sent when Bitcoin payment fails, is invalid, or is only a partial payment.",
+        "subject": "Order {{order_number}} payment failed",
+        "body": """<p>Hi {{customer_name}},</p>
+<p>Bitcoin payment for <strong>{{order_number}}</strong> did not complete successfully. If you sent funds, contact us with your order number.</p>
+<p>— {{site_name}}</p>""",
+        "notify_admin": True,
+        "notify_user": True,
+        "notify_warehouse_manager": True,
+        "sort_order": 55,
     },
     {
         "event_key": "contact_received",
