@@ -13,7 +13,7 @@ export default async function AdminHomePage({
   searchParams: Promise<{ warehouse?: string }>;
 }) {
   const staff = await requireStaff();
-  if (!staff) return null;
+  if (!staff) redirect("/login?next=/admin");
   const admin = isFullAdmin(staff.role);
   const { warehouse: rawWarehouse } = await searchParams;
   const warehouse = asAccountingWarehouse(rawWarehouse);

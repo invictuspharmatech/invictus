@@ -6,6 +6,8 @@ import { LogoutButton } from "@/components/shop/LogoutButton";
 import { AdminNav, type AdminNavItem } from "@/components/admin/AdminNav";
 import { isFullAdmin, roleLabel } from "@/lib/roles";
 
+export const dynamic = "force-dynamic";
+
 const ADMIN_NAV: AdminNavItem[] = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/orders", label: "Orders" },
@@ -61,7 +63,7 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border/50">
+      <header className="relative z-30 border-b border-border/50">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-6">
             <Logo />

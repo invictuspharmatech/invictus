@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cinzel, Geist, Geist_Mono } from "next/font/google";
 import { Suspense } from "react";
+import { headers } from "next/headers";
 import { CartProvider } from "@/components/shop/CartProvider";
 import { ReferralCapture } from "@/components/shop/ReferralCapture";
 import { SiteHeader } from "@/components/site/SiteHeader";
@@ -45,11 +46,18 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await readSession();
-  const [categories, banners] = await Promise.all([
-    djangoJsonSafe<ApiCategory[]>("/api/categories/", []),
-    djangoJsonSafe<ApiBanner[]>("/api/cms/banners/", []),
-  ]);
+  const headerList = await headers();
+  const pathname = headerList.get("x-invictus-pathname") || "";
+  const isAdminApp = pathname.startsWith("/admin");
+  const session = isAdminApp ? null : await readSession();
+  const [categories, banners] = (
+    isAdminApp
+      ? [[], []]
+      : await Promise.all([
+          djangoJsonSafe<ApiCategory[]>("/api/categories/", []),
+          djangoJsonSafe<ApiBanner[]>("/api/cms/banners/", []),
+        ])
+  ) as [ApiCategory[], ApiBanner[]];
   const shopLinks =
     categories.length > 0
       ? [
@@ -75,9 +83,11 @@ export default async function RootLayout({
           <Suspense fallback={null}>
             <ReferralCapture />
           </Suspense>
-          <SiteHeader session={session} shopLinks={shopLinks} promoItems={promoItems} />
+          {isAdminApp ? null : (
+            <SiteHeader session={session} shopLinks={shopLinks} promoItems={promoItems} />
+          )}
           <main className="flex-1">{children}</main>
-          <ConditionalFooter />
+          {isAdminApp ? null : <ConditionalFooter />}
         </CartProvider>
       </body>
     </html>

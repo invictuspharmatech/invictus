@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 
 export type AdminNavItem = {
   href: string;
@@ -10,10 +9,8 @@ export type AdminNavItem = {
 };
 
 export function AdminNav({ items }: { items: AdminNavItem[] }) {
-  const [open, setOpen] = useState<string | null>(null);
-
   return (
-    <nav className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-2 overflow-x-auto px-4 pb-3 sm:px-6">
+    <nav className="relative z-40 mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-2 px-4 pb-3 sm:px-6">
       {items.map((item) => {
         if (!item.children?.length) {
           return (
@@ -27,21 +24,15 @@ export function AdminNav({ items }: { items: AdminNavItem[] }) {
           );
         }
         return (
-          <div
-            key={item.label}
-            className="relative"
-            onMouseEnter={() => setOpen(item.label)}
-            onMouseLeave={() => setOpen(null)}
-          >
-            <button
-              type="button"
-              className="text-[13px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
-              onClick={() => setOpen((current) => (current === item.label ? null : item.label))}
+          <div key={item.label} className="group relative">
+            <Link
+              href={item.href}
+              className="inline-flex items-center text-[13px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
             >
               {item.label}
-            </button>
-            {open === item.label ? (
-              <div className="absolute left-0 top-full z-40 min-w-48 border border-border bg-background py-1 shadow-xl">
+            </Link>
+            <div className="invisible absolute left-0 top-full z-50 min-w-52 pt-2 opacity-0 transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+              <div className="border border-border bg-background py-1 shadow-xl">
                 {item.children.map((child) => (
                   <Link
                     key={child.href}
@@ -52,7 +43,7 @@ export function AdminNav({ items }: { items: AdminNavItem[] }) {
                   </Link>
                 ))}
               </div>
-            ) : null}
+            </div>
           </div>
         );
       })}
