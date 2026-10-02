@@ -8,6 +8,7 @@ from django.db import transaction
 from accounts.models import User
 from catalog.models import Category, Product, ProductCategory, TestResult
 from cms.models import Banner, FAQItem, NavigationLink, Page, SiteSetting
+from cms.policy_copy import QUALITY_GUARANTEE_HTML, PROCESSING_SHIPPING_HTML, TERMS_REFUNDS_HTML
 from orders.models import Order, OrderItem
 
 STAFF = [
@@ -56,7 +57,7 @@ FAQ = [
     (
         "Shipping & Delivery",
         "How much is shipping?",
-        "Standard shipping is $20 per warehouse shipment. Mixed carts that split across warehouses ship as two orders, each with its own shipping fee.",
+        "Standard shipping is $20.",
     ),
     (
         "Shipping & Delivery",
@@ -113,56 +114,19 @@ PAGES = [
         "processing-shipping",
         "Processing & Shipping",
         "",
-        """<h2>Processing</h2>
-<ul>
-<li>Allow 1–4 business days after payment confirmation for shipment.</li>
-<li>Payment confirmation can take up to 72 hours depending on the network and fees paid.</li>
-<li>Business days are Monday–Friday, excluding holidays.</li>
-<li>Bitcoin is the only accepted payment method.</li>
-<li>Tracking is emailed once the order has shipped.</li>
-</ul>
-<h2>Shipping</h2>
-<ul>
-<li>Packages ship Monday–Friday, excluding holidays.</li>
-<li>You can typically expect your order within a week of payment confirmation.</li>
-<li>Shipping fee: $20 per warehouse shipment.</li>
-<li>Mixed carts are split: warehouse 1 items become order #1, warehouse 2 items become order #2. They may not ship together.</li>
-<li>We cannot ship to APOs.</li>
-</ul>""",
+        PROCESSING_SHIPPING_HTML,
     ),
     (
         "terms-refunds",
         "Terms & Refunds",
         "",
-        """<ul>
-<li>Importation responsibility: Invictus Pharma accepts no responsibility for confirming importation requirements of the purchaser's country or state. Products ship at the purchaser's risk.</li>
-<li>Legal action: Invictus Pharma will not check requirements on the purchaser's behalf and is absolved from legal action regarding importation or physical effects of products.</li>
-<li>You declare that you have a prescription or import permits where required.</li>
-<li>Once tracking is provided, it is the purchaser's responsibility to track, receive, and collect the parcel.</li>
-<li>Invictus Pharma is not responsible for postal errors, delays, or incorrect addresses.</li>
-<li>We cannot ship to APOs or military addresses.</li>
-<li>Orders are reserved to ship up to 5–8 business days after payment confirmation.</li>
-<li>Lost packages: a 50% off reshipment policy is offered for packages lost by the carrier once lost status is confirmed.</li>
-<li>Zero-refund policy. All sales are final.</li>
-</ul>
-<p>Minimum order amount: $100.00 USD</p>""",
+        TERMS_REFUNDS_HTML,
     ),
     (
         "quality-guarantee",
         "Product Quality Guarantee",
         "",
-        """<p>We are committed to transparency. This guarantee reflects our dedication to product quality.</p>
-<ol>
-<li>When you purchase a product, you may send it for lab testing to janoshik.com. If you do, you receive a credit for the cost of the lab test on your next purchase—not for the product itself.</li>
-<li>The listed manufacturer of the product being tested must be Invictus Pharma.</li>
-<li>Invictus Pharma may share test results as we deem appropriate.</li>
-<li>Customers are limited to two test credits every six months.</li>
-<li>If there is a listed Janoshik test dated within the previous 60 days for the same product, no credit will be given.</li>
-<li>For tablet or capsule testing, include photos and a description of color. The Janoshik report must also include photos and color description.</li>
-<li>The originating order number must be provided. Tests can only be done on products ordered in the last 90 days.</li>
-<li>If we receive a bad test, we will send a batch for our own testing. If confirmed substandard, we will produce a new batch, test it, and replace the product.</li>
-<li>An underdosed product is defined as more than 8% under advertised strength.</li>
-</ol>""",
+        QUALITY_GUARANTEE_HTML,
     ),
 ]
 
@@ -314,7 +278,7 @@ class Command(BaseCommand):
             Banner.objects.update_or_create(
                 title="Same-day processing on paid orders received before 2pm ET",
                 defaults={
-                    "subtitle": "Bitcoin checkout · $100 minimum · $20 shipping per warehouse",
+                    "subtitle": "Bitcoin checkout · $100 minimum · $20 shipping",
                     "href": "/products",
                     "cta_label": "Shop",
                     "is_active": True,

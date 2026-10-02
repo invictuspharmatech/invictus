@@ -3,7 +3,6 @@ import NextImage from "next/image";
 import { djangoJsonOptional } from "@/lib/django";
 import { formatMoney, mediaUrl, productPrice } from "@/lib/constants";
 import { AddToCartButton } from "@/components/shop/AddToCartButton";
-import { warehouseLabel } from "@/lib/warehouse";
 import type { ApiProduct } from "@/lib/api-types";
 
 export default async function ProductDetailPage({
@@ -55,9 +54,6 @@ export default async function ProductDetailPage({
             Limit {product.maxQuantityPerOrder} per order
           </p>
         ) : null}
-        <p className="mt-6 text-xs uppercase tracking-[0.16em] text-muted-foreground">
-          Fulfilled from {warehouseLabel(product.warehouse)}
-        </p>
         {product.description ? (
           <div className="mt-10 space-y-3 text-sm leading-7 text-muted-foreground">
             {product.description.split("\n").map((para) => (

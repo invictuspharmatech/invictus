@@ -4,6 +4,8 @@ import {
   asAccountingWarehouse,
   periodLabel,
   warehouseFilterLabel,
+  type AccountingSaleRow,
+  type AccountingSummary,
   type TileView,
 } from "@/lib/accounting";
 import { AccountingBoard } from "@/components/admin/AccountingBoard";
@@ -25,16 +27,20 @@ export default async function AccountingPage({
         : AccountingPeriod.DAY;
   const warehouse = asAccountingWarehouse(rawWarehouse);
 
-  const data = await djangoAuthed<{ tiles: TileView[] }>(
-    `/api/admin/accounting/?period=${period}&warehouse=${warehouse}`,
-  );
+  const data = await djangoAuthed<{
+    tiles: TileView[];
+    summary: AccountingSummary;
+    sales: AccountingSaleRow[];
+  }>(`/api/admin/accounting/?period=${period}&warehouse=${warehouse}`);
 
   return (
     <div>
       <h1 className="display-font text-3xl">Accounting</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-        Resettable tiles, scoped by warehouse. Each reset starts that tile at 0 for the selected
-        window and warehouse. Warehouse percentages only count orders marked shipped or delivered.
+        Percentage split of proceeds received (USD, and BTC when the invoice has a crypto
+        amount). Admin is always 25%. Party 1 is 60% × the W1 merchandise share of the sale.
+        Party 2 is the remainder. Mixed checkouts are one sale: X comes from merchandise, then
+        those percentages apply to the full proceeds. Reset a tile after you pay that party.
       </p>
       <div className="mt-6 flex flex-wrap gap-2">
         {([AccountingPeriod.DAY, AccountingPeriod.WEEK, AccountingPeriod.MONTH] as const).map(
@@ -66,7 +72,13 @@ export default async function AccountingPage({
           </a>
         ))}
       </div>
-      <AccountingBoard tiles={data.tiles} period={period} warehouse={warehouse} />
+      <AccountingBoard
+        tiles={data.tiles}
+        period={period}
+        warehouse={warehouse}
+        summary={data.summary ?? { proceeds: 0, w1Share: 0, allocated: 0 }}
+        sales={data.sales ?? []}
+      />
     </div>
   );
 }

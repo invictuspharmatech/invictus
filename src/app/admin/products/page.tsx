@@ -61,6 +61,8 @@ export default async function AdminProductsPage({
               <th>W2</th>
               <th>Total</th>
               <th>Backorder</th>
+              <th>Featured</th>
+              <th>New</th>
               <th></th>
             </tr>
           </thead>
@@ -79,6 +81,8 @@ export default async function AdminProductsPage({
                 <td>{product.stockQuantityW2 ?? "—"}</td>
                 <td>{product.stockQuantity ?? "—"}</td>
                 <td>{product.allowBackorder ? "Yes" : "No"}</td>
+                <td>{product.isFeatured ? "Yes" : "—"}</td>
+                <td>{product.isNewArrival ? "Yes" : "—"}</td>
                 <td>
                   {admin ? (
                     <WarehouseToggle id={product.id} warehouse={product.warehouse} />

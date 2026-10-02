@@ -9,7 +9,30 @@ export type TileView = {
   title: string;
   description: string;
   amount: number;
+  cryptoAmount?: number | null;
+  cryptoCode?: string | null;
+  percentOfSale?: number;
   resetAt: string | null;
+};
+
+export type AccountingSaleRow = {
+  groupId: string;
+  orderNumbers: string[];
+  w1Share: number;
+  proceeds: number;
+  admin: number;
+  party1: number;
+  party2: number;
+  cryptoProceeds?: number | null;
+  cryptoCode?: string | null;
+};
+
+export type AccountingSummary = {
+  proceeds: number;
+  cryptoProceeds?: number | null;
+  cryptoCode?: string | null;
+  w1Share: number;
+  allocated: number;
 };
 
 export function tileCopy(key: AccountingTileKey): {
@@ -17,33 +40,20 @@ export function tileCopy(key: AccountingTileKey): {
   description: string;
 } {
   switch (key) {
-    case AccountingTileKey.SHIPPING_COLLECTED:
+    case AccountingTileKey.ADMIN_25:
       return {
-        title: "Shipping collected",
-        description: "Shipping fees collected on paid orders.",
+        title: "Admin · 25%",
+        description: "25% of proceeds received. Fixed on every sale.",
       };
-    case AccountingTileKey.GROSS_25:
+    case AccountingTileKey.PARTY_1:
       return {
-        title: "25% of gross sales",
-        description: "25% of merchandise totals, excluding shipping.",
+        title: "Party 1",
+        description: "60% × the W1 merchandise share of each sale.",
       };
-    case AccountingTileKey.WAREHOUSE1_75:
+    case AccountingTileKey.PARTY_2:
       return {
-        title: "Warehouse 1 · 75%",
-        description:
-          "75% of merchandise shipped from warehouse 1, excluding shipping.",
-      };
-    case AccountingTileKey.WAREHOUSE2_55:
-      return {
-        title: "Warehouse 2 · 55%",
-        description:
-          "55% of merchandise shipped from warehouse 2, excluding shipping.",
-      };
-    case AccountingTileKey.WAREHOUSE2_20:
-      return {
-        title: "Warehouse 2 · 20%",
-        description:
-          "20% of merchandise shipped from warehouse 2, excluding shipping.",
+        title: "Party 2",
+        description: "75% minus Party 1’s share. The three parties always total 100%.",
       };
     default: {
       const exhaustive: never = key;
@@ -91,4 +101,9 @@ export function asAccountingWarehouse(value: string | undefined): AccountingWare
     return value;
   }
   return AccountingWarehouse.BOTH;
+}
+
+export function formatCrypto(amount: number, code: string): string {
+  const digits = amount >= 1 ? 4 : 8;
+  return `${amount.toFixed(digits)} ${code}`;
 }

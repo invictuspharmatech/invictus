@@ -6,7 +6,6 @@ import { PageHeader } from "@/components/site/PageHeader";
 import { readReferralCode } from "@/components/shop/ReferralCapture";
 import { useCart } from "@/components/shop/CartProvider";
 import { MIN_ORDER_USD, SHIPPING_USD, formatMoney } from "@/lib/constants";
-import { warehouseLabel } from "@/lib/warehouse";
 import { WarehouseCode } from "@/lib/enums";
 
 type CheckoutOrder = {
@@ -24,16 +23,12 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  const groups = useMemo(
-    () =>
-      [WarehouseCode.WAREHOUSE_1, WarehouseCode.WAREHOUSE_2]
-        .map((warehouse) => ({
-          warehouse,
-          items: items.filter((item) => item.warehouse === warehouse),
-        }))
-        .filter((group) => group.items.length > 0),
-    [items],
-  );
+  const shippingTotal = useMemo(() => {
+    const hasW1 = items.some((item) => item.warehouse === WarehouseCode.WAREHOUSE_1);
+    const hasW2 = items.some((item) => item.warehouse === WarehouseCode.WAREHOUSE_2);
+    if (hasW1 && hasW2) return SHIPPING_USD * 2;
+    return items.length > 0 ? SHIPPING_USD : 0;
+  }, [items]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,7 +95,7 @@ export default function CheckoutPage() {
     <div className="mx-auto max-w-5xl px-4 pb-20 sm:px-6">
       <PageHeader
         title="Checkout"
-        lede={`$${MIN_ORDER_USD} minimum. Bitcoin is the accepted payment method. After you place the order you will be sent to BTCPay Server to complete payment. Mixed-warehouse carts become two orders.`}
+        lede={`$${MIN_ORDER_USD} minimum. Bitcoin is the accepted payment method. After you place the order you will be sent to BTCPay Server to complete payment.`}
       />
       <form onSubmit={onSubmit} className="grid gap-8 lg:grid-cols-2">
         <div className="tile space-y-4">
@@ -117,43 +112,24 @@ export default function CheckoutPage() {
           <textarea className="field min-h-24" name="notes" placeholder="Order notes (optional)" />
         </div>
         <div className="tile">
-          <h2 className="text-lg">Order split</h2>
-          <div className="mt-4 space-y-4">
-            {groups.map((group, index) => {
-              const subtotal = group.items.reduce(
-                (sum, item) => sum + item.unitPrice * item.quantity,
-                0,
-              );
-              return (
-                <div key={group.warehouse} className="border border-border/40 p-4">
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                    Order {index + 1} · {warehouseLabel(group.warehouse)}
-                  </p>
-                  <ul className="mt-3 space-y-1 text-sm">
-                    {group.items.map((item) => (
-                      <li key={item.productId} className="flex justify-between gap-3">
-                        <span>
-                          {item.name} × {item.quantity}
-                        </span>
-                        <span>{formatMoney(item.unitPrice * item.quantity)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-3 flex justify-between text-sm text-muted-foreground">
-                    <span>Shipping</span>
-                    <span>{formatMoney(SHIPPING_USD)}</span>
-                  </p>
-                  <p className="mt-1 flex justify-between text-sm">
-                    <span>Subtotal</span>
-                    <span>{formatMoney(subtotal + SHIPPING_USD)}</span>
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-          <p className="mt-6 text-sm">
-            Merchandise {formatMoney(merchandiseTotal)} · Combined shipping{" "}
-            {formatMoney(groups.length * SHIPPING_USD)}
+          <h2 className="text-lg">Order summary</h2>
+          <ul className="mt-4 space-y-2 text-sm">
+            {items.map((item) => (
+              <li key={item.productId} className="flex justify-between gap-3">
+                <span>
+                  {item.name} × {item.quantity}
+                </span>
+                <span>{formatMoney(item.unitPrice * item.quantity)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 flex justify-between text-sm text-muted-foreground">
+            <span>Shipping</span>
+            <span>{formatMoney(shippingTotal)}</span>
+          </p>
+          <p className="mt-2 flex justify-between text-sm">
+            <span>Total</span>
+            <span>{formatMoney(merchandiseTotal + shippingTotal)}</span>
           </p>
           {error ? <p className="mt-3 text-sm text-brand-red">{error}</p> : null}
           <button className="gold-btn mt-6 w-full" type="submit" disabled={pending}>

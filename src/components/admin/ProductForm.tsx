@@ -163,11 +163,11 @@ export function ProductForm({
       </label>
       <label className="flex items-center gap-2 text-sm">
         <input name="isFeatured" type="checkbox" defaultChecked={product?.isFeatured} />
-        Featured
+        Featured selections — homepage “Every detail has a reason”
       </label>
       <label className="flex items-center gap-2 text-sm">
         <input name="isNewArrival" type="checkbox" defaultChecked={product?.isNewArrival} />
-        New arrival
+        New arrivals — homepage, up to 4 products
       </label>
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
       <button className="gold-btn max-w-40" type="submit">

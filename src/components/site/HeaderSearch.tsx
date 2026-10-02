@@ -23,10 +23,10 @@ export function HeaderSearch() {
       <label className="sr-only" htmlFor="header-search">
         Search products
       </label>
-      <Search className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
       <input
         id="header-search"
-        className="w-full border border-border bg-card py-1.5 pl-8 pr-2 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-signal"
+        className="w-full rounded-full border border-border bg-card py-1.5 pl-8 pr-3 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-signal"
         value={value}
         onChange={(event) => setValue(event.target.value)}
         placeholder="Search"

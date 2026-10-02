@@ -13,8 +13,8 @@ export function Logo({ compact = false }: { compact?: boolean }) {
       />
       {compact ? null : (
         <span className="hidden sm:block">
-          <span className="block font-mono text-xs font-bold tracking-[.28em]">INVICTUS</span>
-          <span className="block font-mono text-[9px] tracking-[.42em] text-muted-foreground">
+          <span className="block font-mono text-xl font-normal tracking-[.28em]">INVICTUS</span>
+          <span className="mt-1 block font-mono text-[11px] tracking-[.42em] text-muted-foreground">
             PHARMA
           </span>
         </span>

@@ -1,5 +1,4 @@
 from collections import defaultdict
-from datetime import timedelta
 import logging
 
 from django.conf import settings
@@ -38,37 +37,9 @@ from orders.models import AccountingReset, ContactMessage, FulfillmentRequest, O
 from orders.serializers import FulfillmentRequestSerializer, OrderSerializer
 from orders.btcpay import BtcPayError, create_invoice, is_configured, serialize_invoice
 from orders.pay_token import checkout_url
+from orders.accounting import TILE_KEYS, accounting_response, parse_accounting_warehouse, resolve_warehouse
 
 logger = logging.getLogger(__name__)
-
-
-COUNTED = [
-    Order.Status.PAID,
-    Order.Status.PROCESSING,
-    Order.Status.SHIPPED,
-    Order.Status.DELIVERED,
-]
-SHIPPED = [Order.Status.SHIPPED, Order.Status.DELIVERED]
-
-TILE_COPY = {
-    "SHIPPING_COLLECTED": (
-        "Shipping collected",
-        "Shipping fees collected on paid orders.",
-    ),
-    "GROSS_25": ("25% of gross sales", "25% of merchandise totals, excluding shipping."),
-    "WAREHOUSE1_75": (
-        "Warehouse 1 · 75%",
-        "75% of merchandise shipped from warehouse 1, excluding shipping.",
-    ),
-    "WAREHOUSE2_55": (
-        "Warehouse 2 · 55%",
-        "55% of merchandise shipped from warehouse 2, excluding shipping.",
-    ),
-    "WAREHOUSE2_20": (
-        "Warehouse 2 · 20%",
-        "20% of merchandise shipped from warehouse 2, excluding shipping.",
-    ),
-}
 
 
 def product_price(product: Product) -> float:
@@ -500,99 +471,16 @@ def admin_overview_view(request):
     )
 
 
-def period_window(period: str, now=None):
-    now = now or timezone.now()
-    start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    if period == "WEEK":
-        start = start - timedelta(days=start.weekday())
-    elif period == "MONTH":
-        start = start.replace(day=1)
-    return start
-
-
-def later(a, b):
-    return a if a > b else b
-
-
-def parse_accounting_warehouse(value: str | None) -> str:
-    if value in ("WAREHOUSE_1", "WAREHOUSE_2", "BOTH"):
-        return value
-    return "BOTH"
-
-
-def tiles_for_warehouse(warehouse: str) -> list[str]:
-    if warehouse == Order.Warehouse.WAREHOUSE_1:
-        return ["SHIPPING_COLLECTED", "GROSS_25", "WAREHOUSE1_75"]
-    if warehouse == Order.Warehouse.WAREHOUSE_2:
-        return ["SHIPPING_COLLECTED", "GROSS_25", "WAREHOUSE2_55", "WAREHOUSE2_20"]
-    return list(TILE_COPY.keys())
-
-
-def scoped_orders(qs, warehouse: str):
-    if warehouse in (Order.Warehouse.WAREHOUSE_1, Order.Warehouse.WAREHOUSE_2):
-        return qs.filter(warehouse=warehouse)
-    return qs
-
-
-def compute_tile(key: str, start, warehouse: str):
-    counted = scoped_orders(
-        Order.objects.filter(status__in=COUNTED, created_at__gte=start),
-        warehouse,
-    )
-    shipped = scoped_orders(
-        Order.objects.filter(status__in=SHIPPED, shipped_at__gte=start),
-        warehouse,
-    )
-    if key == "SHIPPING_COLLECTED":
-        return counted.aggregate(total=Sum("shipping_total"))["total"] or 0
-    if key == "GROSS_25":
-        total = counted.aggregate(total=Sum("merchandise_total"))["total"] or 0
-        return total * 0.25
-    if key == "WAREHOUSE1_75":
-        total = shipped.filter(warehouse=Order.Warehouse.WAREHOUSE_1).aggregate(
-            total=Sum("merchandise_total")
-        )["total"] or 0
-        return total * 0.75
-    if key == "WAREHOUSE2_55":
-        total = shipped.filter(warehouse=Order.Warehouse.WAREHOUSE_2).aggregate(
-            total=Sum("merchandise_total")
-        )["total"] or 0
-        return total * 0.55
-    if key == "WAREHOUSE2_20":
-        total = shipped.filter(warehouse=Order.Warehouse.WAREHOUSE_2).aggregate(
-            total=Sum("merchandise_total")
-        )["total"] or 0
-        return total * 0.2
-    return 0
-
-
 @api_view(["GET"])
 @permission_classes([IsStoreStaff])
 def admin_accounting_view(request):
-    period = request.GET.get("period") or "DAY"
-    if period not in ("DAY", "WEEK", "MONTH"):
-        period = "DAY"
-    warehouse = parse_accounting_warehouse(request.GET.get("warehouse"))
-    window_start = period_window(period)
-    resets = {
-        row.tile_key: row
-        for row in AccountingReset.objects.filter(period=period, warehouse=warehouse)
-    }
-    tiles = []
-    for key in tiles_for_warehouse(warehouse):
-        title, description = TILE_COPY[key]
-        reset = resets.get(key)
-        start = later(window_start, reset.reset_at) if reset else window_start
-        tiles.append(
-            {
-                "key": key,
-                "title": title,
-                "description": description,
-                "amount": compute_tile(key, start, warehouse),
-                "resetAt": reset.reset_at.isoformat() if reset else None,
-            }
+    return Response(
+        accounting_response(
+            request.user,
+            request.GET.get("period") or "DAY",
+            request.GET.get("warehouse"),
         )
-    return Response({"period": period, "warehouse": warehouse, "tiles": tiles})
+    )
 
 
 @api_view(["POST"])
@@ -600,11 +488,9 @@ def admin_accounting_view(request):
 def admin_accounting_reset_view(request):
     tile_key = request.data.get("tileKey")
     period = request.data.get("period")
-    warehouse = parse_accounting_warehouse(request.data.get("warehouse"))
-    if tile_key not in TILE_COPY or period not in ("DAY", "WEEK", "MONTH"):
+    warehouse = resolve_warehouse(request.user, request.data.get("warehouse"))
+    if tile_key not in TILE_KEYS or period not in ("DAY", "WEEK", "MONTH"):
         return Response({"error": "Invalid tile or period."}, status=400)
-    if tile_key not in tiles_for_warehouse(warehouse):
-        return Response({"error": "Tile is not available for this warehouse filter."}, status=400)
     AccountingReset.objects.update_or_create(
         tile_key=tile_key,
         period=period,

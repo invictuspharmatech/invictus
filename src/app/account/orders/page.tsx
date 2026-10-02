@@ -4,7 +4,6 @@ import { djangoAuthed } from "@/lib/django";
 import { readSession } from "@/lib/auth";
 import { PageHeader } from "@/components/site/PageHeader";
 import { formatMoney } from "@/lib/constants";
-import { warehouseLabel } from "@/lib/warehouse";
 import { PayOrderButton } from "@/components/shop/PayOrderButton";
 import type { ApiOrder } from "@/lib/api-types";
 
@@ -23,8 +22,7 @@ export default async function OrdersPage({
       <PageHeader title="My orders" />
       {placed ? (
         <p className="mb-6 tile text-sm">
-          Order placed. Complete Bitcoin payment if you were not redirected to BTCPay Server. Split
-          warehouse carts create two invoices.
+          Order placed. Complete Bitcoin payment if you were not redirected to BTCPay Server.
         </p>
       ) : null}
       <div className="space-y-4">
@@ -34,7 +32,7 @@ export default async function OrdersPage({
               <div>
                 <h2 className="text-lg">{order.orderNumber}</h2>
                 <p className="text-sm text-muted-foreground">
-                  {warehouseLabel(order.warehouse)} · {order.status.toLowerCase()}
+                  {order.status.toLowerCase()}
                   {order.paymentStatus ? ` · payment ${order.paymentStatus.toLowerCase()}` : ""}
                 </p>
               </div>

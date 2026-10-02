@@ -1,19 +1,15 @@
 import Link from "next/link";
 import Image from "next/image";
-import {
-  ArrowUpRight,
-  Check,
-  FileCheck,
-  FlaskConical,
-  ShieldCheck,
-} from "lucide-react";
-import { djangoJson } from "@/lib/django";
+import { ArrowUpRight, FlaskConical } from "lucide-react";
+import { djangoJsonSafe } from "@/lib/django";
 import { FeaturedProductCard } from "@/components/shop/FeaturedProductCard";
+import { CategoryCarousel, type CategorySlide } from "@/components/shop/CategoryCarousel";
 import {
   CATEGORY_BLURBS,
   CATEGORY_IMAGES,
-  HOME_PROTOCOL_SLUGS,
+  mediaUrl,
 } from "@/lib/constants";
+import { HIDDEN_HOME_CATEGORY_SLUGS } from "@/lib/storefront-nav";
 import type { ApiCategory, ApiProduct } from "@/lib/api-types";
 
 const MARQUEE = [
@@ -22,43 +18,31 @@ const MARQUEE = [
   "Built for the long game",
 ];
 
-const DETAILS = [
-  {
-    title: "Considered selection",
-    copy: "A focused catalog built around clarity, consistency, and purpose.",
-    icon: ShieldCheck,
-  },
-  {
-    title: "Transparent by design",
-    copy: "Test results and product context are never buried behind the sale.",
-    icon: FileCheck,
-  },
-  {
-    title: "Protocol-minded",
-    copy: "Simple systems for people who take the long view.",
-    icon: FlaskConical,
-  },
-  {
-    title: "No unnecessary noise",
-    copy: "The right information, presented with restraint.",
-    icon: Check,
-  },
-];
+function toSlides(categories: ApiCategory[]): CategorySlide[] {
+  return categories
+    .filter((item) => !HIDDEN_HOME_CATEGORY_SLUGS.has(item.slug))
+    .map((item) => ({
+      id: item.id,
+      slug: item.slug,
+      name: item.name,
+      image:
+        mediaUrl(item.image) ??
+        CATEGORY_IMAGES[item.slug] ??
+        "/images/featured-display.jpg",
+      blurb: CATEGORY_BLURBS[item.slug] ?? "Browse the collection.",
+    }));
+}
 
 export default async function HomePage() {
-  const [categories, featured] = await Promise.all([
-    djangoJson<ApiCategory[]>(`/api/categories/?slugs=${HOME_PROTOCOL_SLUGS.join(",")}`),
-    djangoJson<ApiProduct[]>("/api/products/?featured=1&limit=4"),
+  const [categories, featured, arrivals] = await Promise.all([
+    djangoJsonSafe<ApiCategory[]>("/api/categories/", []),
+    djangoJsonSafe<ApiProduct[]>("/api/products/?featured=1&limit=4", []),
+    djangoJsonSafe<ApiProduct[]>("/api/products/?newArrival=1&limit=4", []),
   ]);
 
-  const protocol = HOME_PROTOCOL_SLUGS.map((slug) =>
-    categories.find((item) => item.slug === slug),
-  ).filter((item): item is ApiCategory => Boolean(item));
-
-  let showcase = featured.slice(0, 4);
-  if (showcase.length === 0) {
-    showcase = await djangoJson<ApiProduct[]>("/api/products/?limit=4");
-  }
+  const slides = toSlides(categories);
+  const featuredSlots = featured.slice(0, 4);
+  const arrivalSlots = arrivals.slice(0, 4);
 
   return (
     <div>
@@ -135,113 +119,53 @@ export default async function HomePage() {
         </div>
       </div>
 
-      <section className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
-        <div className="mb-12 flex flex-col justify-between gap-5 md:flex-row md:items-end">
-          <h2 className="mt-3 font-serif text-5xl tracking-[-0.04em]">Find your protocol.</h2>
-          <p className="max-w-sm text-sm leading-6 text-muted-foreground">
-            A tight edit of future-facing categories. No clutter. Just the essentials, clearly
-            presented.
-          </p>
-        </div>
-        <div className="overflow-x-auto">
-          <div className="grid min-w-[880px] grid-cols-4 gap-px bg-border">
-            {protocol.map((category, index) => (
-              <Link
-                key={category.id}
-                href={`/products?category=${category.slug}`}
-                className="group bg-background p-4 transition hover:bg-card"
-              >
-                <div className="relative aspect-[4/5] overflow-hidden bg-card">
-                  <Image
-                    src={CATEGORY_IMAGES[category.slug] ?? "/images/featured-display.jpg"}
-                    alt={category.name}
-                    fill
-                    className="object-cover transition duration-700 group-hover:scale-105"
-                  />
-                  <span className="absolute left-4 top-4 font-mono text-xs text-signal">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                </div>
-                <div className="flex items-start justify-between gap-4 pt-5">
-                  <div>
-                    <h3 className="font-serif text-2xl">{category.name}</h3>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      {CATEGORY_BLURBS[category.slug] ?? "Browse the collection."}
-                    </p>
-                  </div>
-                  <ArrowUpRight className="mt-1 size-5 text-signal transition group-hover:translate-x-1 group-hover:-translate-y-1" />
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <CategoryCarousel categories={slides} />
 
-      <section className="bg-card px-6 py-20 lg:px-10 lg:py-28">
-        <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
-          <div>
-            <h2 className="mt-4 max-w-md font-serif text-5xl leading-[0.95] tracking-[-0.04em]">
-              Every detail has a reason.
-            </h2>
+      {featuredSlots.length > 0 ? (
+        <section className="bg-card px-6 py-20 lg:px-10 lg:py-28">
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-12 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+              <div>
+                <h2 className="max-w-md font-serif text-5xl leading-[0.95] tracking-[-0.04em]">
+                  Every detail has a reason.
+                </h2>
+                <p className="mt-4 text-sm text-muted-foreground">Featured selections.</p>
+              </div>
+              <Link
+                href="/products"
+                className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-signal"
+              >
+                View all products
+                <ArrowUpRight className="size-4" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6">
+              {featuredSlots.map((product) => (
+                <FeaturedProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {arrivalSlots.length > 0 ? (
+        <section className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+          <div className="mb-12 flex items-end justify-between">
+            <h2 className="font-serif text-5xl tracking-[-0.04em]">New arrivals.</h2>
             <Link
-              href="/about"
-              className="mt-8 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-signal"
+              href="/products"
+              className="hidden text-xs font-bold uppercase tracking-[0.18em] text-signal md:block"
             >
-              About the standard
-              <ArrowUpRight className="size-4" />
+              View all products →
             </Link>
           </div>
-          <div className="grid gap-8 sm:grid-cols-2">
-            {DETAILS.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.title} className="border-t border-border pt-5">
-                  <Icon className="size-5 text-signal" />
-                  <h3 className="mt-5 font-serif text-2xl">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.copy}</p>
-                </div>
-              );
-            })}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6">
+            {arrivalSlots.map((product) => (
+              <FeaturedProductCard key={product.id} product={product} />
+            ))}
           </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
-        <div className="mb-12 flex items-end justify-between">
-          <h2 className="mt-3 font-serif text-5xl tracking-[-0.04em]">Featured selections.</h2>
-          <Link
-            href="/products"
-            className="hidden text-xs font-bold uppercase tracking-[0.18em] text-signal md:block"
-          >
-            View all products →
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6">
-          {showcase.map((product) => (
-            <FeaturedProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      </section>
-
-      <section className="brand-gradient mx-6 mb-8 px-6 py-16 text-signal-foreground sm:px-12 lg:mx-10 lg:py-20">
-        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-8 md:flex-row md:items-end">
-          <div>
-            <p className="font-mono text-[10px] uppercase tracking-[0.28em] opacity-70">
-              Stay close / 04
-            </p>
-            <h2 className="mt-4 max-w-2xl font-serif text-5xl leading-[0.95] tracking-[-0.04em] sm:text-6xl">
-              The next protocol starts here.
-            </h2>
-          </div>
-          <Link
-            href="/contact"
-            className="inline-flex items-center gap-3 border-b border-current pb-3 text-xs font-bold uppercase tracking-[0.18em]"
-          >
-            Get in touch
-            <ArrowUpRight className="size-4" />
-          </Link>
-        </div>
-      </section>
+        </section>
+      ) : null}
     </div>
   );
 }

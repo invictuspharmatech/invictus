@@ -56,6 +56,8 @@ def product_list(request):
         qs = qs.filter(category_links__category__slug=category).distinct()
     if request.GET.get("featured") == "1":
         qs = qs.filter(is_featured=True)
+    if request.GET.get("newArrival") == "1":
+        qs = qs.filter(is_new_arrival=True)
     limit = request.GET.get("limit")
     if limit:
         qs = qs[: int(limit)]

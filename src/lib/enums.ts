@@ -38,11 +38,9 @@ export const PayoutType = {
 export type PayoutType = (typeof PayoutType)[keyof typeof PayoutType];
 
 export const AccountingTileKey = {
-  SHIPPING_COLLECTED: "SHIPPING_COLLECTED",
-  GROSS_25: "GROSS_25",
-  WAREHOUSE1_75: "WAREHOUSE1_75",
-  WAREHOUSE2_55: "WAREHOUSE2_55",
-  WAREHOUSE2_20: "WAREHOUSE2_20",
+  ADMIN_25: "ADMIN_25",
+  PARTY_1: "PARTY_1",
+  PARTY_2: "PARTY_2",
 } as const;
 export type AccountingTileKey =
   (typeof AccountingTileKey)[keyof typeof AccountingTileKey];

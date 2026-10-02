@@ -32,7 +32,11 @@ export default function CheckoutCompletePage() {
     <div className="mx-auto max-w-3xl px-4 pb-20 sm:px-6">
       <PageHeader
         title="Pay with Bitcoin"
-        lede="Your order is reserved. Open BTCPay Server to send the exact amount. Split warehouse carts need a payment for each order."
+        lede={
+          orders.length > 1
+            ? "Your order is reserved. Open BTCPay Server to complete each invoice below."
+            : "Your order is reserved. Open BTCPay Server to send the exact amount."
+        }
       />
       {orders.length === 0 ? (
         <div className="tile text-sm">
