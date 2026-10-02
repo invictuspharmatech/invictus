@@ -1,7 +1,7 @@
 from django.urls import path
 
 from accounts import views as account_views
-from orders import btcpay_views, views
+from orders import btcpay_views, postage_views, views
 
 urlpatterns = [
     path("checkout/", views.checkout_view),
@@ -21,12 +21,22 @@ urlpatterns = [
     path("admin/btcpay/webhook/", btcpay_views.admin_btcpay_webhook_view),
     path("admin/overview/", views.admin_overview_view),
     path("admin/orders/", views.admin_orders_view),
+    path("admin/orders/bulk-status/", views.admin_orders_bulk_status_view),
+    path("admin/orders/<uuid:pk>/", views.admin_order_detail_view),
     path("admin/orders/<uuid:pk>/status/", views.admin_order_status_view),
     path("admin/orders/<uuid:pk>/move-item/", views.admin_order_move_item),
+    path("admin/orders/<uuid:pk>/tracking/", views.admin_order_tracking_view),
+    path("admin/orders/<uuid:pk>/label/", postage_views.postage_create_label_view),
     path("admin/fulfillment-requests/", views.admin_fulfillment_requests),
     path("admin/fulfillment-requests/<uuid:pk>/review/", views.admin_fulfillment_request_review),
+    path("admin/btcpostage/", postage_views.postage_settings_view),
+    path("admin/btcpostage/credits/", postage_views.postage_credits_view),
+    path("admin/btcpostage/charge/", postage_views.postage_charge_view),
+    path("admin/btcpostage/senders/", postage_views.postage_senders_view),
+    path("admin/btcpostage/senders/<uuid:pk>/", postage_views.postage_sender_detail_view),
     path("admin/accounting/", views.admin_accounting_view),
     path("admin/accounting/reset/", views.admin_accounting_reset_view),
+    path("admin/accounting/split/", views.admin_accounting_split_view),
     path("admin/users/", account_views.admin_users_view),
     path("admin/affiliates/", account_views.admin_affiliates_view),
     path("admin/affiliates/<uuid:pk>/", account_views.admin_affiliate_action_view),

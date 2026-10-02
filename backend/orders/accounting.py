@@ -7,30 +7,122 @@ from django.db.models import Prefetch, Q
 from django.utils import timezone
 
 from accounts.permissions import managed_warehouse
-from orders.models import AccountingReset, BtcInvoice, Order, OrderItem
-
-ADMIN_RATE = Decimal("0.25")
-PARTY1_OF_TOTAL_AT_FULL_W1 = Decimal("0.60")
+from orders.models import AccountingReset, BtcInvoice, Order, OrderItem, RevenueSplitSettings
 
 TILE_ADMIN = "ADMIN_25"
 TILE_PARTY_1 = "PARTY_1"
 TILE_PARTY_2 = "PARTY_2"
 TILE_KEYS = (TILE_ADMIN, TILE_PARTY_1, TILE_PARTY_2)
 
-TILE_COPY = {
-    TILE_ADMIN: (
-        "Admin · 25%",
-        "25% of proceeds received. Fixed on every sale, regardless of warehouse mix.",
-    ),
-    TILE_PARTY_1: (
-        "Party 1",
-        "60% × the W1 merchandise share of each sale, applied to proceeds received.",
-    ),
-    TILE_PARTY_2: (
-        "Party 2",
-        "75% minus Party 1's share, so Admin + Party 1 + Party 2 always equals 100%.",
-    ),
+DEFAULT_SPLIT = {
+    "w1_admin": Decimal("25"),
+    "w1_party1": Decimal("60"),
+    "w1_party2": Decimal("15"),
+    "w2_admin": Decimal("25"),
+    "w2_party1": Decimal("0"),
+    "w2_party2": Decimal("75"),
 }
+
+SPLIT_FIELD_MAP = {
+    "w1Admin": "w1_admin",
+    "w1Party1": "w1_party1",
+    "w1Party2": "w1_party2",
+    "w2Admin": "w2_admin",
+    "w2Party1": "w2_party1",
+    "w2Party2": "w2_party2",
+}
+
+
+def default_split() -> dict[str, Decimal]:
+    return dict(DEFAULT_SPLIT)
+
+
+def split_from_row(row: RevenueSplitSettings | None) -> dict[str, Decimal]:
+    if row is None:
+        return default_split()
+    return {
+        "w1_admin": as_decimal(row.w1_admin),
+        "w1_party1": as_decimal(row.w1_party1),
+        "w1_party2": as_decimal(row.w1_party2),
+        "w2_admin": as_decimal(row.w2_admin),
+        "w2_party1": as_decimal(row.w2_party1),
+        "w2_party2": as_decimal(row.w2_party2),
+    }
+
+
+def get_split_rates() -> dict[str, Decimal]:
+    return split_from_row(RevenueSplitSettings.objects.filter(pk=1).first())
+
+
+def split_public(split: dict[str, Decimal]) -> dict:
+    return {
+        "w1Admin": float(split["w1_admin"]),
+        "w1Party1": float(split["w1_party1"]),
+        "w1Party2": float(split["w1_party2"]),
+        "w2Admin": float(split["w2_admin"]),
+        "w2Party1": float(split["w2_party1"]),
+        "w2Party2": float(split["w2_party2"]),
+        "defaults": {
+            "w1Admin": float(DEFAULT_SPLIT["w1_admin"]),
+            "w1Party1": float(DEFAULT_SPLIT["w1_party1"]),
+            "w1Party2": float(DEFAULT_SPLIT["w1_party2"]),
+            "w2Admin": float(DEFAULT_SPLIT["w2_admin"]),
+            "w2Party1": float(DEFAULT_SPLIT["w2_party1"]),
+            "w2Party2": float(DEFAULT_SPLIT["w2_party2"]),
+        },
+    }
+
+
+def validate_split(payload: dict) -> tuple[dict[str, Decimal], str | None]:
+    parsed = default_split()
+    for public, internal in SPLIT_FIELD_MAP.items():
+        if public in payload and payload[public] is not None:
+            parsed[internal] = as_decimal(payload[public])
+    for key, value in parsed.items():
+        if value < 0 or value > 100:
+            return parsed, "Each share must be between 0 and 100."
+    w1 = parsed["w1_admin"] + parsed["w1_party1"] + parsed["w1_party2"]
+    w2 = parsed["w2_admin"] + parsed["w2_party1"] + parsed["w2_party2"]
+    if w1 > Decimal("100.00") or w2 > Decimal("100.00"):
+        return parsed, "Warehouse shares cannot total more than 100%."
+    if abs(w1 - Decimal("100")) > Decimal("0.05") or abs(w2 - Decimal("100")) > Decimal("0.05"):
+        return parsed, "Each warehouse must total exactly 100%."
+    return parsed, None
+
+
+def save_split(parsed: dict[str, Decimal]) -> RevenueSplitSettings:
+    row, _ = RevenueSplitSettings.objects.get_or_create(pk=1)
+    row.w1_admin = float(parsed["w1_admin"])
+    row.w1_party1 = float(parsed["w1_party1"])
+    row.w1_party2 = float(parsed["w1_party2"])
+    row.w2_admin = float(parsed["w2_admin"])
+    row.w2_party1 = float(parsed["w2_party1"])
+    row.w2_party2 = float(parsed["w2_party2"])
+    row.save()
+    return row
+
+
+def reset_split() -> dict[str, Decimal]:
+    parsed = default_split()
+    save_split(parsed)
+    return parsed
+
+
+def tile_copy(split: dict[str, Decimal]) -> dict[str, tuple[str, str]]:
+    return {
+        TILE_ADMIN: (
+            "Admin",
+            f"W1 {float(split['w1_admin']):g}% · W2 {float(split['w2_admin']):g}% of proceeds received.",
+        ),
+        TILE_PARTY_1: (
+            "Party 1",
+            f"W1 {float(split['w1_party1']):g}% · W2 {float(split['w2_party1']):g}%, weighted by merchandise mix.",
+        ),
+        TILE_PARTY_2: (
+            "Party 2",
+            "Remainder of each sale so Admin + Party 1 + Party 2 always equals 100%.",
+        ),
+    }
 
 COUNTED_STATUSES = [
     Order.Status.PAID,
@@ -68,26 +160,37 @@ def w1_merchandise_share(merch_w1: Decimal, merch_w2: Decimal) -> Decimal:
     return clamp_share(merch_w1 / total)
 
 
-def allocate_sale(proceeds: Decimal, w1_share: Decimal) -> tuple[Decimal, Decimal, Decimal]:
+def allocate_sale(
+    proceeds: Decimal,
+    w1_share: Decimal,
+    split: dict[str, Decimal] | None = None,
+) -> tuple[Decimal, Decimal, Decimal]:
     """Admin, Party 1, Party 2. Totals exactly `proceeds`."""
     proceeds = as_decimal(proceeds)
     x = clamp_share(as_decimal(w1_share))
-    admin = proceeds * ADMIN_RATE
-    party1 = proceeds * PARTY1_OF_TOTAL_AT_FULL_W1 * x
+    rates = split or DEFAULT_SPLIT
+    admin_rate = (rates["w1_admin"] * x + rates["w2_admin"] * (Decimal("1") - x)) / Decimal("100")
+    party1_rate = (rates["w1_party1"] * x + rates["w2_party1"] * (Decimal("1") - x)) / Decimal("100")
+    admin = proceeds * admin_rate
+    party1 = proceeds * party1_rate
     party2 = proceeds - admin - party1
     return admin, party1, party2
 
 
 def allocate_for_warehouse(
-    proceeds: Decimal, w1_share: Decimal, warehouse: str
+    proceeds: Decimal,
+    w1_share: Decimal,
+    warehouse: str,
+    split: dict[str, Decimal] | None = None,
 ) -> tuple[Decimal, Decimal, Decimal]:
     x = clamp_share(as_decimal(w1_share))
     proceeds = as_decimal(proceeds)
+    rates = split or DEFAULT_SPLIT
     if warehouse == Order.Warehouse.WAREHOUSE_1:
-        return allocate_sale(proceeds * x, Decimal("1"))
+        return allocate_sale(proceeds * x, Decimal("1"), rates)
     if warehouse == Order.Warehouse.WAREHOUSE_2:
-        return allocate_sale(proceeds * (Decimal("1") - x), Decimal("0"))
-    return allocate_sale(proceeds, x)
+        return allocate_sale(proceeds * (Decimal("1") - x), Decimal("0"), rates)
+    return allocate_sale(proceeds, x, rates)
 
 
 def quantize_usd(value: Decimal) -> Decimal:
@@ -224,7 +327,7 @@ def sales_in_window(start) -> list[dict]:
     return [_sale_from_orders(orders) for orders in groups.values()]
 
 
-def summarize_sales(sales: list[dict], warehouse: str) -> dict:
+def summarize_sales(sales: list[dict], warehouse: str, split: dict[str, Decimal] | None = None) -> dict:
     proceeds = Decimal("0")
     crypto_proceeds = Decimal("0")
     merch_w1 = Decimal("0")
@@ -241,7 +344,7 @@ def summarize_sales(sales: list[dict], warehouse: str) -> dict:
     for sale in sales:
         merch_w1 += sale["merch_w1"]
         merch_w2 += sale["merch_w2"]
-        a, p1, p2 = allocate_for_warehouse(sale["proceeds"], sale["w1_share"], warehouse)
+        a, p1, p2 = allocate_for_warehouse(sale["proceeds"], sale["w1_share"], warehouse, split)
         proceeds += a + p1 + p2
         admin += a
         party1 += p1
@@ -249,7 +352,7 @@ def summarize_sales(sales: list[dict], warehouse: str) -> dict:
         ca = cp1 = cp2 = Decimal("0")
         if sale["crypto_proceeds"] > 0:
             ca, cp1, cp2 = allocate_for_warehouse(
-                sale["crypto_proceeds"], sale["w1_share"], warehouse
+                sale["crypto_proceeds"], sale["w1_share"], warehouse, split
             )
             crypto_proceeds += ca + cp1 + cp2
             crypto_admin += ca
@@ -273,9 +376,12 @@ def summarize_sales(sales: list[dict], warehouse: str) -> dict:
 
     w1_share = w1_merchandise_share(merch_w1, merch_w2)
     if proceeds <= 0:
-        admin_pct = ADMIN_RATE
-        party1_pct = PARTY1_OF_TOTAL_AT_FULL_W1 * w1_share
-        party2_pct = Decimal("1") - admin_pct - party1_pct
+        sample_admin, sample_party1, sample_party2 = allocate_for_warehouse(
+            Decimal("100"), w1_share, warehouse, split
+        )
+        admin_pct = sample_admin / Decimal("100")
+        party1_pct = sample_party1 / Decimal("100")
+        party2_pct = sample_party2 / Decimal("100")
     else:
         admin_pct = admin / proceeds
         party1_pct = party1 / proceeds
@@ -314,13 +420,16 @@ def summarize_sales(sales: list[dict], warehouse: str) -> dict:
 def build_accounting_payload(
     period: str, warehouse: str, tile_starts: dict[str, object], window_start
 ) -> dict:
+    split = get_split_rates()
+    copy = tile_copy(split)
     tiles = []
-    summary = summarize_sales(sales_in_window(window_start), warehouse)
+    summary = summarize_sales(sales_in_window(window_start), warehouse, split)
     unique_starts = {
-        start: summarize_sales(sales_in_window(start), warehouse) for start in set(tile_starts.values())
+        start: summarize_sales(sales_in_window(start), warehouse, split)
+        for start in set(tile_starts.values())
     }
     for key in TILE_KEYS:
-        title, description = TILE_COPY[key]
+        title, description = copy[key]
         start = tile_starts[key]
         data = unique_starts[start]
         crypto_amount = data["crypto_amounts"][key]
@@ -339,6 +448,7 @@ def build_accounting_payload(
     return {
         "period": period,
         "warehouse": warehouse,
+        "split": split_public(split),
         "summary": {
             "proceeds": money_float(summary["proceeds"]),
             "cryptoProceeds": crypto_float(summary["crypto_proceeds"])

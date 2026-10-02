@@ -55,6 +55,17 @@ export type ApiBtcInvoice = {
   checkoutClosed: boolean;
 };
 
+export type ApiShippingLabel = {
+  id: string;
+  trackingNumber: string;
+  trackingUrl: string;
+  labelUrl: string;
+  carrier: string;
+  serviceType: string;
+  source: string;
+  createdAt: string;
+};
+
 export type ApiOrder = {
   id: string;
   orderNumber: string;
@@ -71,8 +82,70 @@ export type ApiOrder = {
   customerEmail: string;
   commissionAmount: number;
   createdAt: string;
+  trackingNumber?: string;
+  userId?: string | null;
+  shippingLine1?: string;
+  shippingLine2?: string;
+  shippingCity?: string;
+  shippingState?: string;
+  shippingPostal?: string;
+  shippingCountry?: string;
+  notes?: string;
   items: ApiOrderItem[];
   btcInvoice?: ApiBtcInvoice | null;
+  shippingLabels?: ApiShippingLabel[];
+};
+
+export type ApiPostageSettings = {
+  apiUrl: string;
+  apiKey: string;
+  hasSecret: boolean;
+  isConfigured: boolean;
+};
+
+export type ApiPostageSender = {
+  id: string;
+  fromName: string;
+  fromStreet: string;
+  fromApt: string;
+  fromCity: string;
+  fromState: string;
+  fromZip: string;
+  fromCountry: string;
+  fromPhone: string;
+  isDefault: boolean;
+};
+
+export type ApiPostageCredits = {
+  credits: string;
+  address?: string;
+  amount?: string;
+  currency?: string;
+  purchaseId?: string;
+  id?: string;
+  timestamp?: string;
+};
+
+export type RevenueSplit = {
+  w1Admin: number;
+  w1Party1: number;
+  w1Party2: number;
+  w2Admin: number;
+  w2Party1: number;
+  w2Party2: number;
+  defaults: {
+    w1Admin: number;
+    w1Party1: number;
+    w1Party2: number;
+    w2Admin: number;
+    w2Party1: number;
+    w2Party2: number;
+  };
+};
+
+export type AdminOrdersResponse = {
+  orders: ApiOrder[];
+  counts: Record<string, number>;
 };
 
 export type ApiBtcPaySettings = {

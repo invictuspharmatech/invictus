@@ -10,10 +10,12 @@ export function OrderFulfillmentControls({
   order,
   policy,
   role,
+  onUpdated,
 }: {
   order: ApiOrder;
   policy: ApiWarehouseSettings;
   role: string;
+  onUpdated?: () => void;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -46,6 +48,7 @@ export function OrderFulfillmentControls({
       return;
     }
     router.refresh();
+    onUpdated?.();
   }
 
   return (

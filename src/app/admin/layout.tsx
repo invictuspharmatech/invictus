@@ -4,6 +4,7 @@ import { requireStaff } from "@/lib/auth";
 import { Logo } from "@/components/site/Logo";
 import { LogoutButton } from "@/components/shop/LogoutButton";
 import { AdminNav, type AdminNavItem } from "@/components/admin/AdminNav";
+import { ShopAsCustomerToggle } from "@/components/admin/ShopAsCustomerToggle";
 import { isFullAdmin, roleLabel } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,7 @@ const ADMIN_NAV: AdminNavItem[] = [
       { href: "/admin/cms/banners", label: "Banners / promo bar" },
       { href: "/admin/cms/email", label: "Email & notifications" },
       { href: "/admin/cms/btcpay", label: "BTCPay / Bitcoin" },
+      { href: "/admin/cms/btcpostage", label: "Bitcoin Postage" },
       { href: "/admin/cms/settings", label: "Site settings" },
     ],
   },
@@ -72,6 +74,10 @@ export default async function AdminLayout({
             </span>
           </div>
           <div className="flex items-center gap-3">
+            <ShopAsCustomerToggle />
+            <Link href="/account" className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              My account
+            </Link>
             <Link href="/" className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
               Store
             </Link>

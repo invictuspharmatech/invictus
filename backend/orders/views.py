@@ -302,11 +302,55 @@ def account_summary_view(request):
 @api_view(["GET"])
 @permission_classes([IsPortalStaff])
 def admin_orders_view(request):
-    qs = Order.objects.prefetch_related("items", "btc_invoices").all()
+    qs = Order.objects.prefetch_related("items", "btc_invoices", "shipping_labels").all()
     warehouse = managed_warehouse(request.user)
     if warehouse:
         qs = qs.filter(warehouse=warehouse)
-    return Response(OrderSerializer(qs[:200], many=True).data)
+    requested_warehouse = request.GET.get("warehouse")
+    if not warehouse and requested_warehouse in (
+        Order.Warehouse.WAREHOUSE_1,
+        Order.Warehouse.WAREHOUSE_2,
+    ):
+        qs = qs.filter(warehouse=requested_warehouse)
+    status = request.GET.get("status")
+    if status and status not in ("all", ""):
+        qs = qs.filter(status=status.upper())
+    q = (request.GET.get("q") or "").strip()
+    if q:
+        qs = qs.filter(
+            Q(order_number__icontains=q)
+            | Q(customer_name__icontains=q)
+            | Q(customer_email__icontains=q)
+            | Q(tracking_number__icontains=q)
+        )
+    date_from = request.GET.get("dateFrom")
+    date_to = request.GET.get("dateTo")
+    if date_from:
+        qs = qs.filter(created_at__date__gte=date_from)
+    if date_to:
+        qs = qs.filter(created_at__date__lte=date_to)
+    base = Order.objects.all()
+    if warehouse:
+        base = base.filter(warehouse=warehouse)
+    elif requested_warehouse in (Order.Warehouse.WAREHOUSE_1, Order.Warehouse.WAREHOUSE_2):
+        base = base.filter(warehouse=requested_warehouse)
+    counts = {"all": base.count()}
+    for choice, _label in Order.Status.choices:
+        counts[choice.lower()] = base.filter(status=choice).count()
+    return Response({"orders": OrderSerializer(qs[:300], many=True).data, "counts": counts})
+
+
+@api_view(["GET"])
+@permission_classes([IsPortalStaff])
+def admin_order_detail_view(request, pk):
+    qs = Order.objects.prefetch_related("items", "btc_invoices", "shipping_labels")
+    warehouse = managed_warehouse(request.user)
+    if warehouse:
+        qs = qs.filter(warehouse=warehouse)
+    order = qs.filter(pk=pk).first()
+    if not order:
+        return Response({"error": "Not found."}, status=404)
+    return Response(OrderSerializer(order).data)
 
 
 @api_view(["POST"])
@@ -498,3 +542,76 @@ def admin_accounting_reset_view(request):
         defaults={"reset_at": timezone.now(), "reset_by_id": str(request.user.id)},
     )
     return Response({"ok": True})
+
+
+@api_view(["POST"])
+@permission_classes([IsPortalStaff])
+def admin_orders_bulk_status_view(request):
+    status = request.data.get("status")
+    ids = request.data.get("ids") or []
+    valid = {choice[0] for choice in Order.Status.choices}
+    if status not in valid:
+        return Response({"error": "Invalid status."}, status=400)
+    warehouse = managed_warehouse(request.user)
+    qs = Order.objects.filter(pk__in=ids)
+    if warehouse:
+        qs = qs.filter(warehouse=warehouse)
+    updated = 0
+    for order in qs:
+        previous = order.status
+        order.status = status
+        if status in (Order.Status.SHIPPED, Order.Status.DELIVERED) and not order.shipped_at:
+            order.shipped_at = timezone.now()
+        order.save()
+        if previous != Order.Status.CANCELLED and status == Order.Status.CANCELLED:
+            restock_order(order)
+            apply_group_shipping(order.group_id)
+        send_order_status_event(order)
+        updated += 1
+    return Response({"ok": True, "updated": updated})
+
+
+@api_view(["POST"])
+@permission_classes([IsPortalStaff])
+def admin_order_tracking_view(request, pk):
+    from orders.bitcoinpostage import tracking_url_for
+    from orders.models import ShippingLabel
+
+    order = Order.objects.filter(pk=pk).first()
+    if not order:
+        return Response({"error": "Not found."}, status=404)
+    warehouse = managed_warehouse(request.user)
+    if warehouse and order.warehouse != warehouse:
+        return Response({"error": "Not found."}, status=404)
+    tracking = str(request.data.get("trackingNumber") or "").strip()
+    carrier = str(request.data.get("carrier") or "USPS").strip() or "USPS"
+    order.tracking_number = tracking
+    if tracking and not order.shipped_at:
+        order.status = Order.Status.SHIPPED
+        order.shipped_at = timezone.now()
+    order.save()
+    if tracking:
+        ShippingLabel.objects.create(
+            order=order,
+            tracking_number=tracking,
+            tracking_url=tracking_url_for(carrier, tracking),
+            carrier=carrier.upper(),
+            source=ShippingLabel.Source.MANUAL,
+        )
+    return Response(OrderSerializer(order).data)
+
+
+@api_view(["GET", "PUT", "POST"])
+@permission_classes([IsStoreStaff])
+def admin_accounting_split_view(request):
+    from orders.accounting import get_split_rates, reset_split, save_split, split_public, validate_split
+
+    if request.method == "GET":
+        return Response(split_public(get_split_rates()))
+    if request.method == "POST" and request.data.get("reset"):
+        return Response(split_public(reset_split()))
+    parsed, error = validate_split(request.data if isinstance(request.data, dict) else {})
+    if error:
+        return Response({"error": error, **split_public(parsed)}, status=400)
+    save_split(parsed)
+    return Response(split_public(parsed))

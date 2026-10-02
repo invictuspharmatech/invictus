@@ -36,8 +36,18 @@ class OrderSerializer(serializers.ModelSerializer):
     createdAt = serializers.DateTimeField(source="created_at")
     paymentStatus = serializers.CharField(source="payment_status")
     paymentMethod = serializers.CharField(source="payment_method")
+    trackingNumber = serializers.CharField(source="tracking_number")
+    userId = serializers.UUIDField(source="user_id", allow_null=True, read_only=True)
+    shippingLine1 = serializers.CharField(source="shipping_line1")
+    shippingLine2 = serializers.CharField(source="shipping_line2")
+    shippingCity = serializers.CharField(source="shipping_city")
+    shippingState = serializers.CharField(source="shipping_state")
+    shippingPostal = serializers.CharField(source="shipping_postal")
+    shippingCountry = serializers.CharField(source="shipping_country")
+    notes = serializers.CharField()
     items = OrderItemSerializer(many=True, read_only=True)
     btcInvoice = serializers.SerializerMethodField()
+    shippingLabels = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -57,12 +67,29 @@ class OrderSerializer(serializers.ModelSerializer):
             "customerEmail",
             "commissionAmount",
             "createdAt",
+            "trackingNumber",
+            "userId",
+            "shippingLine1",
+            "shippingLine2",
+            "shippingCity",
+            "shippingState",
+            "shippingPostal",
+            "shippingCountry",
+            "notes",
             "items",
             "btcInvoice",
+            "shippingLabels",
         ]
 
     def get_btcInvoice(self, obj):
         return serialize_invoice(obj.btc_invoice)
+
+    def get_shippingLabels(self, obj):
+        from orders.bitcoinpostage import serialize_label
+
+        labels = getattr(obj, "_prefetched_objects_cache", {}).get("shipping_labels")
+        rows = list(labels) if labels is not None else list(obj.shipping_labels.all())
+        return [serialize_label(row) for row in rows]
 
 
 class ContactSerializer(serializers.ModelSerializer):

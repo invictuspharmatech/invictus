@@ -6,9 +6,11 @@ import { CartProvider } from "@/components/shop/CartProvider";
 import { ReferralCapture } from "@/components/shop/ReferralCapture";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { ConditionalFooter } from "@/components/site/ConditionalFooter";
-import { readSession } from "@/lib/auth";
+import { readSession, isUserView } from "@/lib/auth";
 import { djangoJsonSafe } from "@/lib/django";
 import { SHOP_CATEGORIES } from "@/lib/storefront-nav";
+import { isStaff } from "@/lib/roles";
+import { UserViewBanner } from "@/components/site/UserViewBanner";
 import type { ApiBanner, ApiCategory } from "@/lib/api-types";
 import "./globals.css";
 
@@ -55,6 +57,7 @@ export default async function RootLayout({
   const pathname = headerList.get("x-invictus-pathname") || "";
   const isAdminApp = pathname.startsWith("/admin");
   const session = isAdminApp ? null : await readSession();
+  const userView = Boolean(session && isStaff(session.role) && (await isUserView()));
   const [categories, banners] = (
     isAdminApp
       ? [[], []]
@@ -89,7 +92,14 @@ export default async function RootLayout({
             <ReferralCapture />
           </Suspense>
           {isAdminApp ? null : (
-            <SiteHeader session={session} shopLinks={shopLinks} promoItems={promoItems} />
+            <>
+              {userView ? <UserViewBanner /> : null}
+              <SiteHeader
+                session={session}
+                shopLinks={shopLinks}
+                promoItems={promoItems}
+              />
+            </>
           )}
           <main className="flex-1">{children}</main>
           {isAdminApp ? null : <ConditionalFooter />}

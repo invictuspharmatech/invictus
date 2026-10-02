@@ -9,7 +9,9 @@ import {
   type TileView,
 } from "@/lib/accounting";
 import { AccountingBoard } from "@/components/admin/AccountingBoard";
+import { SplitForm } from "@/components/admin/SplitForm";
 import { djangoAuthed } from "@/lib/django";
+import type { RevenueSplit } from "@/lib/api-types";
 
 export default async function AccountingPage({
   searchParams,
@@ -31,16 +33,34 @@ export default async function AccountingPage({
     tiles: TileView[];
     summary: AccountingSummary;
     sales: AccountingSaleRow[];
+    split?: RevenueSplit;
   }>(`/api/admin/accounting/?period=${period}&warehouse=${warehouse}`);
+
+  const split = data.split ?? {
+    w1Admin: 25,
+    w1Party1: 60,
+    w1Party2: 15,
+    w2Admin: 25,
+    w2Party1: 0,
+    w2Party2: 75,
+    defaults: {
+      w1Admin: 25,
+      w1Party1: 60,
+      w1Party2: 15,
+      w2Admin: 25,
+      w2Party1: 0,
+      w2Party2: 75,
+    },
+  };
 
   return (
     <div>
       <h1 className="display-font text-3xl">Accounting</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
         Percentage split of proceeds received (USD, and BTC when the invoice has a crypto
-        amount). Admin is always 25%. Party 1 is 60% × the W1 merchandise share of the sale.
-        Party 2 is the remainder. Mixed checkouts are one sale: X comes from merchandise, then
-        those percentages apply to the full proceeds. Reset a tile after you pay that party.
+        amount). Shares are configurable below; mixed checkouts are one sale: X comes from
+        merchandise, then those percentages apply to the full proceeds. Reset a tile after you
+        pay that party. Restoring default shares puts the original rates back.
       </p>
       <div className="mt-6 flex flex-wrap gap-2">
         {([AccountingPeriod.DAY, AccountingPeriod.WEEK, AccountingPeriod.MONTH] as const).map(
@@ -72,6 +92,7 @@ export default async function AccountingPage({
           </a>
         ))}
       </div>
+      <SplitForm split={split} />
       <AccountingBoard
         tiles={data.tiles}
         period={period}

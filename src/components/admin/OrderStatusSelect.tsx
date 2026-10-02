@@ -17,9 +17,11 @@ const OPTIONS: OrderStatus[] = [
 export function OrderStatusSelect({
   id,
   status,
+  onUpdated,
 }: {
   id: string;
   status: string;
+  onUpdated?: () => void;
 }) {
   const router = useRouter();
 
@@ -27,6 +29,7 @@ export function OrderStatusSelect({
     <select
       className="field max-w-xs"
       defaultValue={status}
+      key={status}
       onChange={async (event) => {
         await fetch(`/api/admin/orders/${id}/status`, {
           method: "POST",
@@ -34,6 +37,7 @@ export function OrderStatusSelect({
           body: JSON.stringify({ status: event.target.value }),
         });
         router.refresh();
+        onUpdated?.();
       }}
     >
       {OPTIONS.map((option) => (

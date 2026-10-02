@@ -70,6 +70,7 @@ class Order(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     paid_at = models.DateTimeField(null=True, blank=True)
     shipped_at = models.DateTimeField(null=True, blank=True)
+    tracking_number = models.CharField(max_length=120, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
@@ -224,3 +225,69 @@ class AccountingReset(models.Model):
 
     class Meta:
         unique_together = ("tile_key", "period", "warehouse")
+
+
+class RevenueSplitSettings(models.Model):
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    w1_admin = models.FloatField(default=25)
+    w1_party1 = models.FloatField(default=60)
+    w1_party2 = models.FloatField(default=15)
+    w2_admin = models.FloatField(default=25)
+    w2_party1 = models.FloatField(default=0)
+    w2_party2 = models.FloatField(default=75)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def as_percents(self) -> dict:
+        return {
+            "w1Admin": self.w1_admin,
+            "w1Party1": self.w1_party1,
+            "w1Party2": self.w1_party2,
+            "w2Admin": self.w2_admin,
+            "w2Party1": self.w2_party1,
+            "w2Party2": self.w2_party2,
+        }
+
+
+class BitcoinPostageSettings(models.Model):
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    api_url = models.CharField(max_length=255, default="https://bitcoinpostage.info/api")
+    api_key = models.CharField(max_length=255, blank=True)
+    api_secret = models.CharField(max_length=255, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class BitcoinPostageSender(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    from_name = models.CharField(max_length=160)
+    from_street = models.CharField(max_length=255)
+    from_apt = models.CharField(max_length=120, blank=True)
+    from_city = models.CharField(max_length=120)
+    from_state = models.CharField(max_length=80)
+    from_zip = models.CharField(max_length=32)
+    from_country = models.CharField(max_length=8, default="US")
+    from_phone = models.CharField(max_length=64, blank=True)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-is_default", "from_name"]
+
+
+class ShippingLabel(models.Model):
+    class Source(models.TextChoices):
+        BTCPOSTAGE = "btcpostage", "Bitcoin Postage"
+        MANUAL = "manual", "Manual"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="shipping_labels")
+    tracking_number = models.CharField(max_length=120, blank=True)
+    tracking_url = models.CharField(max_length=500, blank=True)
+    label_url = models.CharField(max_length=700, blank=True)
+    carrier = models.CharField(max_length=40, blank=True)
+    service_type = models.CharField(max_length=80, blank=True)
+    source = models.CharField(max_length=20, choices=Source.choices, default=Source.BTCPOSTAGE)
+    raw = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]

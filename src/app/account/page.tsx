@@ -12,7 +12,6 @@ import type { ApiOrder } from "@/lib/api-types";
 export default async function AccountPage() {
   const session = await readSession();
   if (!session) redirect("/login?next=/account");
-  if (isStaff(session.role)) redirect("/admin");
 
   const { orders, application } = await djangoAuthed<{
     orders: ApiOrder[];
@@ -23,6 +22,11 @@ export default async function AccountPage() {
     <div className="mx-auto max-w-5xl px-4 pb-20 sm:px-6">
       <PageHeader title={`Hello, ${session.name}`} lede={session.email} />
       <div className="mb-8 flex flex-wrap gap-3">
+        {isStaff(session.role) ? (
+          <Link href="/admin" className="ghost-btn">
+            Admin
+          </Link>
+        ) : null}
         <Link href="/account/orders" className="ghost-btn">
           Orders
         </Link>

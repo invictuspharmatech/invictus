@@ -1,6 +1,17 @@
 from django.contrib import admin
 
-from orders.models import AccountingReset, BtcInvoice, ContactMessage, FulfillmentRequest, Order, OrderItem
+from orders.models import (
+    AccountingReset,
+    BitcoinPostageSender,
+    BitcoinPostageSettings,
+    BtcInvoice,
+    ContactMessage,
+    FulfillmentRequest,
+    Order,
+    OrderItem,
+    RevenueSplitSettings,
+    ShippingLabel,
+)
 
 
 class OrderItemInline(admin.TabularInline):
@@ -40,6 +51,26 @@ class AccountingResetAdmin(admin.ModelAdmin):
 class FulfillmentRequestAdmin(admin.ModelAdmin):
     list_display = ("order", "quantity", "from_warehouse", "to_warehouse", "status", "created_at")
     list_filter = ("status", "from_warehouse", "to_warehouse")
+
+
+@admin.register(ShippingLabel)
+class ShippingLabelAdmin(admin.ModelAdmin):
+    list_display = ("order", "tracking_number", "carrier", "source", "created_at")
+
+
+@admin.register(BitcoinPostageSender)
+class BitcoinPostageSenderAdmin(admin.ModelAdmin):
+    list_display = ("from_name", "from_city", "from_state", "is_default")
+
+
+@admin.register(BitcoinPostageSettings)
+class BitcoinPostageSettingsAdmin(admin.ModelAdmin):
+    list_display = ("api_url", "api_key")
+
+
+@admin.register(RevenueSplitSettings)
+class RevenueSplitSettingsAdmin(admin.ModelAdmin):
+    list_display = ("w1_admin", "w1_party1", "w1_party2", "w2_admin", "w2_party1", "w2_party2")
 
 
 @admin.register(BtcInvoice)

@@ -2,7 +2,13 @@ from decimal import Decimal
 
 from django.test import SimpleTestCase
 
-from orders.accounting import allocate_for_warehouse, allocate_sale, w1_merchandise_share
+from orders.accounting import (
+    allocate_for_warehouse,
+    allocate_sale,
+    default_split,
+    validate_split,
+    w1_merchandise_share,
+)
 from orders.models import Order
 
 
@@ -48,3 +54,41 @@ class RevenueSplitTests(SimpleTestCase):
         self.assertEqual(both[1], w1[1] + w2[1])
         self.assertEqual(both[2], w1[2] + w2[2])
         self.assertEqual(sum(both), proceeds)
+
+    def test_custom_split_is_used(self):
+        split = default_split()
+        split["w1_admin"] = Decimal("20")
+        split["w1_party1"] = Decimal("50")
+        split["w1_party2"] = Decimal("30")
+        admin, party1, party2 = allocate_sale(Decimal("100"), Decimal("1"), split)
+        self.assertEqual(admin, Decimal("20"))
+        self.assertEqual(party1, Decimal("50"))
+        self.assertEqual(party2, Decimal("30"))
+
+    def test_split_cannot_exceed_100(self):
+        parsed, error = validate_split(
+            {"w1Admin": 40, "w1Party1": 40, "w1Party2": 40, "w2Admin": 25, "w2Party1": 0, "w2Party2": 75}
+        )
+        self.assertIsNotNone(error)
+        self.assertIn("100", error or "")
+        self.assertEqual(parsed["w1_admin"], Decimal("40"))
+
+    def test_split_must_total_100(self):
+        _, error = validate_split(
+            {"w1Admin": 20, "w1Party1": 20, "w1Party2": 20, "w2Admin": 25, "w2Party1": 0, "w2Party2": 75}
+        )
+        self.assertIsNotNone(error)
+
+    def test_default_split_validates(self):
+        parsed, error = validate_split(
+            {
+                "w1Admin": 25,
+                "w1Party1": 60,
+                "w1Party2": 15,
+                "w2Admin": 25,
+                "w2Party1": 0,
+                "w2Party2": 75,
+            }
+        )
+        self.assertIsNone(error)
+        self.assertEqual(parsed["w1_party2"], Decimal("15"))

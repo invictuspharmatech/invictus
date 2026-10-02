@@ -84,7 +84,7 @@ export function SiteHeader({
   const staff = session ? isStaff(session.role) : false;
   const [open, setOpen] = useState(false);
   const shop = shopLinks.length > 0 ? shopLinks : SHOP_CATEGORIES;
-  const accountHref = session ? (staff ? "/admin" : "/account") : "/login";
+  const accountHref = session ? "/account" : "/login";
 
   if (pathname.startsWith("/admin")) {
     return null;
@@ -128,6 +128,11 @@ export function SiteHeader({
           <Link href={accountHref} className={NAV_LINK_CLASS}>
             My account
           </Link>
+          {staff ? (
+            <Link href="/admin" className={NAV_LINK_CLASS}>
+              Admin
+            </Link>
+          ) : null}
           <Link href="/cart" className={`${NAV_LINK_CLASS} relative inline-flex items-center gap-2`}>
             Cart
             {count > 0 ? (
@@ -218,6 +223,11 @@ export function SiteHeader({
           >
             My account
           </Link>
+          {staff ? (
+            <Link href="/admin" className={`block py-1 ${NAV_LINK_CLASS}`} onClick={() => setOpen(false)}>
+              Admin
+            </Link>
+          ) : null}
         </div>
       ) : null}
     </header>

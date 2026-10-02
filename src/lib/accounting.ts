@@ -42,18 +42,18 @@ export function tileCopy(key: AccountingTileKey): {
   switch (key) {
     case AccountingTileKey.ADMIN_25:
       return {
-        title: "Admin · 25%",
-        description: "25% of proceeds received. Fixed on every sale.",
+        title: "Admin",
+        description: "Configured admin share of proceeds received.",
       };
     case AccountingTileKey.PARTY_1:
       return {
         title: "Party 1",
-        description: "60% × the W1 merchandise share of each sale.",
+        description: "Configured Party 1 share, weighted by merchandise mix.",
       };
     case AccountingTileKey.PARTY_2:
       return {
         title: "Party 2",
-        description: "75% minus Party 1’s share. The three parties always total 100%.",
+        description: "Remainder of each sale so the three parties total 100%.",
       };
     default: {
       const exhaustive: never = key;

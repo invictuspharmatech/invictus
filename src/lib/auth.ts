@@ -9,6 +9,27 @@ export { isStaff } from "@/lib/roles";
 export type { SessionUser } from "@/lib/types";
 
 const COOKIE = "invictus_session";
+export const USER_VIEW_COOKIE = "invictus_user_view";
+
+export async function isUserView(): Promise<boolean> {
+  const jar = await cookies();
+  return jar.get(USER_VIEW_COOKIE)?.value === "1";
+}
+
+export async function setUserViewCookie(enabled: boolean) {
+  const jar = await cookies();
+  if (enabled) {
+    jar.set(USER_VIEW_COOKIE, "1", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 14,
+    });
+    return;
+  }
+  jar.delete(USER_VIEW_COOKIE);
+}
 
 function secretKey() {
   const secret = process.env.AUTH_SECRET;
@@ -73,6 +94,7 @@ export async function setSessionCookie(user: SessionUser) {
 export async function clearSessionCookie() {
   const jar = await cookies();
   jar.delete(COOKIE);
+  jar.delete(USER_VIEW_COOKIE);
 }
 
 export async function requireUser() {
