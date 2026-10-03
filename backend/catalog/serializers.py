@@ -11,6 +11,14 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ["id", "slug", "name", "description", "image", "sortOrder"]
 
 
+class CategoryWriteSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    slug = serializers.CharField(required=False, allow_blank=True)
+    description = serializers.CharField(required=False, allow_blank=True)
+    image = serializers.CharField(required=False, allow_blank=True)
+    sortOrder = serializers.IntegerField(required=False)
+
+
 class NestedCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category

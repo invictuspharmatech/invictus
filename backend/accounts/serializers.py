@@ -15,6 +15,7 @@ class SessionUserSerializer(serializers.ModelSerializer):
 class UserAdminSerializer(serializers.ModelSerializer):
     isAffiliate = serializers.BooleanField(source="is_affiliate")
     affiliateCode = serializers.CharField(source="affiliate_code", allow_null=True)
+    isActive = serializers.BooleanField(source="is_active")
     createdAt = serializers.DateTimeField(source="created_at")
 
     class Meta:
@@ -24,8 +25,10 @@ class UserAdminSerializer(serializers.ModelSerializer):
             "email",
             "name",
             "role",
+            "phone",
             "isAffiliate",
             "affiliateCode",
+            "isActive",
             "createdAt",
         ]
 

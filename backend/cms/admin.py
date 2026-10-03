@@ -73,6 +73,8 @@ class EmailTemplateAdmin(admin.ModelAdmin):
 @admin.register(WarehouseSettings)
 class WarehouseSettingsAdmin(admin.ModelAdmin):
     list_display = (
+        "w1_name",
+        "w2_name",
         "split_enabled",
         "auto_split_enabled",
         "manual_move_enabled",

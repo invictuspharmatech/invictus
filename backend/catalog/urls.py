@@ -10,6 +10,8 @@ urlpatterns = [
     path("admin/products/", views.admin_product_list),
     path("admin/products/<uuid:pk>/", views.admin_product_detail),
     path("admin/products/<uuid:pk>/warehouse/", views.admin_product_warehouse),
+    path("admin/categories/", views.admin_category_list),
+    path("admin/categories/<uuid:pk>/", views.admin_category_detail),
     path("admin/test-results/", views.admin_test_results),
     path("admin/test-results/<uuid:pk>/", views.admin_test_result_detail),
     path("admin/stock-transfers/", views.admin_stock_transfers),

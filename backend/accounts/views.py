@@ -80,13 +80,100 @@ def affiliate_apply_view(request):
     return Response({"ok": True})
 
 
-@api_view(["GET"])
+ASSIGNABLE_ROLES = {
+    User.Role.SUPERUSER,
+    User.Role.ADMIN,
+    User.Role.WAREHOUSE_1,
+    User.Role.WAREHOUSE_2,
+    User.Role.CUSTOMER,
+}
+
+
+def _visible_users(actor):
+    qs = User.objects.all()
+    if actor.role != User.Role.SUPERUSER:
+        qs = qs.exclude(role=User.Role.SUPERUSER)
+    return qs
+
+
+def _can_manage_user(actor, target) -> bool:
+    if target.role == User.Role.SUPERUSER and actor.role != User.Role.SUPERUSER:
+        return False
+    return True
+
+
+def _parse_role(actor, value):
+    role = str(value or "").strip().upper()
+    if role not in ASSIGNABLE_ROLES:
+        return None, "Invalid user type."
+    if role == User.Role.SUPERUSER and actor.role != User.Role.SUPERUSER:
+        return None, "Only a super user can assign that type."
+    return role, None
+
+
+def _apply_user_fields(user, data, actor, *, creating: bool):
+    role, error = _parse_role(actor, data.get("role") or user.role)
+    if error:
+        return error
+    email = (data.get("email") or user.email or "").strip().lower()
+    name = (data.get("name") or user.name or "").strip()
+    if not email or not name:
+        return "Name and email are required."
+    clash = User.objects.filter(email=email)
+    if not creating:
+        clash = clash.exclude(pk=user.pk)
+    if clash.exists():
+        return "An account with that email already exists."
+    password = data.get("password")
+    if creating and (not password or len(str(password)) < 8):
+        return "An 8+ character password is required."
+    if password:
+        if len(str(password)) < 8:
+            return "An 8+ character password is required."
+        user.set_password(password)
+    user.email = email
+    user.name = name
+    user.role = role
+    if "phone" in data:
+        user.phone = str(data.get("phone") or "")
+    if "isActive" in data:
+        user.is_active = bool(data.get("isActive"))
+    if "isAffiliate" in data:
+        user.is_affiliate = bool(data.get("isAffiliate"))
+        if user.is_affiliate and not user.affiliate_code:
+            user.affiliate_code = f"INV{uuid_code()}"
+        if not user.is_affiliate:
+            user.affiliate_code = user.affiliate_code or None
+    user.save()
+    return None
+
+
+@api_view(["GET", "POST"])
 @permission_classes([IsStoreStaff])
 def admin_users_view(request):
-    qs = User.objects.all()
-    if request.user.role != User.Role.SUPERUSER:
-        qs = qs.exclude(role=User.Role.SUPERUSER)
-    return Response(UserAdminSerializer(qs, many=True).data)
+    if request.method == "POST":
+        user = User(role=User.Role.CUSTOMER)
+        error = _apply_user_fields(user, request.data, request.user, creating=True)
+        if error:
+            return Response({"error": error}, status=400)
+        return Response(UserAdminSerializer(user).data, status=201)
+    return Response(UserAdminSerializer(_visible_users(request.user), many=True).data)
+
+
+@api_view(["GET", "PUT", "PATCH"])
+@permission_classes([IsStoreStaff])
+def admin_user_detail_view(request, pk):
+    user = _visible_users(request.user).filter(pk=pk).first()
+    if not user:
+        return Response({"error": "Not found."}, status=404)
+    if not _can_manage_user(request.user, user):
+        return Response({"error": "Not found."}, status=404)
+    if request.method == "GET":
+        return Response(UserAdminSerializer(user).data)
+    error = _apply_user_fields(user, request.data, request.user, creating=False)
+    if error:
+        return Response({"error": error}, status=400)
+    return Response(UserAdminSerializer(user).data)
 
 
 @api_view(["GET"])

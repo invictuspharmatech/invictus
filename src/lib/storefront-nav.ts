@@ -1,7 +1,7 @@
 export const TELEGRAM_URL = "https://t.me/invictuspharma";
 
 export const NAV_LINK_CLASS =
-  "font-mono text-[20px] font-normal uppercase tracking-[0.1em] text-muted-foreground transition hover:text-signal";
+  "font-mono text-[16px] font-normal leading-none uppercase tracking-[0.12em] [word-spacing:-0.55em] text-muted-foreground transition hover:text-signal";
 
 export const FOOTER_HEADING_CLASS =
   "mb-4 font-mono text-[20px] font-bold uppercase tracking-[0.1em] text-foreground";

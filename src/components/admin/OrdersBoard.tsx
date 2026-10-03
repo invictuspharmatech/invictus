@@ -45,15 +45,19 @@ function formatDate(value: string) {
 
 export function OrdersBoard({
   role,
+  initialStatus = "all",
+  initialWarehouse = "BOTH",
 }: {
   role: string;
+  initialStatus?: string;
+  initialWarehouse?: string;
 }) {
   const admin = isFullAdmin(role);
   const [orders, setOrders] = useState<ApiOrder[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState("all");
-  const [warehouse, setWarehouse] = useState("BOTH");
+  const [status, setStatus] = useState(initialStatus);
+  const [warehouse, setWarehouse] = useState(initialWarehouse);
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");

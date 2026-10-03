@@ -180,6 +180,12 @@ class WarehouseSettingsSerializer(serializers.ModelSerializer):
     autoSplitEnabled = serializers.BooleanField(source="auto_split_enabled")
     manualMoveEnabled = serializers.BooleanField(source="manual_move_enabled")
     warehouseRequestEnabled = serializers.BooleanField(source="warehouse_request_enabled")
+    w1Name = serializers.CharField(source="w1_name", required=False, allow_blank=True)
+    w1Contact = serializers.CharField(source="w1_contact", required=False, allow_blank=True)
+    w1Notes = serializers.CharField(source="w1_notes", required=False, allow_blank=True)
+    w2Name = serializers.CharField(source="w2_name", required=False, allow_blank=True)
+    w2Contact = serializers.CharField(source="w2_contact", required=False, allow_blank=True)
+    w2Notes = serializers.CharField(source="w2_notes", required=False, allow_blank=True)
 
     class Meta:
         model = WarehouseSettings
@@ -188,4 +194,10 @@ class WarehouseSettingsSerializer(serializers.ModelSerializer):
             "autoSplitEnabled",
             "manualMoveEnabled",
             "warehouseRequestEnabled",
+            "w1Name",
+            "w1Contact",
+            "w1Notes",
+            "w2Name",
+            "w2Contact",
+            "w2Notes",
         ]

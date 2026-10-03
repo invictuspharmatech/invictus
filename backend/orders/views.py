@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from collections import defaultdict
 import logging
 
@@ -17,7 +19,7 @@ from accounts.permissions import (
     is_full_admin,
     managed_warehouse,
 )
-from catalog.models import Product
+from catalog.models import Category, Product
 from cms.mailer import send_event, send_order_event, send_order_status_event
 from orders.fulfillment import (
     FulfillmentError,
@@ -463,35 +465,105 @@ def admin_fulfillment_request_review(request, pk):
 @permission_classes([IsPortalStaff])
 def admin_overview_view(request):
     from accounts.models import AffiliateApplication, User
-    from catalog.models import Product
+
+    PAID_LIKE = [
+        Order.Status.PAID,
+        Order.Status.PROCESSING,
+        Order.Status.SHIPPED,
+        Order.Status.DELIVERED,
+    ]
+    OPEN = [
+        Order.Status.PENDING,
+        Order.Status.ON_HOLD,
+        Order.Status.PAID,
+        Order.Status.PROCESSING,
+    ]
 
     user_count_qs = User.objects.all()
     if request.user.role != User.Role.SUPERUSER:
         user_count_qs = user_count_qs.exclude(role=User.Role.SUPERUSER)
-    orders_qs = Order.objects.all()
-    open_qs = Order.objects.filter(
-        status__in=[
-            Order.Status.PENDING,
-            Order.Status.ON_HOLD,
-            Order.Status.PAID,
-            Order.Status.PROCESSING,
-        ]
-    )
     warehouse = managed_warehouse(request.user) or parse_accounting_warehouse(
         request.GET.get("warehouse")
     )
-    if warehouse in (Order.Warehouse.WAREHOUSE_1, Order.Warehouse.WAREHOUSE_2):
+    scoped = warehouse in (Order.Warehouse.WAREHOUSE_1, Order.Warehouse.WAREHOUSE_2)
+    orders_qs = Order.objects.all()
+    open_qs = Order.objects.filter(status__in=OPEN)
+    paid_qs = Order.objects.filter(status__in=PAID_LIKE)
+    if scoped:
         orders_qs = orders_qs.filter(warehouse=warehouse)
         open_qs = open_qs.filter(warehouse=warehouse)
+        paid_qs = paid_qs.filter(warehouse=warehouse)
     else:
         warehouse = "BOTH"
-    open_total = open_qs.aggregate(total=Sum("grand_total"))["total"] or 0
+
+    now = timezone.now()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - timedelta(days=today_start.weekday())
+    month_start = today_start.replace(day=1)
+    reset = AccountingReset.objects.order_by("-reset_at").first()
+    reset_at = reset.reset_at if reset else None
+    shipping_reset_qs = paid_qs
+    if reset_at:
+        shipping_reset_qs = paid_qs.filter(created_at__gte=reset_at)
+
     if warehouse == Order.Warehouse.WAREHOUSE_1:
         low_stock = Product.objects.filter(stock_quantity_w1__lte=5).count()
     elif warehouse == Order.Warehouse.WAREHOUSE_2:
         low_stock = Product.objects.filter(stock_quantity_w2__lte=5).count()
     else:
         low_stock = Product.objects.filter(stock_quantity__lte=5).count()
+
+    month_items = OrderItem.objects.filter(
+        order__status__in=PAID_LIKE,
+        order__created_at__gte=month_start,
+    )
+    if scoped:
+        month_items = month_items.filter(order__warehouse=warehouse)
+    top = (
+        month_items.values("product__categories__name")
+        .annotate(total=Sum("quantity"))
+        .order_by("-total")
+        .first()
+    )
+    top_name = (top or {}).get("product__categories__name") or "—"
+    top_count = int((top or {}).get("total") or 0)
+
+    settings_row = get_warehouse_settings()
+
+    def warehouse_card(code: str) -> dict:
+        w_open = Order.objects.filter(warehouse=code, status__in=OPEN)
+        if code == Order.Warehouse.WAREHOUSE_1:
+            name = settings_row.w1_name or "Warehouse 1"
+            contact = settings_row.w1_contact
+            notes = settings_row.w1_notes
+            low = Product.objects.filter(stock_quantity_w1__lte=5).count()
+        else:
+            name = settings_row.w2_name or "Warehouse 2"
+            contact = settings_row.w2_contact
+            notes = settings_row.w2_notes
+            low = Product.objects.filter(stock_quantity_w2__lte=5).count()
+        return {
+            "code": code,
+            "name": name,
+            "contact": contact,
+            "notes": notes,
+            "productCount": Product.objects.filter(warehouse=code).count(),
+            "lowStockCount": low,
+            "processingCount": Order.objects.filter(
+                warehouse=code, status=Order.Status.PROCESSING
+            ).count(),
+            "openOrderCount": w_open.count(),
+            "openOrderValue": w_open.aggregate(total=Sum("grand_total"))["total"] or 0,
+        }
+
+    warehouses = [
+        warehouse_card(Order.Warehouse.WAREHOUSE_1),
+        warehouse_card(Order.Warehouse.WAREHOUSE_2),
+    ]
+    if scoped:
+        warehouses = [row for row in warehouses if row["code"] == warehouse]
+
+    open_total = open_qs.aggregate(total=Sum("grand_total"))["total"] or 0
     orders = orders_qs[:8]
     return Response(
         {
@@ -510,6 +582,33 @@ def admin_overview_view(request):
             "pendingAffiliates": AffiliateApplication.objects.filter(status="pending").count(),
             "userCount": user_count_qs.count(),
             "warehouse": warehouse,
+            "salesToday": paid_qs.filter(created_at__gte=today_start).aggregate(
+                total=Sum("merchandise_total")
+            )["total"]
+            or 0,
+            "salesThisMonth": paid_qs.filter(created_at__gte=month_start).aggregate(
+                total=Sum("merchandise_total")
+            )["total"]
+            or 0,
+            "shippingSinceReset": shipping_reset_qs.aggregate(total=Sum("shipping_total"))["total"]
+            or 0,
+            "shippingThisWeek": paid_qs.filter(created_at__gte=week_start).aggregate(
+                total=Sum("shipping_total")
+            )["total"]
+            or 0,
+            "ordersPending": orders_qs.filter(status=Order.Status.PENDING).count(),
+            "ordersProcessing": orders_qs.filter(status=Order.Status.PROCESSING).count(),
+            "ordersCompleted": orders_qs.filter(
+                status__in=[Order.Status.SHIPPED, Order.Status.DELIVERED]
+            ).count(),
+            "topCategoryMonth": {"name": top_name, "count": top_count},
+            "categoriesTotal": Category.objects.count(),
+            "warehousesTotal": 2,
+            "couponsTotal": 0,
+            "giftCardsTotal": 0,
+            "customersTotal": User.objects.filter(role=User.Role.CUSTOMER).count(),
+            "storeCreditAvailable": 0,
+            "warehouses": warehouses,
             "orders": OrderSerializer(orders, many=True).data,
         }
     )

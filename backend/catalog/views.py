@@ -9,6 +9,7 @@ from accounts.permissions import IsPortalStaff, IsStoreStaff, is_full_admin, man
 from catalog.models import Category, Product, ProductCategory, StockTransferRequest, TestResult
 from catalog.serializers import (
     CategorySerializer,
+    CategoryWriteSerializer,
     ProductSerializer,
     ProductWriteSerializer,
     StockTransferSerializer,
@@ -267,3 +268,46 @@ def admin_stock_transfer_review(request, pk):
     except FulfillmentError as exc:
         return Response({"error": str(exc)}, status=400)
     return Response(StockTransferSerializer(row).data)
+
+
+def _save_category(category: Category, data: dict) -> Category:
+    name = data.get("name") or category.name
+    slug = (data.get("slug") or "").strip() or slugify(name)
+    category.name = name
+    category.slug = slug
+    if "description" in data:
+        category.description = data.get("description") or ""
+    if "image" in data:
+        category.image = data.get("image") or ""
+    if "sortOrder" in data and data.get("sortOrder") is not None:
+        category.sort_order = int(data.get("sortOrder") or 0)
+    category.save()
+    return category
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsStoreStaff])
+def admin_category_list(request):
+    if request.method == "POST":
+        serializer = CategoryWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        category = _save_category(Category(), serializer.validated_data)
+        return Response(CategorySerializer(category).data, status=201)
+    return Response(CategorySerializer(Category.objects.all(), many=True).data)
+
+
+@api_view(["GET", "PUT", "PATCH", "DELETE"])
+@permission_classes([IsStoreStaff])
+def admin_category_detail(request, pk):
+    category = Category.objects.filter(pk=pk).first()
+    if not category:
+        return Response({"error": "Not found."}, status=404)
+    if request.method == "GET":
+        return Response(CategorySerializer(category).data)
+    if request.method == "DELETE":
+        category.delete()
+        return Response({"ok": True})
+    serializer = CategoryWriteSerializer(data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    category = _save_category(category, serializer.validated_data)
+    return Response(CategorySerializer(category).data)

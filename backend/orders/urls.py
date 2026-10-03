@@ -38,6 +38,7 @@ urlpatterns = [
     path("admin/accounting/reset/", views.admin_accounting_reset_view),
     path("admin/accounting/split/", views.admin_accounting_split_view),
     path("admin/users/", account_views.admin_users_view),
+    path("admin/users/<uuid:pk>/", account_views.admin_user_detail_view),
     path("admin/affiliates/", account_views.admin_affiliates_view),
     path("admin/affiliates/<uuid:pk>/", account_views.admin_affiliate_action_view),
 ]

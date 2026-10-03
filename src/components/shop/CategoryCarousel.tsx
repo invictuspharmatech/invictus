@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const AUTO_SLIDE_MS = 5500;
 const GAP_PX = 20;
-const VISIBLE_ON_DESKTOP = 4;
+const VISIBLE_ON_DESKTOP = 5;
 const TRANSITION_MS = 500;
 const DESKTOP_MIN_WIDTH_PX = 1024;
 
@@ -202,7 +202,11 @@ export function CategoryCarousel({ categories }: { categories: CategorySlide[] }
             </div>
           </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div
+            className={`grid gap-5 sm:grid-cols-2 ${
+              total >= 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"
+            }`}
+          >
             {categories.map((cat) => (
               <CategoryCardTile key={cat.id} cat={cat} />
             ))}

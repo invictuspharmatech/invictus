@@ -6,7 +6,8 @@ import { AccountingWarehouse, WarehouseCode } from "@/lib/enums";
 import { formatMoney } from "@/lib/constants";
 import { asAccountingWarehouse, warehouseFilterLabel } from "@/lib/accounting";
 import { isFullAdmin } from "@/lib/roles";
-import type { ApiOrder } from "@/lib/api-types";
+import { DashboardTiles } from "@/components/admin/DashboardTiles";
+import type { ApiDashboardOverview } from "@/lib/api-types";
 
 export default async function AdminHomePage({
   searchParams,
@@ -22,21 +23,11 @@ export default async function AdminHomePage({
     ? `/api/admin/overview/?warehouse=${warehouse}`
     : "/api/admin/overview/";
 
-  const overview = await djangoAuthed<{
-    productCount: number;
-    openOrderValue: number;
-    openOrderCount: number;
-    orderCount: number;
-    lowStockCount: number;
-    pendingAffiliates: number;
-    userCount: number;
-    warehouse: string;
-    orders: ApiOrder[];
-  }>(overviewPath);
+  const overview = await djangoAuthed<ApiDashboardOverview>(overviewPath);
 
   return (
     <div>
-      <h1 className="display-font text-3xl">Operations</h1>
+      <h1 className="display-font text-3xl">Dashboard</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Signed in as {staff.email}. Super user accounts stay hidden from other admins.
       </p>
@@ -59,31 +50,7 @@ export default async function AdminHomePage({
           ))}
         </div>
       ) : null}
-      <div className="mt-8 grid gap-4 md:grid-cols-4">
-        <Stat label="Orders" value={String(overview.orderCount)} href="/admin/orders" />
-        <Stat
-          label="Open orders"
-          value={String(overview.openOrderCount)}
-          href="/admin/orders"
-        />
-        <Stat
-          label="Open order value"
-          value={formatMoney(overview.openOrderValue)}
-          href="/admin/orders"
-        />
-        <Stat label="Catalog SKUs" value={String(overview.productCount)} href="/admin/products" />
-        <Stat label="Low stock" value={String(overview.lowStockCount)} href="/admin/products" />
-        {admin ? (
-          <>
-            <Stat
-              label="Pending affiliates"
-              value={String(overview.pendingAffiliates)}
-              href="/admin/affiliates"
-            />
-            <Stat label="Store users" value={String(overview.userCount)} href="/admin/users" />
-          </>
-        ) : null}
-      </div>
+      <DashboardTiles overview={overview} />
       <section className="tile mt-8">
         <div className="flex items-center justify-between">
           <h2 className="text-lg">Latest orders</h2>
@@ -94,33 +61,16 @@ export default async function AdminHomePage({
         <ul className="mt-4 divide-y divide-border/40 text-sm">
           {overview.orders.map((order) => (
             <li key={order.id} className="flex justify-between py-3">
-              <span>
+              <Link href={`/admin/orders/${order.id}`} className="hover:text-primary">
                 {order.orderNumber} ·{" "}
                 {order.warehouse === WarehouseCode.WAREHOUSE_1 ? "W1" : "W2"} ·{" "}
                 {order.status.toLowerCase()}
-              </span>
+              </Link>
               <span>{formatMoney(order.grandTotal)}</span>
             </li>
           ))}
         </ul>
       </section>
     </div>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  href,
-}: {
-  label: string;
-  value: string;
-  href: string;
-}) {
-  return (
-    <Link href={href} className="tile">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-2 text-2xl">{value}</p>
-    </Link>
   );
 }

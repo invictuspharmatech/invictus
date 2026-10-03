@@ -254,6 +254,63 @@ export type ApiWarehouseSettings = {
   autoSplitEnabled: boolean;
   manualMoveEnabled: boolean;
   warehouseRequestEnabled: boolean;
+  w1Name?: string;
+  w1Contact?: string;
+  w1Notes?: string;
+  w2Name?: string;
+  w2Contact?: string;
+  w2Notes?: string;
+};
+
+export type ApiAdminUser = {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  phone: string;
+  isAffiliate: boolean;
+  affiliateCode: string | null;
+  isActive: boolean;
+  createdAt: string;
+};
+
+export type ApiWarehouseCard = {
+  code: string;
+  name: string;
+  contact: string;
+  notes: string;
+  productCount: number;
+  lowStockCount: number;
+  processingCount: number;
+  openOrderCount: number;
+  openOrderValue: number;
+};
+
+export type ApiDashboardOverview = {
+  productCount: number;
+  openOrderValue: number;
+  openOrderCount: number;
+  orderCount: number;
+  lowStockCount: number;
+  pendingAffiliates: number;
+  userCount: number;
+  warehouse: string;
+  salesToday: number;
+  salesThisMonth: number;
+  shippingSinceReset: number;
+  shippingThisWeek: number;
+  ordersPending: number;
+  ordersProcessing: number;
+  ordersCompleted: number;
+  topCategoryMonth: { name: string; count: number };
+  categoriesTotal: number;
+  warehousesTotal: number;
+  couponsTotal: number;
+  giftCardsTotal: number;
+  customersTotal: number;
+  storeCreditAvailable: number;
+  warehouses: ApiWarehouseCard[];
+  orders: ApiOrder[];
 };
 
 export type ApiStockTransfer = {

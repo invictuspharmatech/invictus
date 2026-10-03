@@ -7,9 +7,9 @@ import { CategoryCarousel, type CategorySlide } from "@/components/shop/Category
 import {
   CATEGORY_BLURBS,
   CATEGORY_IMAGES,
+  HOME_PROTOCOL_SLUGS,
   mediaUrl,
 } from "@/lib/constants";
-import { HIDDEN_HOME_CATEGORY_SLUGS } from "@/lib/storefront-nav";
 import type { ApiCategory, ApiProduct } from "@/lib/api-types";
 
 const MARQUEE = [
@@ -19,18 +19,27 @@ const MARQUEE = [
 ];
 
 function toSlides(categories: ApiCategory[]): CategorySlide[] {
-  return categories
-    .filter((item) => !HIDDEN_HOME_CATEGORY_SLUGS.has(item.slug))
-    .map((item) => ({
-      id: item.id,
-      slug: item.slug,
-      name: item.name,
-      image:
-        mediaUrl(item.image) ??
-        CATEGORY_IMAGES[item.slug] ??
-        "/images/featured-display.jpg",
-      blurb: CATEGORY_BLURBS[item.slug] ?? "Browse the collection.",
-    }));
+  const bySlug = new Map(categories.map((item) => [item.slug, item]));
+  const peptides = bySlug.get("peptides");
+  if (peptides && !bySlug.has("peptides-glps")) {
+    bySlug.set("peptides-glps", peptides);
+  }
+  return HOME_PROTOCOL_SLUGS.flatMap((slug) => {
+    const item = bySlug.get(slug);
+    if (!item) return [];
+    return [
+      {
+        id: item.id,
+        slug: item.slug,
+        name: item.name,
+        image:
+          mediaUrl(item.image) ??
+          CATEGORY_IMAGES[item.slug] ??
+          "/images/featured-display.jpg",
+        blurb: CATEGORY_BLURBS[item.slug] ?? "Browse the collection.",
+      },
+    ];
+  });
 }
 
 export default async function HomePage() {

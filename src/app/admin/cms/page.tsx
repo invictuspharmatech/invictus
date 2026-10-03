@@ -33,9 +33,9 @@ const CARDS = [
     copy: "SMTP settings, email templates, and who receives each notification.",
   },
   {
-    href: "/admin/cms/warehouses",
+    href: "/admin/warehouses",
     title: "Warehouses",
-    copy: "Split orders, auto-cover shortages, manual moves, and warehouse requests.",
+    copy: "Warehouse profiles, low stock, processing orders, and split settings.",
   },
   {
     href: "/admin/products",

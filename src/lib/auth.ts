@@ -136,8 +136,10 @@ export async function visibleUsers(_viewer: SessionUser) {
       email: string;
       name: string;
       role: string;
+      phone: string;
       isAffiliate: boolean;
       affiliateCode: string | null;
+      isActive: boolean;
       createdAt: string;
     }[]
   >("/api/admin/users/");

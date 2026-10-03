@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { ChevronDown, Menu, X } from "lucide-react";
@@ -19,20 +18,13 @@ import type { SessionUser } from "@/lib/types";
 
 function Wordmark() {
   return (
-    <Link href="/" className="flex shrink-0 items-center gap-3 text-foreground">
-      <Image
-        src="/images/invictus-logo.png"
-        alt=""
-        width={48}
-        height={48}
-        className="size-12 object-contain"
-      />
+    <Link href="/" className="flex shrink-0 items-center text-foreground">
       <span>
-        <span className="block font-mono text-[26px] font-normal leading-none tracking-[0.22em] sm:text-[30px]">
-          INVICTUS
+        <span className="block font-serif text-[26px] font-normal leading-[0.95] tracking-[-0.04em] sm:text-[30px]">
+          Invictus
         </span>
-        <span className="mt-1.5 block font-mono text-[12px] font-normal leading-none tracking-[0.46em] text-muted-foreground sm:text-[14px]">
-          PHARMA
+        <span className="mt-1 block font-serif text-[14px] font-normal leading-none tracking-[-0.02em] text-muted-foreground sm:text-[16px]">
+          Pharma
         </span>
       </span>
     </Link>
@@ -48,7 +40,7 @@ function Dropdown({
 }) {
   return (
     <div className="group relative">
-      <button type="button" className={`${NAV_LINK_CLASS} inline-flex items-center gap-1`}>
+      <button type="button" className={`${NAV_LINK_CLASS} inline-flex items-center gap-1 bg-transparent p-0`}>
         {label}
         <ChevronDown className="size-4 opacity-70 transition group-hover:rotate-180" aria-hidden />
       </button>
@@ -61,10 +53,7 @@ function Dropdown({
 
 function DropLink({ href, label }: { href: string; label: string }) {
   return (
-    <Link
-      href={href}
-      className="block px-4 py-2.5 font-mono text-[16px] font-normal uppercase tracking-[0.12em] text-muted-foreground hover:bg-card hover:text-signal"
-    >
+    <Link href={href} className={`block px-4 py-2.5 hover:bg-card ${NAV_LINK_CLASS}`}>
       {label}
     </Link>
   );
@@ -91,8 +80,9 @@ export function SiteHeader({
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-xl">
+    <header className="sticky top-0 z-50">
       <PromoTicker items={promoItems} />
+      <div className="border-b border-border bg-background/90 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-3 lg:px-10">
         <Wordmark />
         <nav className="hidden flex-1 flex-wrap items-center justify-end gap-x-6 gap-y-2 lg:flex">
@@ -111,7 +101,7 @@ export function SiteHeader({
               <DropLink key={item.href} href={item.href} label={item.label} />
             ))}
             <div className="group/tools relative">
-              <p className="flex items-center justify-between gap-2 px-4 py-2.5 font-mono text-[16px] font-normal uppercase tracking-[0.12em] text-muted-foreground">
+              <p className={`flex items-center justify-between gap-2 px-4 py-2.5 ${NAV_LINK_CLASS}`}>
                 Tools & resources
                 <ChevronDown className="-rotate-90 size-4 opacity-70" aria-hidden />
               </p>
@@ -180,7 +170,7 @@ export function SiteHeader({
             <Link
               key={item.href + item.label}
               href={item.href}
-              className="block py-1 pl-3 font-mono text-[16px] font-normal uppercase tracking-[0.12em] text-muted-foreground"
+              className={`block py-1 pl-3 ${NAV_LINK_CLASS}`}
               onClick={() => setOpen(false)}
             >
               {item.label}
@@ -190,14 +180,14 @@ export function SiteHeader({
             FAQ
             <ChevronDown className="size-4 opacity-70" aria-hidden />
           </p>
-          <Link href="/faq" className="block py-1 pl-3 font-mono text-[16px] uppercase tracking-[0.12em] text-muted-foreground" onClick={() => setOpen(false)}>
+          <Link href="/faq" className={`block py-1 pl-3 ${NAV_LINK_CLASS}`} onClick={() => setOpen(false)}>
             FAQ
           </Link>
           {POLICY_LINKS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="block py-1 pl-3 font-mono text-[16px] font-normal uppercase tracking-[0.12em] text-muted-foreground"
+              className={`block py-1 pl-3 ${NAV_LINK_CLASS}`}
               onClick={() => setOpen(false)}
             >
               {item.label}
@@ -207,7 +197,7 @@ export function SiteHeader({
             <Link
               key={item.href}
               href={item.href}
-              className="block py-1 pl-3 font-mono text-[16px] font-normal uppercase tracking-[0.12em] text-muted-foreground"
+              className={`block py-1 pl-3 ${NAV_LINK_CLASS}`}
               onClick={() => setOpen(false)}
             >
               {item.label}
@@ -230,6 +220,7 @@ export function SiteHeader({
           ) : null}
         </div>
       ) : null}
+      </div>
     </header>
   );
 }

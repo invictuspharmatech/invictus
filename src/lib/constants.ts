@@ -17,7 +17,13 @@ export const CATEGORY_IMAGES: Record<string, string> = {
   injectables: "/images/featured-display.jpg",
 };
 
-export const HOME_PROTOCOL_SLUGS = ["oils", "orals", "peptides-glps", "aminos"];
+export const HOME_PROTOCOL_SLUGS = [
+  "aminos",
+  "orals",
+  "oils",
+  "peptides-glps",
+  "pct-medications",
+];
 
 export const CATEGORY_BLURBS: Record<string, string> = {
   injectables: "Precision protocols for measured performance.",

@@ -168,6 +168,12 @@ class WarehouseSettings(models.Model):
     auto_split_enabled = models.BooleanField(default=False)
     manual_move_enabled = models.BooleanField(default=False)
     warehouse_request_enabled = models.BooleanField(default=False)
+    w1_name = models.CharField(max_length=160, blank=True, default="Warehouse 1")
+    w1_contact = models.CharField(max_length=255, blank=True)
+    w1_notes = models.TextField(blank=True)
+    w2_name = models.CharField(max_length=160, blank=True, default="Warehouse 2")
+    w2_contact = models.CharField(max_length=255, blank=True)
+    w2_notes = models.TextField(blank=True)
 
     class Meta:
         verbose_name = "Warehouse settings"

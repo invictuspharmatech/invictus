@@ -10,46 +10,66 @@ import { isFullAdmin, roleLabel } from "@/lib/roles";
 export const dynamic = "force-dynamic";
 
 const ADMIN_NAV: AdminNavItem[] = [
-  { href: "/admin", label: "Overview" },
-  { href: "/admin/orders", label: "Orders" },
+  { href: "/admin", label: "Dashboard" },
   {
     href: "/admin/products",
-    label: "Catalog",
+    label: "Products",
     children: [
-      { href: "/admin/products", label: "Products" },
+      { href: "/admin/products", label: "Product list" },
+      { href: "/admin/cms/products/new", label: "Create product" },
       { href: "/admin/cms/test-results", label: "Test results" },
     ],
   },
+  { href: "/admin/categories", label: "Categories" },
+  { href: "/admin/orders", label: "Orders" },
+  { href: "/admin/cms/email", label: "Email" },
   {
-    href: "/admin/transfers",
+    href: "/admin/users",
+    label: "Users",
+    children: [
+      { href: "/admin/users", label: "User list" },
+      { href: "/admin/users/new", label: "Add user" },
+    ],
+  },
+  { href: "/admin/inventory", label: "Inventory" },
+  {
+    href: "/admin/warehouses",
     label: "Warehouses",
     children: [
-      { href: "/admin/transfers", label: "Transfers & requests" },
-      { href: "/admin/cms/warehouses", label: "Warehouse settings" },
+      { href: "/admin/warehouses", label: "All warehouses" },
+      { href: "/admin/warehouses/WAREHOUSE_1", label: "Warehouse 1" },
+      { href: "/admin/warehouses/WAREHOUSE_2", label: "Warehouse 2" },
+      { href: "/admin/transfers", label: "Transfers" },
     ],
   },
   {
+    href: "/admin/promotions",
+    label: "Promotions",
+    children: [{ href: "/admin/affiliates", label: "Affiliates" }],
+  },
+  { href: "/admin/cms/btcpostage", label: "Btcpostage" },
+  { href: "/admin/accounting", label: "Accounting" },
+  { href: "/admin/analytics", label: "Analytics" },
+  {
     href: "/admin/cms",
-    label: "CMS",
+    label: "Content",
     children: [
       { href: "/admin/cms/pages", label: "Pages" },
       { href: "/admin/cms/faq", label: "FAQ" },
       { href: "/admin/cms/banners", label: "Banners / promo bar" },
-      { href: "/admin/cms/email", label: "Email & notifications" },
+      { href: "/admin/cms/email", label: "Email templates" },
       { href: "/admin/cms/btcpay", label: "BTCPay / Bitcoin" },
-      { href: "/admin/cms/btcpostage", label: "Bitcoin Postage" },
       { href: "/admin/cms/settings", label: "Site settings" },
+      { href: "/admin/cms/test-results", label: "Test results" },
     ],
   },
-  { href: "/admin/accounting", label: "Accounting" },
-  { href: "/admin/affiliates", label: "Affiliates" },
-  { href: "/admin/users", label: "Users" },
 ];
 
 const WAREHOUSE_NAV: AdminNavItem[] = [
-  { href: "/admin", label: "Overview" },
+  { href: "/admin", label: "Dashboard" },
   { href: "/admin/orders", label: "Orders" },
-  { href: "/admin/products", label: "Inventory" },
+  { href: "/admin/inventory", label: "Inventory" },
+  { href: "/admin/warehouses", label: "Warehouses" },
   { href: "/admin/transfers", label: "Transfers" },
 ];
 
