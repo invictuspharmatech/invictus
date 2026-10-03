@@ -3,18 +3,30 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Role } from "@/lib/enums";
-import { roleLabel } from "@/lib/roles";
+import { asRole, roleLabel } from "@/lib/roles";
 import type { ApiAdminUser } from "@/lib/api-types";
 
-function roleOptions(viewerRole: string) {
-  const options = [
+function roleOptions(viewerRole: string): Role[] {
+  const options: Role[] = [
     Role.CUSTOMER,
     Role.WAREHOUSE_1,
     Role.WAREHOUSE_2,
     Role.ADMIN,
   ];
-  if (viewerRole === Role.SUPERUSER) {
-    options.push(Role.SUPERUSER);
+  const resolved = asRole(viewerRole);
+  switch (resolved) {
+    case Role.SUPERUSER:
+      options.push(Role.SUPERUSER);
+      break;
+    case Role.ADMIN:
+    case Role.WAREHOUSE_1:
+    case Role.WAREHOUSE_2:
+    case Role.CUSTOMER:
+      break;
+    default: {
+      const exhaustive: never = resolved;
+      return exhaustive;
+    }
   }
   return options;
 }
