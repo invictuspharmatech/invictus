@@ -46,6 +46,7 @@ class Product(models.Model):
         max_length=20, choices=Warehouse.choices, default=Warehouse.WAREHOUSE_2
     )
     status = models.CharField(max_length=20, default="publish")
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     categories = models.ManyToManyField(Category, through="ProductCategory", related_name="products")
 
     class Meta:

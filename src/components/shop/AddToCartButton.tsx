@@ -21,9 +21,10 @@ export function AddToCartButton({
   variant = "button",
 }: {
   product: Addable;
-  variant?: "button" | "icon";
+  variant?: "button" | "icon" | "card";
 }) {
-  const { addItem } = useCart();
+  const { addItem, items } = useCart();
+  const inCartQty = items.find((row) => row.productId === product.id)?.quantity ?? 0;
 
   function add() {
     addItem({
@@ -47,6 +48,16 @@ export function AddToCartButton({
           onClick={add}
         >
           <ShoppingCart className="size-4" />
+        </button>
+      );
+    case "card":
+      return (
+        <button
+          type="button"
+          className="w-full rounded-[0.75rem] bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:scale-[1.02] hover:bg-accent active:scale-95"
+          onClick={add}
+        >
+          {inCartQty > 0 ? `In cart (${inCartQty}) — add` : "Add to cart"}
         </button>
       );
     case "button":

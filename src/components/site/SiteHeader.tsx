@@ -19,7 +19,7 @@ import type { SessionUser } from "@/lib/types";
 function Wordmark() {
   return (
     <Link href="/" className="flex shrink-0 items-center text-foreground">
-      <span>
+      <span className="text-center">
         <span className="block font-serif text-[26px] font-normal leading-[0.95] tracking-[-0.04em] sm:text-[30px]">
           Invictus
         </span>

@@ -6,6 +6,37 @@ from django.db import models
 from catalog.models import Product
 
 
+class Coupon(models.Model):
+    class DiscountType(models.TextChoices):
+        PERCENT = "PERCENT", "Percent off"
+        FIXED = "FIXED", "Fixed amount"
+        FREE_SHIPPING = "FREE_SHIPPING", "Free shipping"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(max_length=64, unique=True)
+    name = models.CharField(max_length=255)
+    discount_type = models.CharField(
+        max_length=20,
+        choices=DiscountType.choices,
+        default=DiscountType.PERCENT,
+    )
+    amount = models.FloatField(default=0)
+    minimum_amount = models.FloatField(default=0)
+    usage_limit = models.IntegerField(null=True, blank=True)
+    used_count = models.IntegerField(default=0)
+    starts_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.code
+
+
 class Order(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
@@ -66,6 +97,16 @@ class Order(models.Model):
         related_name="referred_orders",
     )
     commission_amount = models.FloatField(default=0)
+    coupon = models.ForeignKey(
+        Coupon,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="orders",
+    )
+    coupon_code = models.CharField(max_length=64, blank=True)
+    discount_total = models.FloatField(default=0)
+    shipping_waived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     paid_at = models.DateTimeField(null=True, blank=True)

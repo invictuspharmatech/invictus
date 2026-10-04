@@ -33,6 +33,9 @@ class OrderSerializer(serializers.ModelSerializer):
     customerName = serializers.CharField(source="customer_name")
     customerEmail = serializers.EmailField(source="customer_email")
     commissionAmount = serializers.FloatField(source="commission_amount")
+    couponCode = serializers.CharField(source="coupon_code")
+    discountTotal = serializers.FloatField(source="discount_total")
+    shippingWaived = serializers.BooleanField(source="shipping_waived")
     createdAt = serializers.DateTimeField(source="created_at")
     paymentStatus = serializers.CharField(source="payment_status")
     paymentMethod = serializers.CharField(source="payment_method")
@@ -66,6 +69,9 @@ class OrderSerializer(serializers.ModelSerializer):
             "customerName",
             "customerEmail",
             "commissionAmount",
+            "couponCode",
+            "discountTotal",
+            "shippingWaived",
             "createdAt",
             "trackingNumber",
             "userId",

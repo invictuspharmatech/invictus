@@ -131,47 +131,67 @@ export default async function HomePage() {
       <CategoryCarousel categories={slides} />
 
       {featuredSlots.length > 0 ? (
-        <section className="bg-card px-6 py-20 lg:px-10 lg:py-28">
+        <section className="px-6 py-14 sm:py-16 lg:px-10">
           <div className="mx-auto max-w-7xl">
-            <div className="mb-12 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
               <div>
-                <h2 className="max-w-md font-serif text-5xl leading-[0.95] tracking-[-0.04em]">
-                  Every detail has a reason.
+                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-signal">
+                  Featured products
+                </p>
+                <h2 className="mt-1 font-serif text-3xl tracking-[-0.03em] sm:text-4xl">
+                  Popular selections
                 </h2>
-                <p className="mt-4 text-sm text-muted-foreground">Featured selections.</p>
               </div>
               <Link
                 href="/products"
-                className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-signal"
+                className="hidden rounded-[1rem] border border-white/25 bg-white/10 px-5 py-3 text-sm font-semibold backdrop-blur-xl transition hover:scale-105 hover:bg-white/20 hover:text-signal sm:inline-block"
               >
-                View all products
-                <ArrowUpRight className="size-4" />
+                View all
               </Link>
             </div>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6">
+            <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {featuredSlots.map((product) => (
                 <FeaturedProductCard key={product.id} product={product} />
               ))}
+            </div>
+            <div className="mt-6 text-center sm:hidden">
+              <Link
+                href="/products"
+                className="inline-flex rounded-[1rem] border border-white/25 bg-white/10 px-5 py-3 text-sm font-semibold backdrop-blur-xl"
+              >
+                View all
+              </Link>
             </div>
           </div>
         </section>
       ) : null}
 
       {arrivalSlots.length > 0 ? (
-        <section className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
-          <div className="mb-12 flex items-end justify-between">
-            <h2 className="font-serif text-5xl tracking-[-0.04em]">New arrivals.</h2>
+        <section className="mx-auto max-w-7xl px-6 py-14 sm:py-16 lg:px-10">
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-signal">Just in</p>
+              <h2 className="mt-1 font-serif text-3xl tracking-[-0.03em] sm:text-4xl">New arrivals</h2>
+            </div>
             <Link
               href="/products"
-              className="hidden text-xs font-bold uppercase tracking-[0.18em] text-signal md:block"
+              className="hidden rounded-[1rem] border border-white/25 bg-white/10 px-5 py-3 text-sm font-semibold backdrop-blur-xl transition hover:scale-105 hover:bg-white/20 hover:text-signal sm:inline-block"
             >
-              View all products →
+              View all
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6">
+          <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {arrivalSlots.map((product) => (
               <FeaturedProductCard key={product.id} product={product} />
             ))}
+          </div>
+          <div className="mt-6 text-center sm:hidden">
+            <Link
+              href="/products"
+              className="inline-flex rounded-[1rem] border border-white/25 bg-white/10 px-5 py-3 text-sm font-semibold backdrop-blur-xl"
+            >
+              View all
+            </Link>
           </div>
         </section>
       ) : null}

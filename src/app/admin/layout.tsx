@@ -22,7 +22,14 @@ const ADMIN_NAV: AdminNavItem[] = [
   },
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/orders", label: "Orders" },
-  { href: "/admin/cms/email", label: "Email" },
+  {
+    href: "/admin/email",
+    label: "Email",
+    children: [
+      { href: "/admin/email", label: "Bulk email" },
+      { href: "/admin/cms/email", label: "Settings & templates" },
+    ],
+  },
   {
     href: "/admin/users",
     label: "Users",
@@ -45,11 +52,28 @@ const ADMIN_NAV: AdminNavItem[] = [
   {
     href: "/admin/promotions",
     label: "Promotions",
-    children: [{ href: "/admin/affiliates", label: "Affiliates" }],
+    children: [
+      { href: "/admin/promotions/coupons", label: "Coupons" },
+      { href: "/admin/affiliates", label: "Affiliates" },
+    ],
   },
   { href: "/admin/cms/btcpostage", label: "Btcpostage" },
   { href: "/admin/accounting", label: "Accounting" },
-  { href: "/admin/analytics", label: "Analytics" },
+  {
+    href: "/admin/analytics",
+    label: "Analytics",
+    children: [
+      { href: "/admin/analytics", label: "Overview" },
+      { href: "/admin/analytics/charts", label: "Charts" },
+      { href: "/admin/analytics/revenue", label: "Revenue" },
+      { href: "/admin/analytics/products", label: "Products" },
+      { href: "/admin/analytics/orders", label: "Orders" },
+      { href: "/admin/analytics/variations", label: "Variations" },
+      { href: "/admin/analytics/categories", label: "Categories" },
+      { href: "/admin/analytics/coupons", label: "Coupons" },
+      { href: "/admin/analytics/stock", label: "Stock" },
+    ],
+  },
   {
     href: "/admin/cms",
     label: "Content",
@@ -57,7 +81,7 @@ const ADMIN_NAV: AdminNavItem[] = [
       { href: "/admin/cms/pages", label: "Pages" },
       { href: "/admin/cms/faq", label: "FAQ" },
       { href: "/admin/cms/banners", label: "Banners / promo bar" },
-      { href: "/admin/cms/email", label: "Email templates" },
+      { href: "/admin/cms/email", label: "Email settings & templates" },
       { href: "/admin/cms/btcpay", label: "BTCPay / Bitcoin" },
       { href: "/admin/cms/settings", label: "Site settings" },
       { href: "/admin/cms/test-results", label: "Test results" },

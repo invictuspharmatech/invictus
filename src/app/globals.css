@@ -153,22 +153,65 @@ body {
   padding: 1.25rem;
 }
 
+.store-card,
+.store-card-product {
+  border-radius: 1.5rem;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  background: rgb(255 255 255 / 0.15);
+  padding: 1.25rem;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.25), 0 8px 10px -6px rgb(0 0 0 / 0.2);
+  isolation: isolate;
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.store-card {
+  display: block;
+  height: 100%;
+}
+
+.store-card-product {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+
+.store-card:hover {
+  transform: translateY(-0.5rem);
+  background: rgb(255 255 255 / 0.25);
+}
+
+.store-card-product:hover {
+  transform: translateY(-0.5rem) scale(1.02);
+  background: rgb(255 255 255 / 0.25);
+}
+
+.store-card-media {
+  position: relative;
+  aspect-ratio: 1;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 0.08);
+}
+
 .dash-tile {
   display: block;
-  min-height: 8.5rem;
-  padding: 1.1rem 1.15rem 1.25rem;
+  min-height: 5.25rem;
+  padding: 0.75rem 0.9rem;
   color: #fff;
 }
 
 .dash-tile h3 {
-  font-size: 1.65rem;
+  font-size: 1.35rem;
   line-height: 1.1;
   font-weight: 600;
 }
 
 .dash-tile p {
-  margin-top: 0.35rem;
-  font-size: 0.78rem;
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   opacity: 0.88;

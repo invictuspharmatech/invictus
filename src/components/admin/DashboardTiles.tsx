@@ -36,7 +36,7 @@ function Tile({
 export function DashboardTiles({ overview }: { overview: ApiDashboardOverview }) {
   const monthDays = daysInCurrentMonth();
   return (
-    <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <Tile
         href="/admin/accounting"
         tone={salesTone(overview.salesToday, 1)}
@@ -110,28 +110,16 @@ export function DashboardTiles({ overview }: { overview: ApiDashboardOverview })
         label="Warehouses"
       />
       <Tile
-        href="/admin/promotions"
+        href="/admin/promotions/coupons"
         tone="dash-tile-info"
         value={String(overview.couponsTotal)}
         label="Coupons"
-      />
-      <Tile
-        href="/admin/promotions"
-        tone="dash-tile-dark"
-        value={String(overview.giftCardsTotal)}
-        label="Gift cards"
       />
       <Tile
         href="/admin/users"
         tone="dash-tile-primary"
         value={String(overview.customersTotal)}
         label="Customers"
-      />
-      <Tile
-        href="/admin/users"
-        tone="dash-tile-primary"
-        value={formatMoney(overview.storeCreditAvailable)}
-        label="Store credit available"
       />
     </div>
   );

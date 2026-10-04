@@ -48,6 +48,9 @@ export function OrderDetailBoard({
           <p>{formatMoney(order.grandTotal)}</p>
           <p className="text-xs text-muted-foreground">
             Merch {formatMoney(order.merchandiseTotal)} · Ship {formatMoney(order.shippingTotal)}
+            {order.couponCode
+              ? ` · ${order.couponCode}${order.discountTotal ? ` −${formatMoney(order.discountTotal)}` : ""}`
+              : ""}
           </p>
         </div>
       </div>

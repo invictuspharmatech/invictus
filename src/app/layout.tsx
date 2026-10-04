@@ -38,9 +38,12 @@ export const metadata: Metadata = {
   description:
     "Invictus is a considered collection of performance and wellness essentials, selected with the discipline of a laboratory and the eye of an artist.",
   icons: {
-    icon: [{ url: "/images/invictus-logo.png", type: "image/png" }],
-    apple: "/images/invictus-logo.png",
-    shortcut: "/images/invictus-logo.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/images/site-icon.png", type: "image/png", sizes: "32x32" },
+    ],
+    apple: "/apple-icon.png",
+    shortcut: "/favicon.ico",
   },
 };
 

@@ -17,11 +17,21 @@ type CheckoutOrder = {
   payUrl?: string | null;
 };
 
+type AppliedCoupon = {
+  code: string;
+  name: string;
+  discount: number;
+  freeShipping: boolean;
+};
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, merchandiseTotal, clear } = useCart();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
 
   const shippingTotal = useMemo(() => {
     const hasW1 = items.some((item) => item.warehouse === WarehouseCode.WAREHOUSE_1);
@@ -29,6 +39,33 @@ export default function CheckoutPage() {
     if (hasW1 && hasW2) return SHIPPING_USD * 2;
     return items.length > 0 ? SHIPPING_USD : 0;
   }, [items]);
+
+  const chargedShipping = appliedCoupon?.freeShipping ? 0 : shippingTotal;
+  const chargedTotal = Math.max(0, merchandiseTotal - (appliedCoupon?.discount || 0)) + chargedShipping;
+
+  async function applyCoupon() {
+    setCouponError(null);
+    const response = await fetch("/api/coupons/validate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        code: couponInput,
+        merchandiseTotal,
+      }),
+    });
+    const data = (await response.json()) as AppliedCoupon & { error?: string };
+    if (!response.ok) {
+      setAppliedCoupon(null);
+      setCouponError(data.error || "This coupon is not valid.");
+      return;
+    }
+    setAppliedCoupon({
+      code: data.code,
+      name: data.name,
+      discount: data.discount,
+      freeShipping: data.freeShipping,
+    });
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,6 +82,7 @@ export default function CheckoutPage() {
       postal: String(form.get("postal") || ""),
       notes: String(form.get("notes") || ""),
       referralCode: readReferralCode(),
+      couponCode: appliedCoupon?.code || couponInput.trim(),
       items: items.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,
@@ -123,13 +161,39 @@ export default function CheckoutPage() {
               </li>
             ))}
           </ul>
+          <div className="mt-4 flex gap-2">
+            <input
+              className="field flex-1 uppercase"
+              value={couponInput}
+              onChange={(event) => setCouponInput(event.target.value)}
+              placeholder="Coupon code"
+              autoComplete="off"
+            />
+            <button className="ghost-btn" type="button" onClick={() => void applyCoupon()}>
+              Apply
+            </button>
+          </div>
+          {couponError ? <p className="mt-2 text-sm text-brand-red">{couponError}</p> : null}
+          {appliedCoupon ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {appliedCoupon.code} · {appliedCoupon.name}
+              {appliedCoupon.discount > 0 ? ` · −${formatMoney(appliedCoupon.discount)}` : ""}
+              {appliedCoupon.freeShipping ? " · free shipping" : ""}
+            </p>
+          ) : null}
+          {appliedCoupon && appliedCoupon.discount > 0 ? (
+            <p className="mt-4 flex justify-between text-sm text-muted-foreground">
+              <span>Discount</span>
+              <span>−{formatMoney(appliedCoupon.discount)}</span>
+            </p>
+          ) : null}
           <p className="mt-4 flex justify-between text-sm text-muted-foreground">
             <span>Shipping</span>
-            <span>{formatMoney(shippingTotal)}</span>
+            <span>{formatMoney(chargedShipping)}</span>
           </p>
           <p className="mt-2 flex justify-between text-sm">
             <span>Total</span>
-            <span>{formatMoney(merchandiseTotal + shippingTotal)}</span>
+            <span>{formatMoney(chargedTotal)}</span>
           </p>
           {error ? <p className="mt-3 text-sm text-brand-red">{error}</p> : null}
           <button className="gold-btn mt-6 w-full" type="submit" disabled={pending}>

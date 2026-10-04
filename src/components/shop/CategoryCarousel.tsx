@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const AUTO_SLIDE_MS = 5500;
 const GAP_PX = 20;
-const VISIBLE_ON_DESKTOP = 5;
+const VISIBLE_ON_DESKTOP = 4;
 const TRANSITION_MS = 500;
 const DESKTOP_MIN_WIDTH_PX = 1024;
 
@@ -35,8 +35,8 @@ function useIsDesktop(): boolean {
 
 function CategoryCardTile({ cat }: { cat: CategorySlide }) {
   return (
-    <Link href={`/products?category=${cat.slug}`} className="group block h-full">
-      <div className="relative mb-4 aspect-square overflow-hidden bg-card">
+    <Link href={`/products?category=${cat.slug}`} className="store-card group">
+      <div className="store-card-media mb-4">
         <Image
           src={cat.image}
           alt={cat.name}
@@ -45,9 +45,9 @@ function CategoryCardTile({ cat }: { cat: CategorySlide }) {
           sizes="(max-width: 640px) 250px, (max-width: 1024px) 360px, 280px"
         />
       </div>
-      <h3 className="font-serif text-2xl">{cat.name}</h3>
+      <h3 className="text-xl font-semibold">{cat.name}</h3>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">{cat.blurb}</p>
-      <p className="mt-4 flex items-center gap-2 text-sm font-medium text-signal transition-all group-hover:gap-3">
+      <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-signal transition-all group-hover:gap-3">
         Shop now
         <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
       </p>
@@ -145,8 +145,9 @@ export function CategoryCarousel({ categories }: { categories: CategorySlide[] }
     <section className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
       <div className="mb-12 flex flex-wrap items-end justify-between gap-5">
         <div>
-          <h2 className="font-serif text-5xl tracking-[-0.04em]">Find your protocol.</h2>
-          <p className="mt-4 max-w-sm text-sm leading-6 text-muted-foreground">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-signal">Product categories</p>
+          <h2 className="mt-3 font-serif text-3xl tracking-[-0.03em] sm:text-4xl">Find your protocol.</h2>
+          <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground sm:text-base">
             Choose a category to explore products.
           </p>
         </div>
@@ -156,7 +157,7 @@ export function CategoryCarousel({ categories }: { categories: CategorySlide[] }
               type="button"
               onClick={goPrev}
               aria-label="Previous categories"
-              className="grid size-10 place-items-center border border-border text-foreground transition hover:border-signal hover:text-signal"
+              className="grid size-10 place-items-center rounded-full border border-white/25 bg-white/10 text-foreground transition hover:bg-white/20 hover:text-signal"
             >
               <ChevronLeft className="size-5" />
             </button>
@@ -164,7 +165,7 @@ export function CategoryCarousel({ categories }: { categories: CategorySlide[] }
               type="button"
               onClick={goNext}
               aria-label="Next categories"
-              className="grid size-10 place-items-center border border-border text-foreground transition hover:border-signal hover:text-signal"
+              className="grid size-10 place-items-center rounded-full border border-white/25 bg-white/10 text-foreground transition hover:bg-white/20 hover:text-signal"
             >
               <ChevronRight className="size-5" />
             </button>
@@ -203,9 +204,7 @@ export function CategoryCarousel({ categories }: { categories: CategorySlide[] }
           </div>
         ) : (
           <div
-            className={`grid gap-5 sm:grid-cols-2 ${
-              total >= 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"
-            }`}
+            className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4"
           >
             {categories.map((cat) => (
               <CategoryCardTile key={cat.id} cat={cat} />

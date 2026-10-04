@@ -37,6 +37,13 @@ export const PayoutType = {
 } as const;
 export type PayoutType = (typeof PayoutType)[keyof typeof PayoutType];
 
+export const CouponType = {
+  PERCENT: "PERCENT",
+  FIXED: "FIXED",
+  FREE_SHIPPING: "FREE_SHIPPING",
+} as const;
+export type CouponType = (typeof CouponType)[keyof typeof CouponType];
+
 export const AccountingTileKey = {
   ADMIN_25: "ADMIN_25",
   PARTY_1: "PARTY_1",
@@ -60,3 +67,20 @@ export const AccountingWarehouse = {
 } as const;
 export type AccountingWarehouse =
   (typeof AccountingWarehouse)[keyof typeof AccountingWarehouse];
+
+export const BulkEmailStatus = {
+  RUNNING: "running",
+  PAUSED: "paused",
+  STOPPED: "stopped",
+  COMPLETED: "completed",
+  INTERRUPTED: "interrupted",
+} as const;
+export type BulkEmailStatus = (typeof BulkEmailStatus)[keyof typeof BulkEmailStatus];
+
+export const BulkEmailRecipientStatus = {
+  PENDING: "pending",
+  SENT: "sent",
+  FAILED: "failed",
+} as const;
+export type BulkEmailRecipientStatus =
+  (typeof BulkEmailRecipientStatus)[keyof typeof BulkEmailRecipientStatus];

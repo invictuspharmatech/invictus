@@ -39,6 +39,7 @@ class ProductSerializer(serializers.ModelSerializer):
     allowBackorder = serializers.BooleanField(source="allow_backorder")
     isFeatured = serializers.BooleanField(source="is_featured")
     isNewArrival = serializers.BooleanField(source="is_new_arrival")
+    createdAt = serializers.DateTimeField(source="created_at", read_only=True, allow_null=True)
     sourceId = serializers.IntegerField(source="source_id", allow_null=True)
     categories = serializers.SerializerMethodField()
     categoryIds = serializers.SerializerMethodField()
@@ -64,6 +65,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "allowBackorder",
             "isFeatured",
             "isNewArrival",
+            "createdAt",
             "warehouse",
             "status",
             "categories",

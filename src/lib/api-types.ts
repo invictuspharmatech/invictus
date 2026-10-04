@@ -25,6 +25,7 @@ export type ApiProduct = {
   allowBackorder: boolean;
   isFeatured: boolean;
   isNewArrival: boolean;
+  createdAt?: string | null;
   warehouse: string;
   status: string;
   categoryIds?: string[];
@@ -81,6 +82,9 @@ export type ApiOrder = {
   customerName: string;
   customerEmail: string;
   commissionAmount: number;
+  couponCode?: string;
+  discountTotal?: number;
+  shippingWaived?: boolean;
   createdAt: string;
   trackingNumber?: string;
   userId?: string | null;
@@ -306,9 +310,9 @@ export type ApiDashboardOverview = {
   categoriesTotal: number;
   warehousesTotal: number;
   couponsTotal: number;
-  giftCardsTotal: number;
+  giftCardsTotal?: number;
   customersTotal: number;
-  storeCreditAvailable: number;
+  storeCreditAvailable?: number;
   warehouses: ApiWarehouseCard[];
   orders: ApiOrder[];
 };
@@ -343,4 +347,65 @@ export type ApiFulfillmentRequest = {
   reviewedBy: string | null;
   createdAt: string;
   reviewedAt: string | null;
+};
+
+export type ApiCoupon = {
+  id: string;
+  code: string;
+  name: string;
+  discountType: string;
+  amount: number;
+  minimumAmount: number;
+  usageLimit: number | null;
+  usedCount: number;
+  startsAt: string | null;
+  expiresAt: string | null;
+  isActive: boolean;
+  createdAt?: string | null;
+};
+
+export type ApiBulkEmailDraft = {
+  subject: string;
+  title: string;
+  bodyHtml: string;
+  isSaved: boolean;
+  savedAt: string | null;
+};
+
+export type ApiBulkEmailPreview = {
+  count: number;
+  sample: { email: string; name: string }[];
+};
+
+export type ApiBulkEmailBatch = {
+  id: string;
+  totalCount: number;
+  sentCount: number;
+  failedCount: number;
+  pendingCount: number;
+  processed: number;
+  lastRecipientEmail: string | null;
+  status: string;
+  subjectPreview: string | null;
+  lastError: string | null;
+  chunkSize: number;
+  chunkGapMinutes: number;
+  intervalSeconds: number;
+  nextSendAt: string | null;
+  canResume: boolean;
+  canPause: boolean;
+  canStop: boolean;
+  hasRecipientTracking: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type ApiBulkEmailRecipient = {
+  id: string;
+  email: string;
+  name: string | null;
+  status: string;
+  errorMessage: string | null;
+  processedAt: string | null;
+  sortOrder: number;
 };

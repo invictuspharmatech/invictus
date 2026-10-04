@@ -1,6 +1,6 @@
 from django.urls import path
 
-from cms import views
+from cms import bulk_email_views, views
 
 urlpatterns = [
     path("cms/pages/", views.public_pages),
@@ -23,4 +23,14 @@ urlpatterns = [
     path("admin/cms/email-templates/<uuid:pk>/", views.admin_email_template_detail),
     path("admin/cms/email-test/", views.admin_email_test),
     path("admin/cms/warehouse-settings/", views.admin_warehouse_settings),
+    path("admin/email/bulk/template/", bulk_email_views.bulk_template_view),
+    path("admin/email/bulk/preview/", bulk_email_views.bulk_preview_view),
+    path("admin/email/bulk/render-preview/", bulk_email_views.bulk_render_preview_view),
+    path("admin/email/bulk/send/", bulk_email_views.bulk_send_view),
+    path("admin/email/bulk/batches/", bulk_email_views.bulk_batch_list_view),
+    path("admin/email/bulk/batches/<uuid:pk>/", bulk_email_views.bulk_batch_detail_view),
+    path("admin/email/bulk/batches/<uuid:pk>/recipients/", bulk_email_views.bulk_batch_recipients_view),
+    path("admin/email/bulk/batches/<uuid:pk>/pause/", bulk_email_views.bulk_batch_pause_view),
+    path("admin/email/bulk/batches/<uuid:pk>/stop/", bulk_email_views.bulk_batch_stop_view),
+    path("admin/email/bulk/batches/<uuid:pk>/resume/", bulk_email_views.bulk_batch_resume_view),
 ]

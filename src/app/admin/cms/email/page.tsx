@@ -14,11 +14,9 @@ export default async function CmsEmailPage() {
 
   return (
     <div>
-      <h1 className="display-font text-3xl">Email & notifications</h1>
+      <h1 className="display-font text-3xl">Email settings & templates</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-        Configure SMTP here, then turn each notification on or off and choose who
-        receives it: admin, the customer, warehouse managers, a custom list, or both
-        admin and customer by checking both boxes.
+        SMTP and notification templates. Bulk email lives on the Email tab.
       </p>
       <div className="mt-8">
         <EmailSettingsForm settings={settings} />

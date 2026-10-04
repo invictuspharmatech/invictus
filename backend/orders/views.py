@@ -35,7 +35,8 @@ from orders.fulfillment import (
     reject_fulfillment_request,
     restock_order,
 )
-from orders.models import AccountingReset, ContactMessage, FulfillmentRequest, Order, OrderItem
+from orders.coupons import bump_usage, discount_for, is_free_shipping, resolve_coupon
+from orders.models import AccountingReset, ContactMessage, Coupon, FulfillmentRequest, Order, OrderItem
 from orders.serializers import FulfillmentRequestSerializer, OrderSerializer
 from orders.btcpay import BtcPayError, create_invoice, is_configured, serialize_invoice
 from orders.pay_token import checkout_url
@@ -116,6 +117,13 @@ def checkout_view(request):
                 status=400,
             )
 
+        coupon = None
+        coupon_code = (data.get("couponCode") or "").strip()
+        if coupon_code:
+            coupon, coupon_error = resolve_coupon(coupon_code, merchandise_total)
+            if coupon_error:
+                return Response({"error": coupon_error}, status=400)
+
         decrement_allocations(stock_ops)
 
         referral_code = data.get("referralCode") or request.COOKIES.get("invictus-ref")
@@ -139,17 +147,34 @@ def checkout_view(request):
         created = []
         session_user = request.user if request.user.is_authenticated else None
 
-        for index, warehouse in enumerate(grouped.keys()):
-            group_lines = grouped[warehouse]
+        warehouse_groups = []
+        for warehouse, group_lines in grouped.items():
             merch = sum(line["line_total"] for line in group_lines)
             if first_order_discount:
                 merch = round(merch * (1 - settings.FIRST_ORDER_AFFILIATE_DISCOUNT), 2)
+            warehouse_groups.append((warehouse, group_lines, merch))
+
+        paid_merch_total = sum(merch for _, _, merch in warehouse_groups)
+        coupon_discount = discount_for(coupon, paid_merch_total) if coupon else 0.0
+        remaining_discount = coupon_discount
+        waived = is_free_shipping(coupon)
+
+        for index, (warehouse, group_lines, merch) in enumerate(warehouse_groups):
+            if coupon_discount and paid_merch_total:
+                if index == len(warehouse_groups) - 1:
+                    share_disc = round(remaining_discount, 2)
+                else:
+                    share_disc = round(coupon_discount * (merch / paid_merch_total), 2)
+                    remaining_discount = round(remaining_discount - share_disc, 2)
+            else:
+                share_disc = 0.0
+            merch_after = round(max(0.0, merch - share_disc), 2)
             commission_amount = 0
             if affiliate:
                 if affiliate.commission_type == User.CommissionType.FIXED:
                     commission_amount = affiliate.commission_rate
                 else:
-                    commission_amount = round((merch * affiliate.commission_rate) / 100, 2)
+                    commission_amount = round((merch_after * affiliate.commission_rate) / 100, 2)
             suffix = "W1" if warehouse == Product.Warehouse.WAREHOUSE_1 else "W2"
             order = Order.objects.create(
                 order_number=f"{group_id}-{suffix}",
@@ -160,9 +185,9 @@ def checkout_view(request):
                 status=Order.Status.PENDING,
                 payment_status=Order.PaymentStatus.PENDING,
                 payment_method="btc",
-                merchandise_total=merch,
+                merchandise_total=merch_after,
                 shipping_total=0,
-                grand_total=merch,
+                grand_total=merch_after,
                 customer_name=data["name"],
                 customer_email=email,
                 shipping_line1=data["line1"],
@@ -173,6 +198,10 @@ def checkout_view(request):
                 notes=data.get("notes") or "",
                 affiliate=affiliate,
                 commission_amount=commission_amount,
+                coupon=coupon,
+                coupon_code=coupon.code if coupon else "",
+                discount_total=share_disc,
+                shipping_waived=waived,
             )
             for line in group_lines:
                 OrderItem.objects.create(
@@ -187,6 +216,8 @@ def checkout_view(request):
                 )
             created.append(order)
 
+        if coupon:
+            bump_usage(coupon)
         apply_group_shipping(group_id)
 
     payload = []
@@ -604,7 +635,7 @@ def admin_overview_view(request):
             "topCategoryMonth": {"name": top_name, "count": top_count},
             "categoriesTotal": Category.objects.count(),
             "warehousesTotal": 2,
-            "couponsTotal": 0,
+            "couponsTotal": Coupon.objects.count(),
             "giftCardsTotal": 0,
             "customersTotal": User.objects.filter(role=User.Role.CUSTOMER).count(),
             "storeCreditAvailable": 0,

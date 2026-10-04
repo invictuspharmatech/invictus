@@ -94,7 +94,8 @@ def apply_group_shipping(group_id: str) -> None:
         order.delete()
     if not live:
         return
-    share = shipping if len(live) == 1 else round(shipping / 2, 2)
+    waived = any(order.shipping_waived for order in live)
+    share = 0.0 if waived else (shipping if len(live) == 1 else round(shipping / 2, 2))
     for order in live:
         order.shipping_total = share
         order.grand_total = float(order.merchandise_total) + share
@@ -131,6 +132,10 @@ def sibling_order(source: Order, warehouse: str) -> Order:
         notes=source.notes,
         affiliate=source.affiliate,
         commission_amount=0,
+        coupon=source.coupon,
+        coupon_code=source.coupon_code,
+        discount_total=0,
+        shipping_waived=source.shipping_waived,
         paid_at=source.paid_at,
     )
 

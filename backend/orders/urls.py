@@ -1,10 +1,11 @@
 from django.urls import path
 
 from accounts import views as account_views
-from orders import btcpay_views, postage_views, views
+from orders import analytics_views, btcpay_views, coupon_views, postage_views, views
 
 urlpatterns = [
     path("checkout/", views.checkout_view),
+    path("coupons/validate/", coupon_views.validate_coupon_view),
     path("contact/", views.contact_view),
     path("affiliate/apply/", account_views.affiliate_apply_view),
     path("account/orders/", views.account_orders_view),
@@ -20,6 +21,15 @@ urlpatterns = [
     path("admin/btcpay/test/", btcpay_views.admin_btcpay_test_view),
     path("admin/btcpay/webhook/", btcpay_views.admin_btcpay_webhook_view),
     path("admin/overview/", views.admin_overview_view),
+    path("admin/analytics/overview/", analytics_views.analytics_overview_view),
+    path("admin/analytics/revenue/", analytics_views.analytics_revenue_view),
+    path("admin/analytics/products/", analytics_views.analytics_products_view),
+    path("admin/analytics/orders/", analytics_views.analytics_orders_view),
+    path("admin/analytics/variations/", analytics_views.analytics_variations_view),
+    path("admin/analytics/categories/", analytics_views.analytics_categories_view),
+    path("admin/analytics/coupons/", analytics_views.analytics_coupons_view),
+    path("admin/analytics/stock/", analytics_views.analytics_stock_view),
+    path("admin/analytics/sales-charts/", analytics_views.analytics_sales_charts_view),
     path("admin/orders/", views.admin_orders_view),
     path("admin/orders/bulk-status/", views.admin_orders_bulk_status_view),
     path("admin/orders/<uuid:pk>/", views.admin_order_detail_view),
@@ -41,4 +51,6 @@ urlpatterns = [
     path("admin/users/<uuid:pk>/", account_views.admin_user_detail_view),
     path("admin/affiliates/", account_views.admin_affiliates_view),
     path("admin/affiliates/<uuid:pk>/", account_views.admin_affiliate_action_view),
+    path("admin/coupons/", coupon_views.admin_coupon_list),
+    path("admin/coupons/<uuid:pk>/", coupon_views.admin_coupon_detail),
 ]

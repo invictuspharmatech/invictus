@@ -29,8 +29,8 @@ const CARDS = [
   },
   {
     href: "/admin/cms/email",
-    title: "Email & notifications",
-    copy: "SMTP settings, email templates, and who receives each notification.",
+    title: "Email settings & templates",
+    copy: "SMTP, notification templates, and who receives each store email.",
   },
   {
     href: "/admin/warehouses",

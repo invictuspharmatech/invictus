@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.db import models
 
 
@@ -136,6 +137,87 @@ class EmailSettings(models.Model):
 
     def __str__(self):
         return "Email settings"
+
+
+class BulkEmailDraft(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="bulk_email_draft",
+        primary_key=True,
+    )
+    subject = models.CharField(max_length=255, blank=True)
+    title = models.CharField(max_length=500, blank=True)
+    body_html = models.TextField(blank=True)
+    saved_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Bulk draft · {self.user}"
+
+
+class BulkEmailBatch(models.Model):
+    class Status(models.TextChoices):
+        RUNNING = "running", "Sending"
+        PAUSED = "paused", "Paused"
+        STOPPED = "stopped", "Stopped"
+        COMPLETED = "completed", "Completed"
+        INTERRUPTED = "interrupted", "Interrupted"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="bulk_email_batches",
+    )
+    total_count = models.IntegerField(default=0)
+    sent_count = models.IntegerField(default=0)
+    failed_count = models.IntegerField(default=0)
+    last_recipient_email = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=32, choices=Status.choices, default=Status.RUNNING)
+    subject_preview = models.CharField(max_length=255, blank=True)
+    subject_tpl = models.TextField(blank=True)
+    title_tpl = models.TextField(blank=True)
+    body_tpl = models.TextField(blank=True)
+    interval_seconds = models.IntegerField(default=300)
+    chunk_size = models.IntegerField(default=20)
+    last_error = models.TextField(blank=True)
+    next_send_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Bulk batch {self.id} · {self.status}"
+
+
+class BulkEmailRecipient(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        SENT = "sent", "Sent"
+        FAILED = "failed", "Failed"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    batch = models.ForeignKey(
+        BulkEmailBatch,
+        on_delete=models.CASCADE,
+        related_name="recipients",
+    )
+    sort_order = models.IntegerField(default=0)
+    email = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    error_message = models.TextField(blank=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["sort_order", "created_at"]
+        unique_together = ("batch", "email")
+
+    def __str__(self):
+        return self.email
 
 
 class EmailTemplate(models.Model):

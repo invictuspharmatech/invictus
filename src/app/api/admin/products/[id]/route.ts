@@ -17,6 +17,15 @@ export async function PUT(
   return proxyDjango(`/api/admin/products/${id}/`, { method: "PUT", body });
 }
 
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  const { id } = await context.params;
+  const body = await request.text();
+  return proxyDjango(`/api/admin/products/${id}/`, { method: "PATCH", body });
+}
+
 export async function DELETE(
   _request: Request,
   context: { params: Promise<{ id: string }> },
