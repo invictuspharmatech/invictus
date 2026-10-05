@@ -1,17 +1,22 @@
 import Link from "next/link";
 import { formatMoney } from "@/lib/constants";
-import type { ApiDashboardOverview } from "@/lib/api-types";
+import { resolveDashboardTileTone } from "@/lib/dashboard/tiles";
+import type { ApiDashboardOverview, ApiDashboardTile } from "@/lib/api-types";
 
-function daysInCurrentMonth() {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-}
-
-function salesTone(amount: number, dayMultiplier: number) {
-  if (amount <= 0) return "dash-tile-danger";
-  if (amount <= 500 * dayMultiplier) return "dash-tile-warning";
-  if (amount <= 1000 * dayMultiplier) return "dash-tile-info";
-  return "dash-tile-success";
+function tileHint(
+  tile: ApiDashboardTile,
+  period?: { todayLabel: string; weekLabel: string; monthLabel: string },
+) {
+  switch (tile.periodHint) {
+    case "today":
+      return period?.todayLabel || tile.periodHint;
+    case "week":
+      return period?.weekLabel || "Resets each Monday";
+    case "month":
+      return period?.monthLabel || tile.periodHint;
+    default:
+      return tile.periodHint;
+  }
 }
 
 function Tile({
@@ -19,108 +24,49 @@ function Tile({
   tone,
   value,
   label,
+  hint,
+  colSpan,
 }: {
   href: string;
   tone: string;
   value: string;
   label: string;
+  hint?: string;
+  colSpan: number;
 }) {
   return (
-    <Link href={href} className={`dash-tile ${tone}`}>
+    <Link
+      href={href}
+      className={`dash-tile ${tone} ${colSpan === 2 ? "sm:col-span-2" : ""}`}
+    >
       <h3>{value}</h3>
       <p>{label}</p>
+      {hint ? <span className="dash-tile-hint">{hint}</span> : null}
     </Link>
   );
 }
 
+function displayValue(tile: ApiDashboardTile) {
+  const amount = typeof tile.value === "number" ? tile.value : Number(tile.value) || 0;
+  return tile.format === "currency" ? formatMoney(amount) : String(amount);
+}
+
 export function DashboardTiles({ overview }: { overview: ApiDashboardOverview }) {
-  const monthDays = daysInCurrentMonth();
+  const tiles = overview.dashboardTiles ?? [];
+  if (tiles.length === 0) return null;
   return (
     <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <Tile
-        href="/admin/accounting"
-        tone={salesTone(overview.salesToday, 1)}
-        value={formatMoney(overview.salesToday)}
-        label="Sales today"
-      />
-      <Tile
-        href="/admin/accounting"
-        tone={salesTone(overview.salesThisMonth, monthDays)}
-        value={formatMoney(overview.salesThisMonth)}
-        label="Sales this month"
-      />
-      <Tile
-        href="/admin/accounting"
-        tone={overview.shippingSinceReset > 0 ? "dash-tile-info" : "dash-tile-success"}
-        value={formatMoney(overview.shippingSinceReset)}
-        label="Shipping since reset"
-      />
-      <Tile
-        href="/admin/accounting"
-        tone={overview.shippingThisWeek > 0 ? "dash-tile-info" : "dash-tile-success"}
-        value={formatMoney(overview.shippingThisWeek)}
-        label="Shipping this week"
-      />
-      <Tile
-        href="/admin/orders?status=pending"
-        tone="dash-tile-orange"
-        value={String(overview.ordersPending)}
-        label="Orders pending"
-      />
-      <Tile
-        href="/admin/orders?status=processing"
-        tone="dash-tile-orange"
-        value={String(overview.ordersProcessing)}
-        label="Orders processing"
-      />
-      <Tile
-        href="/admin/orders?status=delivered"
-        tone="dash-tile-orange"
-        value={String(overview.ordersCompleted)}
-        label="Orders completed"
-      />
-      <Tile
-        href="/admin/categories"
-        tone="dash-tile-primary"
-        value={overview.topCategoryMonth.name}
-        label={`Top category · ${overview.topCategoryMonth.count} this month`}
-      />
-      <Tile
-        href="/admin/products"
-        tone="dash-tile-info"
-        value={String(overview.productCount)}
-        label="Products"
-      />
-      <Tile
-        href="/admin/inventory"
-        tone={overview.lowStockCount > 0 ? "dash-tile-warning" : "dash-tile-success"}
-        value={String(overview.lowStockCount)}
-        label="Products low stock"
-      />
-      <Tile
-        href="/admin/categories"
-        tone="dash-tile-primary"
-        value={String(overview.categoriesTotal)}
-        label="Categories"
-      />
-      <Tile
-        href="/admin/warehouses"
-        tone="dash-tile-info"
-        value={String(overview.warehousesTotal)}
-        label="Warehouses"
-      />
-      <Tile
-        href="/admin/promotions/coupons"
-        tone="dash-tile-info"
-        value={String(overview.couponsTotal)}
-        label="Coupons"
-      />
-      <Tile
-        href="/admin/users"
-        tone="dash-tile-primary"
-        value={String(overview.customersTotal)}
-        label="Customers"
-      />
+      {tiles.map((tile) => (
+        <Tile
+          key={tile.id}
+          href={tile.href}
+          tone={resolveDashboardTileTone(tile.color, tile.id, tile.value)}
+          value={displayValue(tile)}
+          label={tile.label}
+          hint={tileHint(tile, overview.period)}
+          colSpan={tile.colSpan}
+        />
+      ))}
     </div>
   );
 }

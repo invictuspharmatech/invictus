@@ -3,21 +3,19 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from django.core.exceptions import ValidationError
-from django.db.models import Count, Min, Sum
-from django.db.models.functions import TruncDate, TruncMonth, TruncWeek, TruncYear
+from django.db.models import Count, F, FloatField, Min, Q, Sum, Value
+from django.db.models.functions import Coalesce, Greatest, Least, TruncDate, TruncMonth, TruncWeek, TruncYear
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
 from accounts.models import User
 from catalog.models import Category, Product, ProductCategory
 from orders.models import Coupon, Order, OrderItem
+from orders.status import COMPLETED_LIKE, PAID_LIKE, REVENUE_ELIGIBLE
 
-PAID_LIKE = [
-    Order.Status.PAID,
-    Order.Status.PROCESSING,
-    Order.Status.SHIPPED,
-    Order.Status.DELIVERED,
-]
+# Great Life revenueEligible = processing + completed.
+COMPLETED_STATUSES = list(COMPLETED_LIKE)
+OUT_OF_STOCK_STATUSES = ("outofstock", "out_of_stock")
 
 LOW_STOCK_THRESHOLD = 10
 CHART_FORMATS = {
@@ -185,16 +183,87 @@ def paid_orders():
     return Order.objects.filter(status__in=PAID_LIKE)
 
 
+def revenue_orders():
+    return Order.objects.filter(status__in=REVENUE_ELIGIBLE)
+
+
+def dashboard_week_bounds(now: datetime | None = None) -> tuple[datetime, datetime, datetime, datetime]:
+    moment = now or timezone.now()
+    today_start = moment.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - timedelta(days=today_start.weekday())
+    week_end = week_start + timedelta(days=7)
+    month_start = today_start.replace(day=1)
+    return today_start, week_start, week_end, month_start
+
+
+def dashboard_period_labels(now: datetime | None = None) -> dict[str, str]:
+    moment = now or timezone.now()
+    _today_start, week_start, week_end, _month_start = dashboard_week_bounds(moment)
+    week_end_inclusive = week_end - timedelta(microseconds=1)
+    return {
+        "todayLabel": f"{moment.strftime('%b')} {moment.day}, {moment.year}",
+        "weekLabel": (
+            f"{week_start.strftime('%b')} {week_start.day} – "
+            f"{week_end_inclusive.strftime('%b')} {week_end_inclusive.day}, {week_end_inclusive.year} (Mon–Sun)"
+        ),
+        "monthLabel": moment.strftime("%B %Y"),
+    }
+
+
+def completed_this_week_q(week_start: datetime, week_end: datetime) -> Q:
+    in_week = Q(shipped_at__gte=week_start, shipped_at__lt=week_end) | Q(
+        shipped_at__isnull=True,
+        updated_at__gte=week_start,
+        updated_at__lt=week_end,
+    )
+    return Q(status__in=COMPLETED_STATUSES) & in_week
+
+
+def _stock_quantity_field(warehouse: str) -> str:
+    if warehouse == Order.Warehouse.WAREHOUSE_1:
+        return "stock_quantity_w1"
+    if warehouse == Order.Warehouse.WAREHOUSE_2:
+        return "stock_quantity_w2"
+    return "stock_quantity"
+
+
+def catalog_stock_counts(warehouse: str) -> tuple[int, int]:
+    field = _stock_quantity_field(warehouse)
+    catalog = Product.objects.all()
+    low_stock = catalog.filter(**{f"{field}__gt": 0, f"{field}__lte": LOW_STOCK_THRESHOLD}).count()
+    out_qs = catalog.filter(
+        Q(**{f"{field}__lte": 0})
+        | Q(**{f"{field}__isnull": True})
+        | Q(stock_status__in=OUT_OF_STOCK_STATUSES)
+    ).exclude(stock_status="always_in_stock")
+    return low_stock, out_qs.count()
+
+
 def all_orders():
     return Order.objects.all()
 
 
+def _paid_shipping_expr():
+    shipping = Coalesce(F("shipping_total"), Value(0.0), output_field=FloatField())
+    grand = Coalesce(F("grand_total"), Value(0.0), output_field=FloatField())
+    return Least(shipping, Greatest(grand, Value(0.0)))
+
+
+def _paid_merchandise_expr():
+    grand = Coalesce(F("grand_total"), Value(0.0), output_field=FloatField())
+    return Greatest(Value(0.0), grand - _paid_shipping_expr())
+
+
+def _triplet_annotations() -> dict:
+    return {
+        "subtotal": Sum(_paid_merchandise_expr()),
+        "shipping": Sum(_paid_shipping_expr()),
+        "grand_total": Sum(Coalesce(F("grand_total"), Value(0.0), output_field=FloatField())),
+    }
+
+
 def _triplet(qs) -> dict[str, float]:
-    row = qs.aggregate(
-        subtotal=Sum("merchandise_total"),
-        shipping=Sum("shipping_total"),
-        grand_total=Sum("grand_total"),
-    )
+    row = qs.aggregate(**_triplet_annotations())
     return {
         "subtotal": _float(row["subtotal"]),
         "shipping": _float(row["shipping"]),
@@ -251,9 +320,9 @@ def _revenue_chart(start, end, chart_period: str) -> list[dict[str, Any]]:
         .annotate(bucket=_truncator(chart_period))
         .values("bucket")
         .annotate(
-            subtotal=Sum("merchandise_total"),
-            shipping=Sum("shipping_total"),
-            revenue=Sum("grand_total"),
+            subtotal=Sum(_paid_merchandise_expr()),
+            shipping=Sum(_paid_shipping_expr()),
+            revenue=Sum(Coalesce(F("grand_total"), Value(0.0), output_field=FloatField())),
         )
         .order_by("bucket")
     )
@@ -668,9 +737,7 @@ def _daily_buckets(start: datetime, end: datetime) -> list[dict[str, Any]]:
         .annotate(bucket=TruncDate("created_at"))
         .values("bucket")
         .annotate(
-            subtotal=Sum("merchandise_total"),
-            shipping=Sum("shipping_total"),
-            grand_total=Sum("grand_total"),
+            **_triplet_annotations(),
             orders_count=Count("id"),
         )
     )

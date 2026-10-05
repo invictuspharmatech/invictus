@@ -60,7 +60,7 @@ export function AccountingBoard({
             cryptoCode={summary.cryptoCode}
           />
           <p className="mt-3 text-sm text-muted-foreground">
-            Paid / processing / shipped / delivered in this window.
+            Processing / completed in this window.
           </p>
         </article>
         <article className="tile">

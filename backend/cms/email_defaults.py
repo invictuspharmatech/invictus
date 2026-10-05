@@ -110,6 +110,34 @@ DEFAULT_TEMPLATES = [
         "sort_order": 55,
     },
     {
+        "event_key": "order_refunded",
+        "name": "Order refunded",
+        "description": "Sent when an order is marked refunded.",
+        "subject": "Order {{order_number}} refunded",
+        "body": """<p>Hi {{customer_name}},</p>
+<p>Your order <strong>{{order_number}}</strong> has been refunded.</p>
+<p>— {{site_name}}</p>""",
+        "notify_admin": True,
+        "notify_user": True,
+        "notify_warehouse_manager": True,
+        "sort_order": 56,
+    },
+    {
+        "event_key": "product_in_stock",
+        "name": "Back in stock",
+        "description": "Sent to customers who asked to be notified when a product is back in stock.",
+        "subject": "{{product_name}} is back in stock",
+        "body": """<p>Hi {{customer_name}},</p>
+<p><strong>{{product_name}}</strong> is back in stock.</p>
+<p>{{stock_message}}</p>
+<p><a href="{{product_url}}">View product</a></p>
+<p>— {{site_name}}</p>""",
+        "notify_admin": False,
+        "notify_user": True,
+        "notify_warehouse_manager": False,
+        "sort_order": 58,
+    },
+    {
         "event_key": "contact_received",
         "name": "Contact form",
         "description": "Sent when someone submits the contact page.",

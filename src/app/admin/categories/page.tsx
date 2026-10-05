@@ -1,11 +1,17 @@
 import Link from "next/link";
 import { djangoAuthed } from "@/lib/django";
 import { requireFullAdmin } from "@/lib/auth";
+import { CatalogCsvBar } from "@/components/admin/CatalogCsvBar";
 import type { ApiCategory } from "@/lib/api-types";
 
-export default async function AdminCategoriesPage() {
+export default async function AdminCategoriesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ import?: string; export?: string }>;
+}) {
   const staff = await requireFullAdmin();
   if (!staff) return null;
+  const { import: importFlag, export: exportFlag } = await searchParams;
   const categories = await djangoAuthed<ApiCategory[]>("/api/admin/categories/");
 
   return (
@@ -17,9 +23,12 @@ export default async function AdminCategoriesPage() {
             These power the shop menu and the landing-page category section.
           </p>
         </div>
-        <Link href="/admin/categories/new" className="gold-btn">
-          Add category
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <CatalogCsvBar kind="categories" openImport={importFlag === "1"} autoExport={exportFlag === "1"} />
+          <Link href="/admin/categories/new" className="gold-btn">
+            Add category
+          </Link>
+        </div>
       </div>
       <div className="tile mt-6 overflow-x-auto">
         <table className="w-full text-left text-sm">

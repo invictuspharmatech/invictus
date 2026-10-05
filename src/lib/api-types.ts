@@ -188,6 +188,19 @@ export type ApiFaq = {
   sortOrder: number;
 };
 
+export type BannerBgMode =
+  | "brand-orange"
+  | "brand-green"
+  | "primary"
+  | "info"
+  | "success"
+  | "warning"
+  | "danger"
+  | "secondary"
+  | "dark";
+
+export type BannerTextMode = "light" | "dark" | "accent";
+
 export type ApiBanner = {
   id: string;
   title: string;
@@ -197,6 +210,14 @@ export type ApiBanner = {
   ctaLabel: string;
   isActive: boolean;
   sortOrder: number;
+  bgColorMode?: BannerBgMode;
+  textColorMode?: BannerTextMode;
+};
+
+export type ApiBannerRuntime = {
+  items: ApiBanner[];
+  enabled: boolean;
+  displayMode: "marquee" | "slider";
 };
 
 export type ApiNav = {
@@ -290,20 +311,38 @@ export type ApiWarehouseCard = {
   openOrderValue: number;
 };
 
+export type ApiDashboardTile = {
+  id: string;
+  row: number;
+  sort: number;
+  color: string;
+  colSpan: number;
+  label: string;
+  value: number;
+  format: "count" | "currency";
+  href: string;
+  periodHint: string;
+  supportsDynamicColor: boolean;
+};
+
 export type ApiDashboardOverview = {
   productCount: number;
   openOrderValue: number;
   openOrderCount: number;
   orderCount: number;
   lowStockCount: number;
+  outOfStockCount: number;
   pendingAffiliates: number;
   userCount: number;
   warehouse: string;
+  period?: { todayLabel: string; weekLabel: string; monthLabel: string };
   salesToday: number;
+  salesThisWeek: number;
   salesThisMonth: number;
   shippingSinceReset: number;
   shippingThisWeek: number;
   ordersPending: number;
+  ordersFailed: number;
   ordersProcessing: number;
   ordersCompleted: number;
   topCategoryMonth: { name: string; count: number };
@@ -313,6 +352,14 @@ export type ApiDashboardOverview = {
   giftCardsTotal?: number;
   customersTotal: number;
   storeCreditAvailable?: number;
+  customersThisMonth?: number;
+  productsActive?: number;
+  ordersOnHold?: number;
+  ordersCancelled?: number;
+  ordersRefunded?: number;
+  ordersPartiallyFilled?: number;
+  salesThisYear?: number;
+  dashboardTiles?: ApiDashboardTile[];
   warehouses: ApiWarehouseCard[];
   orders: ApiOrder[];
 };

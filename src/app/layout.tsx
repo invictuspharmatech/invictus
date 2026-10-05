@@ -11,7 +11,8 @@ import { djangoJsonSafe } from "@/lib/django";
 import { SHOP_CATEGORIES } from "@/lib/storefront-nav";
 import { isStaff } from "@/lib/roles";
 import { UserViewBanner } from "@/components/site/UserViewBanner";
-import type { ApiBanner, ApiCategory } from "@/lib/api-types";
+import type { ApiCategory } from "@/lib/api-types";
+import { asBannerRuntime } from "@/lib/feature-banners";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -57,14 +58,15 @@ export default async function RootLayout({
   const isAdminApp = pathname.startsWith("/admin");
   const session = isAdminApp ? null : await readSession();
   const userView = Boolean(session && isStaff(session.role) && (await isUserView()));
-  const [categories, banners] = (
+  const [categories, bannerPayload] = (
     isAdminApp
-      ? [[], []]
+      ? [[], { items: [], enabled: true, displayMode: "marquee" }]
       : await Promise.all([
           djangoJsonSafe<ApiCategory[]>("/api/categories/", []),
-          djangoJsonSafe<ApiBanner[]>("/api/cms/banners/", []),
+          djangoJsonSafe("/api/cms/banners/", { items: [], enabled: true, displayMode: "marquee" }),
         ])
-  ) as [ApiCategory[], ApiBanner[]];
+  ) as [ApiCategory[], unknown];
+  const banners = asBannerRuntime(bannerPayload);
   const shopLinks =
     categories.length > 0
       ? [
@@ -75,10 +77,15 @@ export default async function RootLayout({
           })),
         ]
       : SHOP_CATEGORIES;
-  const promoItems = banners
+  const promoItems = banners.items
     .filter((item) => item.isActive)
-    .map((item) => [item.title, item.subtitle].filter(Boolean).join(" · "))
-    .filter(Boolean);
+    .map((item) => ({
+      id: item.id,
+      title: [item.title, item.subtitle].filter(Boolean).join(" · "),
+      href: item.href || undefined,
+      bgColorMode: item.bgColorMode,
+      textColorMode: item.textColorMode,
+    }));
 
   return (
     <html
@@ -97,6 +104,8 @@ export default async function RootLayout({
                 session={session}
                 shopLinks={shopLinks}
                 promoItems={promoItems}
+                promoEnabled={banners.enabled}
+                promoDisplayMode={banners.displayMode}
               />
             </>
           )}

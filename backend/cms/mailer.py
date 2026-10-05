@@ -22,9 +22,11 @@ TAG_RE = re.compile(r"<[^>]+>")
 STATUS_EVENTS = {
     "ON_HOLD": "order_on_hold",
     "PROCESSING": "order_processing",
+    "COMPLETED": "order_shipped",
     "SHIPPED": "order_shipped",
     "DELIVERED": "order_delivered",
     "CANCELLED": "order_cancelled",
+    "REFUNDED": "order_refunded",
     "FAILED": "order_failed",
     "PAID": "order_paid",
 }
@@ -91,27 +93,41 @@ def warehouse_label(code: str | None) -> str:
 
 
 def order_context(order) -> dict[str, Any]:
-    items = list(order.items.all())
+    from orders.fulfillment import live_group_orders, payment_primary
+
+    group = live_group_orders(order) or [order]
+    primary = payment_primary(order)
+    items = []
+    merchandise_total = 0.0
+    shipping_total = 0.0
+    warehouses = []
+    for row in group:
+        items.extend(list(row.items.all()))
+        merchandise_total += float(row.merchandise_total or 0)
+        shipping_total += float(row.shipping_total or 0)
+        if row.warehouse not in warehouses:
+            warehouses.append(row.warehouse)
     pay_now_url = ""
     try:
         from orders.pay_token import checkout_url
 
-        pay_now_url = checkout_url(order)
+        pay_now_url = checkout_url(primary)
     except Exception:
         pay_now_url = ""
+    grand_total = merchandise_total + shipping_total
     return {
         "site_name": SITE_NAME,
-        "order_number": order.order_number,
+        "order_number": primary.group_id or order.order_number,
         "customer_name": order.customer_name,
         "customer_email": order.customer_email,
         "user_name": order.customer_name,
         "user_email": order.customer_email,
-        "status": order.status,
-        "warehouse": warehouse_label(order.warehouse),
-        "warehouse_code": order.warehouse,
-        "grand_total": f"{order.grand_total:.2f}",
-        "merchandise_total": f"{order.merchandise_total:.2f}",
-        "shipping_total": f"{order.shipping_total:.2f}",
+        "status": primary.status,
+        "warehouse": " / ".join(warehouse_label(code) for code in warehouses) or warehouse_label(order.warehouse),
+        "warehouse_code": primary.warehouse,
+        "grand_total": f"{grand_total:.2f}",
+        "merchandise_total": f"{merchandise_total:.2f}",
+        "shipping_total": f"{shipping_total:.2f}",
         "items": ", ".join(f"{item.name} × {item.quantity}" for item in items),
         "pay_now_url": pay_now_url,
         "shipping_address": ", ".join(

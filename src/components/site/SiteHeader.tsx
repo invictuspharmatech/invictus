@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { ChevronDown, Menu, X } from "lucide-react";
 import { useCart } from "@/components/shop/CartProvider";
 import { HeaderSearch } from "@/components/site/HeaderSearch";
-import { PromoTicker } from "@/components/site/PromoTicker";
+import { PromoTicker, type PromoSlide } from "@/components/site/PromoTicker";
 import { isStaff } from "@/lib/roles";
 import {
   NAV_LINK_CLASS,
@@ -63,10 +63,14 @@ export function SiteHeader({
   session,
   shopLinks,
   promoItems,
+  promoEnabled = true,
+  promoDisplayMode = "slider",
 }: {
   session: SessionUser | null;
   shopLinks: { href: string; label: string }[];
-  promoItems: string[];
+  promoItems: PromoSlide[];
+  promoEnabled?: boolean;
+  promoDisplayMode?: "marquee" | "slider";
 }) {
   const pathname = usePathname();
   const { count } = useCart();
@@ -81,7 +85,7 @@ export function SiteHeader({
 
   return (
     <header className="sticky top-0 z-50">
-      <PromoTicker items={promoItems} />
+      <PromoTicker items={promoItems} enabled={promoEnabled} displayMode={promoDisplayMode} />
       <div className="border-b border-border bg-background/90 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-3 lg:px-10">
         <Wordmark />

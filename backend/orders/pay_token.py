@@ -4,8 +4,10 @@ import base64
 import hashlib
 import hmac
 import json
+from datetime import timedelta
 
 from django.conf import settings
+from django.utils import timezone
 
 from orders.models import Order
 
@@ -50,14 +52,13 @@ def order_may_pay(order: Order) -> bool:
     if order.status in (
         Order.Status.CANCELLED,
         Order.Status.FAILED,
+        Order.Status.COMPLETED,
+        Order.Status.REFUNDED,
+        Order.Status.PARTIALLY_FILLED,
         Order.Status.DELIVERED,
         Order.Status.SHIPPED,
     ):
         return False
-    from datetime import timedelta
-
-    from django.utils import timezone
-
     if order.created_at and order.created_at <= timezone.now() - timedelta(hours=24):
         return False
     return True

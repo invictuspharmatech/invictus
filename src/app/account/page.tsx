@@ -5,6 +5,7 @@ import { readSession } from "@/lib/auth";
 import { isStaff } from "@/lib/roles";
 import { PageHeader } from "@/components/site/PageHeader";
 import { formatMoney } from "@/lib/constants";
+import { formatOrderStatus } from "@/lib/enums";
 import { AffiliateApplyButton } from "@/components/shop/AffiliateApplyButton";
 import { LogoutButton } from "@/components/shop/LogoutButton";
 import type { ApiOrder } from "@/lib/api-types";
@@ -48,7 +49,7 @@ export default async function AccountPage() {
             {orders.map((order) => (
               <li key={order.id} className="flex justify-between py-3">
                 <span>
-                  {order.orderNumber} · {order.status.toLowerCase()}
+                  {order.orderNumber} · {formatOrderStatus(order.status)}
                 </span>
                 <span>{formatMoney(order.grandTotal)}</span>
               </li>

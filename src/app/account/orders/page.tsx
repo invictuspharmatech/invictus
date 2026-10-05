@@ -4,6 +4,7 @@ import { djangoAuthed } from "@/lib/django";
 import { readSession } from "@/lib/auth";
 import { PageHeader } from "@/components/site/PageHeader";
 import { formatMoney } from "@/lib/constants";
+import { formatOrderStatus } from "@/lib/enums";
 import { PayOrderButton } from "@/components/shop/PayOrderButton";
 import type { ApiOrder } from "@/lib/api-types";
 
@@ -32,7 +33,7 @@ export default async function OrdersPage({
               <div>
                 <h2 className="text-lg">{order.orderNumber}</h2>
                 <p className="text-sm text-muted-foreground">
-                  {order.status.toLowerCase()}
+                  {formatOrderStatus(order.status)}
                   {order.paymentStatus ? ` · payment ${order.paymentStatus.toLowerCase()}` : ""}
                 </p>
               </div>

@@ -1,12 +1,21 @@
 import re
 
+from django.http import HttpResponse
 from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from accounts.permissions import IsPortalStaff, IsStoreStaff, is_full_admin, managed_warehouse
-from catalog.models import Category, Product, ProductCategory, StockTransferRequest, TestResult
+from catalog.models import (
+    Category,
+    Product,
+    ProductCategory,
+    ProductStockSubscription,
+    StockNotificationBatch,
+    StockTransferRequest,
+    TestResult,
+)
 from catalog.serializers import (
     CategorySerializer,
     CategoryWriteSerializer,
@@ -201,12 +210,16 @@ def _save_product(product: Product, data: dict) -> Product:
         product.stock_quantity_w1 = int(data["stockQuantityW1"] or 0)
     if "stockQuantityW2" in data:
         product.stock_quantity_w2 = int(data["stockQuantityW2"] or 0)
+    previous_status = product.stock_status
     product.sync_total(save=False)
     slug = data.get("slug") or product.slug or slugify(product.name)
     product.slug = slug
     if product.regular_price is None:
         product.regular_price = 0
     product.save()
+    from catalog.stock_notify import maybe_dispatch_restock
+
+    maybe_dispatch_restock(product, previous_status)
     if "categoryIds" in data:
         ProductCategory.objects.filter(product=product).delete()
         for category_id in data["categoryIds"]:
@@ -311,3 +324,129 @@ def admin_category_detail(request, pk):
     serializer.is_valid(raise_exception=True)
     category = _save_category(category, serializer.validated_data)
     return Response(CategorySerializer(category).data)
+
+
+@api_view(["POST"])
+@permission_classes([IsStoreStaff])
+def admin_products_import(request):
+    from catalog.csv_io import import_products
+
+    if not is_full_admin(request.user):
+        return Response({"error": "Not allowed."}, status=403)
+    result = import_products(request.data.get("csvData") or request.data.get("csv_data") or "")
+    return Response(result)
+
+
+@api_view(["GET"])
+@permission_classes([IsStoreStaff])
+def admin_products_export(request):
+    from catalog.csv_io import export_products
+
+    response = HttpResponse(export_products(), content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="products.csv"'
+    return response
+
+
+@api_view(["POST"])
+@permission_classes([IsStoreStaff])
+def admin_categories_import(request):
+    from catalog.csv_io import import_categories
+
+    if not is_full_admin(request.user):
+        return Response({"error": "Not allowed."}, status=403)
+    return Response(import_categories(request.data.get("csvData") or request.data.get("csv_data") or ""))
+
+
+@api_view(["GET"])
+@permission_classes([IsStoreStaff])
+def admin_categories_export(request):
+    from catalog.csv_io import export_categories
+
+    response = HttpResponse(export_categories(), content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="categories.csv"'
+    return response
+
+
+@api_view(["POST", "GET", "DELETE"])
+@permission_classes([AllowAny])
+def product_stock_notify(request, pk):
+    from catalog.stock_notify import subscribe, subscription_status, unsubscribe
+
+    product = Product.objects.filter(pk=pk).first()
+    if not product:
+        return Response({"error": "Not found."}, status=404)
+    user = request.user if getattr(request.user, "is_authenticated", False) else None
+    email = (request.data.get("email") if request.method != "GET" else request.GET.get("email")) or (
+        getattr(user, "email", "") if user else ""
+    )
+    if request.method == "GET":
+        return Response(subscription_status(product, email))
+    if request.method == "DELETE":
+        unsubscribe(product, email)
+        return Response({"ok": True})
+    try:
+        row = subscribe(product, email, request.data.get("name") or getattr(user, "name", ""), user)
+    except ValueError as exc:
+        return Response({"error": str(exc)}, status=400)
+    return Response({"ok": True, "status": row.status})
+
+
+@api_view(["GET"])
+@permission_classes([IsPortalStaff])
+def admin_stock_batches(request):
+    from catalog.stock_notify import serialize_batch
+
+    qs = StockNotificationBatch.objects.select_related("product").all()
+    return Response([serialize_batch(row) for row in qs[:100]])
+
+
+@api_view(["GET"])
+@permission_classes([IsPortalStaff])
+def admin_stock_subscriptions(request):
+    qs = ProductStockSubscription.objects.select_related("product").all()
+    status = request.GET.get("status")
+    if status:
+        qs = qs.filter(status=status)
+    return Response(
+        [
+            {
+                "id": str(row.id),
+                "email": row.email,
+                "name": row.name,
+                "status": row.status,
+                "productId": str(row.product_id),
+                "productName": row.product.name,
+                "createdAt": row.created_at.isoformat() if row.created_at else None,
+            }
+            for row in qs[:300]
+        ]
+    )
+
+
+@api_view(["POST", "DELETE"])
+@permission_classes([IsPortalStaff])
+def admin_stock_batch_action(request, pk):
+    from catalog.stock_notify import process_chunk, serialize_batch
+
+    batch = StockNotificationBatch.objects.select_related("product").filter(pk=pk).first()
+    if not batch:
+        return Response({"error": "Not found."}, status=404)
+    if request.method == "DELETE":
+        batch.delete()
+        return Response({"ok": True})
+    action = request.data.get("action")
+    if action == "pause":
+        batch.status = StockNotificationBatch.Status.PAUSED
+        batch.save(update_fields=["status", "updated_at"])
+    elif action == "resume":
+        batch.status = StockNotificationBatch.Status.RUNNING
+        batch.save(update_fields=["status", "updated_at"])
+        process_chunk(batch)
+        batch.refresh_from_db()
+    elif action == "stop":
+        batch.status = StockNotificationBatch.Status.STOPPED
+        batch.save(update_fields=["status", "updated_at"])
+    else:
+        return Response({"error": "Invalid action."}, status=400)
+    return Response(serialize_batch(batch))
+

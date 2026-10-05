@@ -16,14 +16,48 @@ export type WarehouseCode = (typeof WarehouseCode)[keyof typeof WarehouseCode];
 export const OrderStatus = {
   PENDING: "PENDING",
   ON_HOLD: "ON_HOLD",
-  PAID: "PAID",
   PROCESSING: "PROCESSING",
+  PARTIALLY_FILLED: "PARTIALLY_FILLED",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED",
+  REFUNDED: "REFUNDED",
+  FAILED: "FAILED",
+  PAID: "PAID",
   SHIPPED: "SHIPPED",
   DELIVERED: "DELIVERED",
-  CANCELLED: "CANCELLED",
-  FAILED: "FAILED",
 } as const;
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
+
+export const STAFF_ORDER_STATUSES = [
+  OrderStatus.PENDING,
+  OrderStatus.ON_HOLD,
+  OrderStatus.PROCESSING,
+  OrderStatus.PARTIALLY_FILLED,
+  OrderStatus.COMPLETED,
+  OrderStatus.CANCELLED,
+  OrderStatus.REFUNDED,
+  OrderStatus.FAILED,
+] as const;
+
+export function canonicalOrderStatus(status: string): string {
+  const key = status.toUpperCase().replaceAll("-", "_");
+  if (key === OrderStatus.PAID) return OrderStatus.PROCESSING;
+  if (key === OrderStatus.SHIPPED || key === OrderStatus.DELIVERED) {
+    return OrderStatus.COMPLETED;
+  }
+  return key;
+}
+
+export function orderStatusTab(status: string): string {
+  const key = status.toLowerCase().replaceAll("-", "_");
+  if (key === "paid") return "processing";
+  if (key === "shipped" || key === "delivered") return "completed";
+  return key || "all";
+}
+
+export function formatOrderStatus(status: string): string {
+  return canonicalOrderStatus(status).toLowerCase().replaceAll("_", " ");
+}
 
 export const CommissionType = {
   PERCENT: "PERCENT",

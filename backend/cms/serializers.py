@@ -30,8 +30,10 @@ class BannerSerializer(serializers.ModelSerializer):
     image = serializers.CharField(allow_blank=True, required=False)
     href = serializers.CharField(allow_blank=True, required=False)
     ctaLabel = serializers.CharField(source="cta_label", allow_blank=True, required=False)
-    isActive = serializers.BooleanField(source="is_active")
+    isActive = serializers.BooleanField(source="is_active", required=False)
     sortOrder = serializers.IntegerField(source="sort_order", required=False)
+    bgColorMode = serializers.CharField(source="bg_color_mode", required=False)
+    textColorMode = serializers.CharField(source="text_color_mode", required=False)
 
     class Meta:
         model = Banner
@@ -44,12 +46,14 @@ class BannerSerializer(serializers.ModelSerializer):
             "ctaLabel",
             "isActive",
             "sortOrder",
+            "bgColorMode",
+            "textColorMode",
         ]
 
 
 class FAQSerializer(serializers.ModelSerializer):
-    isPublished = serializers.BooleanField(source="is_published")
-    sortOrder = serializers.IntegerField(source="sort_order")
+    isPublished = serializers.BooleanField(source="is_published", required=False)
+    sortOrder = serializers.IntegerField(source="sort_order", required=False)
 
     class Meta:
         model = FAQItem

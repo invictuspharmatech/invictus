@@ -127,6 +127,8 @@ def tile_copy(split: dict[str, Decimal]) -> dict[str, tuple[str, str]]:
 COUNTED_STATUSES = [
     Order.Status.PAID,
     Order.Status.PROCESSING,
+    Order.Status.PARTIALLY_FILLED,
+    Order.Status.COMPLETED,
     Order.Status.SHIPPED,
     Order.Status.DELIVERED,
 ]

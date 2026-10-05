@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -6,6 +5,7 @@ from accounts.permissions import is_full_admin, managed_warehouse
 from catalog.models import Product, StockTransferRequest
 from cms.models import WarehouseSettings
 from orders.models import FulfillmentRequest, Order, OrderItem
+from orders.totals import allocate_weighted, money
 
 W1 = Product.Warehouse.WAREHOUSE_1
 W2 = Product.Warehouse.WAREHOUSE_2
@@ -71,21 +71,44 @@ def restock_order(order: Order) -> None:
 
 
 def recalc_merchandise(order: Order) -> None:
-    total = sum(item.line_total for item in order.items.all())
-    order.merchandise_total = total
+    raw = sum(float(item.line_total) for item in order.items.all())
+    order.merchandise_total = money(max(0, raw - float(order.discount_total or 0)))
     order.save(update_fields=["merchandise_total"])
 
 
-def apply_group_shipping(group_id: str) -> None:
-    shipping = float(settings.SHIPPING_USD)
-    orders = list(
-        Order.objects.filter(group_id=group_id).exclude(
-            status__in=[Order.Status.CANCELLED, Order.Status.FAILED]
-        )
+def _terminal_statuses() -> list[str]:
+    return [Order.Status.CANCELLED, Order.Status.FAILED]
+
+
+def live_group_orders(order_or_group_id: Order | str) -> list[Order]:
+    group_id = order_or_group_id if isinstance(order_or_group_id, str) else order_or_group_id.group_id
+    if not group_id:
+        return [order_or_group_id] if isinstance(order_or_group_id, Order) else []
+    return list(
+        Order.objects.filter(group_id=group_id)
+        .exclude(status__in=_terminal_statuses())
+        .order_by("split_index", "created_at")
     )
+
+
+def payment_primary(order: Order) -> Order:
+    live = live_group_orders(order)
+    return live[0] if live else order
+
+
+def group_grand_total(order: Order) -> float:
+    return money(sum(float(row.grand_total) for row in live_group_orders(order)))
+
+
+def apply_group_shipping(group_id: str, shipping_usd: float | None = None) -> None:
+    orders = live_group_orders(group_id)
     live = []
     empty = []
+    group_discount = 0.0
+    waived = False
     for order in orders:
+        group_discount += float(order.discount_total or 0)
+        waived = waived or bool(order.shipping_waived)
         if order.items.exists():
             live.append(order)
         else:
@@ -94,12 +117,21 @@ def apply_group_shipping(group_id: str) -> None:
         order.delete()
     if not live:
         return
-    waived = any(order.shipping_waived for order in live)
-    share = 0.0 if waived else (shipping if len(live) == 1 else round(shipping / 2, 2))
-    for order in live:
+    raws = [sum(float(item.line_total) for item in order.items.all()) for order in live]
+    discount_shares = allocate_weighted(group_discount, raws)
+    if shipping_usd is None:
+        from orders.shop_config import get_default_shipping_usd
+
+        shipping_usd = get_default_shipping_usd()
+    shipping = 0.0 if waived else money(shipping_usd)
+    for index, order in enumerate(live):
+        share = 0.0 if index > 0 else shipping
+        merch = money(max(0, raws[index] - discount_shares[index]))
+        order.discount_total = discount_shares[index]
+        order.merchandise_total = merch
         order.shipping_total = share
-        order.grand_total = float(order.merchandise_total) + share
-        order.save(update_fields=["shipping_total", "grand_total"])
+        order.grand_total = money(merch + share)
+        order.save(update_fields=["discount_total", "merchandise_total", "shipping_total", "grand_total"])
 
 
 def sibling_order(source: Order, warehouse: str) -> Order:

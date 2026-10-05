@@ -88,7 +88,15 @@ class OrderSerializer(serializers.ModelSerializer):
         ]
 
     def get_btcInvoice(self, obj):
-        return serialize_invoice(obj.btc_invoice)
+        invoice = obj.btc_invoice
+        if invoice:
+            return serialize_invoice(invoice)
+        from orders.fulfillment import payment_primary
+
+        primary = payment_primary(obj)
+        if primary.id != obj.id:
+            return serialize_invoice(primary.btc_invoice)
+        return None
 
     def get_shippingLabels(self, obj):
         from orders.bitcoinpostage import serialize_label
@@ -139,3 +147,33 @@ class FulfillmentRequestSerializer(serializers.ModelSerializer):
         if obj.order_item_id and obj.order_item:
             return obj.order_item.name
         return ""
+
+
+def group_customer_order_payloads(payloads) -> list[dict]:
+    buckets: dict[str, list[dict]] = {}
+    keys: list[str] = []
+    for payload in payloads:
+        row = dict(payload)
+        key = str(row.get("groupId") or row.get("id") or "")
+        if key not in buckets:
+            keys.append(key)
+            buckets[key] = []
+        buckets[key].append(row)
+    grouped: list[dict] = []
+    for key in keys:
+        siblings = sorted(buckets[key], key=lambda row: int(row.get("splitIndex") or 0))
+        primary = dict(siblings[0])
+        if len(siblings) == 1:
+            grouped.append(primary)
+            continue
+        invoice = next((row.get("btcInvoice") for row in siblings if row.get("btcInvoice")), None)
+        primary["orderNumber"] = primary.get("groupId") or primary.get("orderNumber")
+        primary["merchandiseTotal"] = round(sum(float(row.get("merchandiseTotal") or 0) for row in siblings), 2)
+        primary["shippingTotal"] = round(sum(float(row.get("shippingTotal") or 0) for row in siblings), 2)
+        primary["grandTotal"] = round(sum(float(row.get("grandTotal") or 0) for row in siblings), 2)
+        primary["discountTotal"] = round(sum(float(row.get("discountTotal") or 0) for row in siblings), 2)
+        primary["items"] = [item for row in siblings for item in (row.get("items") or [])]
+        if invoice:
+            primary["btcInvoice"] = invoice
+        grouped.append(primary)
+    return grouped

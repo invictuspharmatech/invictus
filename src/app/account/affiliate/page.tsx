@@ -3,6 +3,7 @@ import { djangoAuthed } from "@/lib/django";
 import { readSession } from "@/lib/auth";
 import { PageHeader } from "@/components/site/PageHeader";
 import { formatMoney } from "@/lib/constants";
+import { formatOrderStatus } from "@/lib/enums";
 import type { ApiOrder } from "@/lib/api-types";
 
 export default async function AffiliateDashboardPage() {
@@ -68,7 +69,7 @@ export default async function AffiliateDashboardPage() {
                 <td className="py-2">{order.orderNumber}</td>
                 <td>{formatMoney(order.merchandiseTotal)}</td>
                 <td>{formatMoney(order.commissionAmount)}</td>
-                <td className="capitalize">{order.status.toLowerCase()}</td>
+                <td className="capitalize">{formatOrderStatus(order.status)}</td>
               </tr>
             ))}
           </tbody>

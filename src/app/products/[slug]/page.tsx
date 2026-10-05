@@ -3,6 +3,7 @@ import NextImage from "next/image";
 import { djangoJsonOptional } from "@/lib/django";
 import { formatMoney, mediaUrl, productPrice } from "@/lib/constants";
 import { AddToCartButton } from "@/components/shop/AddToCartButton";
+import { StockNotifyButton } from "@/components/shop/StockNotifyButton";
 import type { ApiProduct } from "@/lib/api-types";
 
 export default async function ProductDetailPage({
@@ -49,6 +50,10 @@ export default async function ProductDetailPage({
         <div className="mt-8 max-w-sm">
           <AddToCartButton product={product} />
         </div>
+        <StockNotifyButton
+          productId={product.id}
+          outOfStock={product.stockStatus === "outofstock"}
+        />
         {product.maxQuantityPerOrder ? (
           <p className="mt-3 text-xs text-muted-foreground">
             Limit {product.maxQuantityPerOrder} per order

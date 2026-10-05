@@ -20,6 +20,7 @@ from orders.btcpay import (
     test_connection,
     update_invoice_status,
 )
+from orders.fulfillment import group_grand_total, payment_primary
 from orders.models import BtcInvoice, Order
 from orders.pay_token import checkout_url, order_may_pay, verify_and_load
 
@@ -27,7 +28,13 @@ logger = logging.getLogger(__name__)
 
 
 def invoice_for_order(order: Order) -> BtcInvoice | None:
-    return order.btc_invoices.order_by("-created_at").first()
+    invoice = order.btc_invoices.order_by("-created_at").first()
+    if invoice:
+        return invoice
+    primary = payment_primary(order)
+    if primary.id != order.id:
+        return primary.btc_invoices.order_by("-created_at").first()
+    return None
 
 
 def can_access_order(request, order: Order) -> bool:
@@ -78,14 +85,15 @@ def pay_token_info_view(request):
     if not order:
         return Response({"error": "Invalid payment link"}, status=404)
     invoice = invoice_for_order(order)
+    primary = payment_primary(order)
     return Response(
         {
-            "orderId": str(order.id),
-            "orderNumber": order.order_number,
+            "orderId": str(primary.id),
+            "orderNumber": primary.group_id or primary.order_number,
             "paymentMethod": order.payment_method,
             "paymentStatus": order.payment_status,
             "orderStatus": order.status,
-            "grandTotal": order.grand_total,
+            "grandTotal": group_grand_total(order),
             "canPay": order_may_pay(order),
             "checkoutWindowClosed": checkout_window_closed(order),
             "payUrl": checkout_url(order),
@@ -175,7 +183,12 @@ def invoice_status_view(request, invoice_id):
     allowed = can_access_order(request, order)
     if not allowed and token:
         token_order = verify_and_load(token)
-        allowed = bool(token_order and token_order.id == order.id)
+        allowed = bool(
+            token_order
+            and token_order.group_id
+            and order.group_id
+            and token_order.group_id == order.group_id
+        )
     if not allowed:
         return Response({"error": "Not found."}, status=404)
     try:

@@ -74,11 +74,16 @@ class Product(models.Model):
             )
 
     def adjust_stock(self, warehouse: str, delta: int, save: bool = True) -> None:
+        previous = self.stock_status
         if warehouse == self.Warehouse.WAREHOUSE_1:
             self.stock_quantity_w1 = int(self.stock_quantity_w1 or 0) + delta
         else:
             self.stock_quantity_w2 = int(self.stock_quantity_w2 or 0) + delta
         self.sync_total(save=save)
+        if save:
+            from catalog.stock_notify import maybe_dispatch_restock
+
+            maybe_dispatch_restock(self, previous)
 
 
 class ProductCategory(models.Model):
@@ -143,3 +148,92 @@ class StockTransferRequest(models.Model):
 
     def __str__(self):
         return f"{self.product.name} × {self.quantity}"
+
+
+class ProductStockSubscription(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        NOTIFIED = "notified", "Notified"
+        CANCELLED = "cancelled", "Cancelled"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="stock_subscriptions")
+    email = models.EmailField()
+    name = models.CharField(max_length=255, blank=True)
+    user = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="stock_subscriptions",
+    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    notified_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ("product", "email")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.email} · {self.product.name}"
+
+
+class StockNotificationBatch(models.Model):
+    class Status(models.TextChoices):
+        RUNNING = "running", "Running"
+        PAUSED = "paused", "Paused"
+        STOPPED = "stopped", "Stopped"
+        COMPLETED = "completed", "Completed"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="stock_batches")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.RUNNING)
+    subject_tpl = models.CharField(max_length=255, blank=True)
+    body_tpl = models.TextField(blank=True)
+    chunk_size = models.IntegerField(default=20)
+    interval_seconds = models.IntegerField(default=300)
+    sent_count = models.IntegerField(default=0)
+    failed_count = models.IntegerField(default=0)
+    last_error = models.TextField(blank=True)
+    next_send_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.product.name} · {self.status}"
+
+
+class StockNotificationRecipient(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        SENT = "sent", "Sent"
+        FAILED = "failed", "Failed"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    batch = models.ForeignKey(
+        StockNotificationBatch, on_delete=models.CASCADE, related_name="recipients"
+    )
+    subscription = models.ForeignKey(
+        ProductStockSubscription,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="batch_rows",
+    )
+    email = models.EmailField()
+    name = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    error_message = models.TextField(blank=True)
+    sort_order = models.IntegerField(default=0)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+
+    def __str__(self):
+        return self.email
+

@@ -1,18 +1,9 @@
 "use client";
 
-import { OrderStatus } from "@/lib/enums";
+import { STAFF_ORDER_STATUSES, canonicalOrderStatus, formatOrderStatus } from "@/lib/enums";
 import { useRouter } from "next/navigation";
 
-const OPTIONS: OrderStatus[] = [
-  OrderStatus.PENDING,
-  OrderStatus.ON_HOLD,
-  OrderStatus.PAID,
-  OrderStatus.PROCESSING,
-  OrderStatus.SHIPPED,
-  OrderStatus.DELIVERED,
-  OrderStatus.CANCELLED,
-  OrderStatus.FAILED,
-];
+const OPTIONS = [...STAFF_ORDER_STATUSES];
 
 export function OrderStatusSelect({
   id,
@@ -24,12 +15,13 @@ export function OrderStatusSelect({
   onUpdated?: () => void;
 }) {
   const router = useRouter();
+  const current = canonicalOrderStatus(status);
 
   return (
     <select
       className="field max-w-xs"
-      defaultValue={status}
-      key={status}
+      defaultValue={current}
+      key={current}
       onChange={async (event) => {
         await fetch(`/api/admin/orders/${id}/status`, {
           method: "POST",
@@ -42,7 +34,7 @@ export function OrderStatusSelect({
     >
       {OPTIONS.map((option) => (
         <option key={option} value={option}>
-          {option.toLowerCase().replaceAll("_", " ")}
+          {formatOrderStatus(option)}
         </option>
       ))}
     </select>

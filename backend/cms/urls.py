@@ -1,6 +1,6 @@
 from django.urls import path
 
-from cms import bulk_email_views, views
+from cms import bulk_email_views, ops_views, views
 
 urlpatterns = [
     path("cms/pages/", views.public_pages),
@@ -11,7 +11,10 @@ urlpatterns = [
     path("cms/warehouse-policy/", views.public_warehouse_policy),
     path("admin/cms/pages/", views.admin_pages),
     path("admin/cms/pages/<uuid:pk>/", views.admin_page_detail),
+    path("admin/cms/banners/visibility/", views.admin_banner_visibility),
+    path("admin/cms/banners/display-mode/", views.admin_banner_display_mode),
     path("admin/cms/banners/", views.admin_banners),
+    path("admin/cms/banners/<uuid:pk>/restore/", views.admin_banner_restore),
     path("admin/cms/banners/<uuid:pk>/", views.admin_banner_detail),
     path("admin/cms/faq/", views.admin_faq),
     path("admin/cms/faq/<uuid:pk>/", views.admin_faq_detail),
@@ -23,6 +26,9 @@ urlpatterns = [
     path("admin/cms/email-templates/<uuid:pk>/", views.admin_email_template_detail),
     path("admin/cms/email-test/", views.admin_email_test),
     path("admin/cms/warehouse-settings/", views.admin_warehouse_settings),
+    path("admin/dashboard/tiles/", ops_views.admin_dashboard_tiles_view),
+    path("admin/ops-settings/", ops_views.admin_ops_settings_view),
+    path("checkout-settings/", ops_views.public_checkout_settings_view),
     path("admin/email/bulk/template/", bulk_email_views.bulk_template_view),
     path("admin/email/bulk/preview/", bulk_email_views.bulk_preview_view),
     path("admin/email/bulk/render-preview/", bulk_email_views.bulk_render_preview_view),

@@ -23,7 +23,7 @@ class PageAdmin(admin.ModelAdmin):
 
 @admin.register(Banner)
 class BannerAdmin(admin.ModelAdmin):
-    list_display = ("title", "is_active", "sort_order")
+    list_display = ("title", "is_active", "bg_color_mode", "sort_order")
     list_filter = ("is_active",)
 
 

@@ -1,12 +1,18 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/site/PageHeader";
 import { readReferralCode } from "@/components/shop/ReferralCapture";
 import { useCart } from "@/components/shop/CartProvider";
-import { MIN_ORDER_USD, SHIPPING_USD, formatMoney } from "@/lib/constants";
-import { WarehouseCode } from "@/lib/enums";
+import { formatMoney } from "@/lib/constants";
+import {
+  fetchCheckoutSettings,
+  readSavedShippingOptionId,
+  resolveShippingFee,
+  saveShippingOptionId,
+  type CheckoutSettings,
+} from "@/lib/checkout-settings";
 
 type CheckoutOrder = {
   id: string;
@@ -32,13 +38,23 @@ export default function CheckoutPage() {
   const [couponInput, setCouponInput] = useState("");
   const [couponError, setCouponError] = useState<string | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  const [settings, setSettings] = useState<CheckoutSettings | null>(null);
+  const [optionId, setOptionId] = useState<string | null>(null);
 
-  const shippingTotal = useMemo(() => {
-    const hasW1 = items.some((item) => item.warehouse === WarehouseCode.WAREHOUSE_1);
-    const hasW2 = items.some((item) => item.warehouse === WarehouseCode.WAREHOUSE_2);
-    if (hasW1 && hasW2) return SHIPPING_USD * 2;
-    return items.length > 0 ? SHIPPING_USD : 0;
-  }, [items]);
+  useEffect(() => {
+    void fetchCheckoutSettings().then((data) => {
+      setSettings(data);
+      const saved = readSavedShippingOptionId();
+      const resolved = resolveShippingFee(data, saved);
+      setOptionId(resolved.id);
+      saveShippingOptionId(resolved.id);
+    });
+  }, []);
+
+  const shippingOption = resolveShippingFee(settings, optionId);
+  const shippingTotal = items.length > 0 ? shippingOption.fee : 0;
+  const minOrder = settings?.minOrderAmount ?? 100;
+  const fees = settings?.shippingFees ?? [];
 
   const chargedShipping = appliedCoupon?.freeShipping ? 0 : shippingTotal;
   const chargedTotal = Math.max(0, merchandiseTotal - (appliedCoupon?.discount || 0)) + chargedShipping;
@@ -83,6 +99,7 @@ export default function CheckoutPage() {
       notes: String(form.get("notes") || ""),
       referralCode: readReferralCode(),
       couponCode: appliedCoupon?.code || couponInput.trim(),
+      shippingOptionId: shippingOption.id,
       items: items.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,
@@ -111,7 +128,7 @@ export default function CheckoutPage() {
     }
     clear();
     const checkoutLink = data.checkoutLink || orders.find((order) => order.checkoutLink)?.checkoutLink;
-    if (checkoutLink && orders.length === 1) {
+    if (checkoutLink) {
       window.location.assign(checkoutLink);
       return;
     }
@@ -129,11 +146,13 @@ export default function CheckoutPage() {
     );
   }
 
+  const minLabel = minOrder != null ? `${formatMoney(minOrder)} minimum. ` : "";
+
   return (
     <div className="mx-auto max-w-5xl px-4 pb-20 sm:px-6">
       <PageHeader
         title="Checkout"
-        lede={`$${MIN_ORDER_USD} minimum. Bitcoin is the accepted payment method. After you place the order you will be sent to BTCPay Server to complete payment.`}
+        lede={`${minLabel}Bitcoin is the accepted payment method. After you place the order you will be sent to BTCPay Server to complete payment.`}
       />
       <form onSubmit={onSubmit} className="grid gap-8 lg:grid-cols-2">
         <div className="tile space-y-4">
@@ -147,6 +166,25 @@ export default function CheckoutPage() {
             <input className="field" name="state" placeholder="State" required />
           </div>
           <input className="field" name="postal" placeholder="ZIP" required />
+          {fees.length > 1 ? (
+            <label className="text-sm">
+              Shipping method
+              <select
+                className="field mt-1"
+                value={shippingOption.id}
+                onChange={(event) => {
+                  setOptionId(event.target.value);
+                  saveShippingOptionId(event.target.value);
+                }}
+              >
+                {fees.map((fee) => (
+                  <option key={fee.id} value={fee.id}>
+                    {fee.name} · {formatMoney(fee.fee)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <textarea className="field min-h-24" name="notes" placeholder="Order notes (optional)" />
         </div>
         <div className="tile">
@@ -188,7 +226,7 @@ export default function CheckoutPage() {
             </p>
           ) : null}
           <p className="mt-4 flex justify-between text-sm text-muted-foreground">
-            <span>Shipping</span>
+            <span>{fees.length > 1 ? shippingOption.name : "Shipping"}</span>
             <span>{formatMoney(chargedShipping)}</span>
           </p>
           <p className="mt-2 flex justify-between text-sm">

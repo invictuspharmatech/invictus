@@ -10,18 +10,45 @@ import { isFullAdmin, roleLabel } from "@/lib/roles";
 export const dynamic = "force-dynamic";
 
 const ADMIN_NAV: AdminNavItem[] = [
-  { href: "/admin", label: "Dashboard" },
+  {
+    href: "/admin",
+    label: "Dashboard",
+    children: [
+      { href: "/admin", label: "Overview" },
+      { href: "/admin/dashboard/tiles", label: "Tile layout" },
+    ],
+  },
   {
     href: "/admin/products",
     label: "Products",
     children: [
       { href: "/admin/products", label: "Product list" },
       { href: "/admin/cms/products/new", label: "Create product" },
+      { href: "/admin/stock-alerts", label: "Stock alerts" },
+      { href: "/admin/products?import=1", label: "Import from CSV" },
+      { href: "/admin/products?export=1", label: "Export to CSV" },
       { href: "/admin/cms/test-results", label: "Test results" },
     ],
   },
-  { href: "/admin/categories", label: "Categories" },
-  { href: "/admin/orders", label: "Orders" },
+  {
+    href: "/admin/categories",
+    label: "Categories",
+    children: [
+      { href: "/admin/categories", label: "Category list" },
+      { href: "/admin/categories/new", label: "Add category" },
+      { href: "/admin/categories?import=1", label: "Import from CSV" },
+      { href: "/admin/categories?export=1", label: "Export to CSV" },
+    ],
+  },
+  {
+    href: "/admin/orders",
+    label: "Orders",
+    children: [
+      { href: "/admin/orders", label: "Order list" },
+      { href: "/admin/orders/summary", label: "Order summary" },
+      { href: "/admin/orders/create", label: "Create order" },
+    ],
+  },
   {
     href: "/admin/email",
     label: "Email",
@@ -87,11 +114,26 @@ const ADMIN_NAV: AdminNavItem[] = [
       { href: "/admin/cms/test-results", label: "Test results" },
     ],
   },
+  {
+    href: "/admin/settings",
+    label: "Settings",
+    children: [
+      { href: "/admin/settings", label: "Store settings" },
+      { href: "/admin/profile", label: "Staff profile" },
+    ],
+  },
 ];
 
 const WAREHOUSE_NAV: AdminNavItem[] = [
   { href: "/admin", label: "Dashboard" },
-  { href: "/admin/orders", label: "Orders" },
+  {
+    href: "/admin/orders",
+    label: "Orders",
+    children: [
+      { href: "/admin/orders", label: "Order list" },
+      { href: "/admin/orders/summary", label: "Order summary" },
+    ],
+  },
   { href: "/admin/inventory", label: "Inventory" },
   { href: "/admin/warehouses", label: "Warehouses" },
   { href: "/admin/transfers", label: "Transfers" },
@@ -119,6 +161,9 @@ export default async function AdminLayout({
           </div>
           <div className="flex items-center gap-3">
             <ShopAsCustomerToggle />
+            <Link href="/admin/profile" className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              Profile
+            </Link>
             <Link href="/account" className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
               My account
             </Link>

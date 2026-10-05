@@ -11,6 +11,7 @@ from accounts.serializers import (
 )
 from accounts.tokens import issue_token, session_payload
 from cms.mailer import send_event
+from orders.shop_config import apply_affiliate_defaults
 
 
 @api_view(["POST"])
@@ -57,10 +58,47 @@ def register_view(request):
     return Response({"ok": True, "token": token, "user": session_payload(user)})
 
 
-@api_view(["GET"])
+@api_view(["GET", "PATCH"])
 @permission_classes([IsAuthenticatedUser])
 def me_view(request):
-    return Response(SessionUserSerializer(request.user).data)
+    user = request.user
+    if request.method == "GET":
+        return Response(SessionUserSerializer(user).data)
+    name = (request.data.get("name") or "").strip()
+    email = (request.data.get("email") or "").strip().lower()
+    if not name or not email:
+        return Response({"error": "Name and email are required."}, status=400)
+    clash = User.objects.filter(email=email).exclude(pk=user.pk)
+    if clash.exists():
+        return Response({"error": "An account with that email already exists."}, status=409)
+    user.name = name
+    user.email = email
+    user.save(update_fields=["name", "email"])
+    token = issue_token(user)
+    return Response({"ok": True, "token": token, "user": session_payload(user)})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticatedUser])
+def change_password_view(request):
+    user = request.user
+    current = request.data.get("currentPassword") or request.data.get("current_password") or ""
+    password = request.data.get("password") or ""
+    confirm = (
+        request.data.get("passwordConfirmation")
+        or request.data.get("password_confirmation")
+        or ""
+    )
+    if not user.check_password(current):
+        return Response({"error": "Current password is incorrect."}, status=400)
+    if password != confirm:
+        return Response({"error": "New passwords do not match."}, status=400)
+    if len(password) < 8:
+        return Response({"error": "An 8+ character password is required."}, status=400)
+    user.set_password(password)
+    user.save(update_fields=["password"])
+    token = issue_token(user)
+    return Response({"ok": True, "token": token})
 
 
 @api_view(["POST"])
@@ -142,6 +180,7 @@ def _apply_user_fields(user, data, actor, *, creating: bool):
         user.is_affiliate = bool(data.get("isAffiliate"))
         if user.is_affiliate and not user.affiliate_code:
             user.affiliate_code = f"INV{uuid_code()}"
+            apply_affiliate_defaults(user)
         if not user.is_affiliate:
             user.affiliate_code = user.affiliate_code or None
     user.save()
@@ -204,7 +243,16 @@ def admin_affiliate_action_view(request, pk):
         user.is_affiliate = True
         if not user.affiliate_code:
             user.affiliate_code = f"INV{uuid_code()}"
-        user.save(update_fields=["is_affiliate", "affiliate_code"])
+        apply_affiliate_defaults(user)
+        user.save(
+            update_fields=[
+                "is_affiliate",
+                "affiliate_code",
+                "commission_type",
+                "commission_rate",
+                "payout_type",
+            ]
+        )
         send_event(
             "affiliate_approved",
             {

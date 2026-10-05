@@ -16,7 +16,16 @@ export function PayOrderButton({
 }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const blocked = ["CANCELLED", "FAILED", "SHIPPED", "DELIVERED", "PROCESSING"].includes(status);
+  const blocked = [
+    "CANCELLED",
+    "FAILED",
+    "COMPLETED",
+    "REFUNDED",
+    "PARTIALLY_FILLED",
+    "SHIPPED",
+    "DELIVERED",
+    "PROCESSING",
+  ].includes(status);
   const awaiting =
     !blocked &&
     ((paymentStatus || "PENDING") === "PENDING" || paymentStatus === "PARTIAL");

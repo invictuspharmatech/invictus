@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { OrderStatus } from "@/lib/enums";
+import { STAFF_ORDER_STATUSES, formatOrderStatus, orderStatusTab } from "@/lib/enums";
 import { formatMoney } from "@/lib/constants";
 import { isFullAdmin } from "@/lib/roles";
 import { warehouseLabel, warehouseShort } from "@/lib/warehouse";
@@ -14,28 +14,15 @@ const STATUS_TABS = [
   { key: "all", label: "All" },
   { key: "pending", label: "Pending" },
   { key: "on_hold", label: "On hold" },
-  { key: "paid", label: "Paid" },
   { key: "processing", label: "Processing" },
-  { key: "shipped", label: "Shipped" },
-  { key: "delivered", label: "Delivered" },
+  { key: "partially_filled", label: "Partially filled" },
+  { key: "completed", label: "Completed" },
   { key: "cancelled", label: "Cancelled" },
+  { key: "refunded", label: "Refunded" },
   { key: "failed", label: "Failed" },
 ] as const;
 
-const BULK_STATUSES: OrderStatus[] = [
-  OrderStatus.PENDING,
-  OrderStatus.ON_HOLD,
-  OrderStatus.PAID,
-  OrderStatus.PROCESSING,
-  OrderStatus.SHIPPED,
-  OrderStatus.DELIVERED,
-  OrderStatus.CANCELLED,
-  OrderStatus.FAILED,
-];
-
-function formatStatus(status: string) {
-  return status.toLowerCase().replaceAll("_", " ");
-}
+const BULK_STATUSES = [...STAFF_ORDER_STATUSES];
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -56,7 +43,7 @@ export function OrdersBoard({
   const [orders, setOrders] = useState<ApiOrder[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState(initialStatus);
+  const [status, setStatus] = useState(orderStatusTab(initialStatus));
   const [warehouse, setWarehouse] = useState(initialWarehouse);
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
@@ -144,7 +131,17 @@ export function OrdersBoard({
             checkouts share a group ID.
           </p>
         </div>
-        <p className="text-sm text-muted-foreground">{counts.all ?? orders.length} orders</p>
+        <div className="flex flex-wrap items-center gap-2">
+          {admin ? (
+            <Link href="/admin/orders/create" className="gold-btn">
+              Create order
+            </Link>
+          ) : null}
+          <Link href="/admin/orders/summary" className="ghost-btn">
+            Order summary
+          </Link>
+          <p className="text-sm text-muted-foreground">{counts.all ?? orders.length} orders</p>
+        </div>
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2 border-b border-border/50 pb-px">
@@ -221,7 +218,7 @@ export function OrdersBoard({
             <option value="">Bulk actions</option>
             {BULK_STATUSES.map((item) => (
               <option key={item} value={item}>
-                Mark {formatStatus(item)}
+                Mark {formatOrderStatus(item)}
               </option>
             ))}
           </select>
@@ -301,7 +298,7 @@ export function OrdersBoard({
                     <td className="py-4 pr-3">
                       <OrderStatusSelect id={order.id} status={order.status} onUpdated={() => void load()} />
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {order.paymentStatus ? `pay ${formatStatus(order.paymentStatus)}` : ""}
+                        {order.paymentStatus ? `pay ${order.paymentStatus.toLowerCase()}` : ""}
                       </p>
                     </td>
                     <td className="py-4 pr-3">

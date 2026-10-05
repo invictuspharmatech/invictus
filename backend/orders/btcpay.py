@@ -16,7 +16,14 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from cms.models import SiteSetting
-from orders.fulfillment import apply_group_shipping, restock_order
+from orders.status import LOCKED_STATUSES
+from orders.fulfillment import (
+    apply_group_shipping,
+    group_grand_total,
+    live_group_orders,
+    payment_primary,
+    restock_order,
+)
 from orders.models import BtcInvoice, Order
 
 logger = logging.getLogger(__name__)
@@ -312,20 +319,26 @@ def create_invoice(order: Order) -> BtcInvoice:
     if not order.order_number:
         raise BtcPayError("Order number is required to create a BTCPay invoice.")
 
-    supersede_existing(order)
+    primary = payment_primary(order)
+    amount = group_grand_total(primary)
+    if amount <= 0:
+        raise BtcPayError("This order has no amount due.")
+    for sibling in live_group_orders(primary):
+        supersede_existing(sibling)
+
     cfg = get_config()
     from orders.pay_token import checkout_url
 
     payload = {
-        "amount": f"{order.grand_total:.2f}",
+        "amount": f"{amount:.2f}",
         "currency": "USD",
         "metadata": {
-            "orderId": order.order_number,
-            "buyerEmail": order.customer_email,
-            "itemDesc": f"Invictus Pharma {order.order_number}",
+            "orderId": primary.group_id or primary.order_number,
+            "buyerEmail": primary.customer_email,
+            "itemDesc": f"Invictus Pharma {primary.group_id or primary.order_number}",
         },
         "checkout": {
-            "redirectURL": checkout_url(order),
+            "redirectURL": checkout_url(primary),
             "expirationMinutes": invoice_expiration_minutes(),
         },
     }
@@ -338,10 +351,10 @@ def create_invoice(order: Order) -> BtcInvoice:
 
     details = extract_payment_details(data)
     return BtcInvoice.objects.create(
-        order=order,
+        order=primary,
         invoice_id=data["id"],
         store_id=cfg["store_id"],
-        amount=order.grand_total,
+        amount=amount,
         currency="USD",
         crypto_code=details["crypto_code"],
         crypto_amount=details["crypto_amount"],
@@ -360,12 +373,6 @@ def fetch_invoice(invoice_id: str) -> dict:
     return data
 
 
-LOCKED_STATUSES = {
-    Order.Status.SHIPPED,
-    Order.Status.DELIVERED,
-}
-
-
 def apply_order_update(
     order: Order,
     *,
@@ -374,6 +381,7 @@ def apply_order_update(
     mark_paid_at: bool = False,
     restock: bool = False,
     send_paid_mail: bool = False,
+    send_status: bool = True,
 ) -> None:
     from cms.mailer import send_order_event, send_order_status_event
 
@@ -396,51 +404,57 @@ def apply_order_update(
     if restock and previous not in (Order.Status.CANCELLED, Order.Status.FAILED):
         restock_order(order)
         apply_group_shipping(order.group_id)
-    if previous != order.status:
+    if send_status and previous != order.status:
         send_order_status_event(order)
     if send_paid_mail:
         send_order_event("order_paid", order)
 
 
 def mark_settled(order: Order) -> None:
-    apply_order_update(
-        order,
-        status=Order.Status.PROCESSING,
-        payment_status=Order.PaymentStatus.PAID,
-        mark_paid_at=True,
-        send_paid_mail=True,
-    )
+    siblings = live_group_orders(order)
+    for index, sibling in enumerate(siblings):
+        apply_order_update(
+            sibling,
+            status=Order.Status.PROCESSING,
+            payment_status=Order.PaymentStatus.PAID,
+            mark_paid_at=True,
+            send_paid_mail=index == 0,
+            send_status=index == 0,
+        )
 
 
 def mark_on_hold(order: Order) -> None:
-    if order.payment_status == Order.PaymentStatus.PAID:
-        return
-    apply_order_update(
-        order,
-        status=Order.Status.ON_HOLD,
-        payment_status=Order.PaymentStatus.PENDING,
-    )
+    for sibling in live_group_orders(order):
+        if sibling.payment_status == Order.PaymentStatus.PAID:
+            continue
+        apply_order_update(
+            sibling,
+            status=Order.Status.ON_HOLD,
+            payment_status=Order.PaymentStatus.PENDING,
+        )
 
 
 def mark_failed(order: Order, payment_status: str) -> None:
-    if order.payment_status == Order.PaymentStatus.PAID and payment_status != Order.PaymentStatus.PAID:
-        return
-    apply_order_update(
-        order,
-        status=Order.Status.FAILED,
-        payment_status=payment_status,
-    )
+    for sibling in live_group_orders(order):
+        if sibling.payment_status == Order.PaymentStatus.PAID and payment_status != Order.PaymentStatus.PAID:
+            continue
+        apply_order_update(
+            sibling,
+            status=Order.Status.FAILED,
+            payment_status=payment_status,
+        )
 
 
 def cancel_unpaid(order: Order) -> None:
-    if order.payment_status == Order.PaymentStatus.PAID:
-        return
-    apply_order_update(
-        order,
-        status=Order.Status.CANCELLED,
-        payment_status=Order.PaymentStatus.FAILED,
-        restock=True,
-    )
+    for sibling in live_group_orders(order):
+        if sibling.payment_status == Order.PaymentStatus.PAID:
+            continue
+        apply_order_update(
+            sibling,
+            status=Order.Status.CANCELLED,
+            payment_status=Order.PaymentStatus.FAILED,
+            restock=True,
+        )
 
 
 def sync_order_from_invoice(order: Order, invoice: BtcInvoice, mapped: str, invoice_data: dict) -> None:
@@ -454,12 +468,13 @@ def sync_order_from_invoice(order: Order, invoice: BtcInvoice, mapped: str, invo
         mark_on_hold(order)
         return
     if mapped == BtcInvoice.Status.PAID:
-        if order.payment_status != Order.PaymentStatus.PAID:
-            apply_order_update(
-                order,
-                payment_status=Order.PaymentStatus.PAID,
-                mark_paid_at=True,
-            )
+        for sibling in live_group_orders(order):
+            if sibling.payment_status != Order.PaymentStatus.PAID:
+                apply_order_update(
+                    sibling,
+                    payment_status=Order.PaymentStatus.PAID,
+                    mark_paid_at=True,
+                )
         return
     if mapped == BtcInvoice.Status.COMPLETE:
         mark_settled(order)

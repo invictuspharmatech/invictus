@@ -230,7 +230,7 @@ def create_label(order: Order, options: dict) -> ShippingLabel:
     )
     if tracking:
         order.tracking_number = tracking
-    order.status = Order.Status.SHIPPED
+    order.status = Order.Status.COMPLETED
     if not order.shipped_at:
         order.shipped_at = timezone.now()
     order.save(update_fields=["tracking_number", "status", "shipped_at", "updated_at"])

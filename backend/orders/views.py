@@ -6,6 +6,7 @@ import logging
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q, Sum
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -21,6 +22,22 @@ from accounts.permissions import (
 )
 from catalog.models import Category, Product
 from cms.mailer import send_event, send_order_event, send_order_status_event
+from cms.dashboard_tiles import resolve_tiles
+from orders.analytics import (
+    REVENUE_ELIGIBLE,
+    catalog_stock_counts,
+    completed_this_week_q,
+    dashboard_period_labels,
+    dashboard_week_bounds,
+)
+from orders.status import (
+    OPEN_STATUSES,
+    PROCESSING_LIKE,
+    canonical_status,
+    stamp_if_completed,
+    statuses_for_tab,
+    tab_counts,
+)
 from orders.fulfillment import (
     FulfillmentError,
     allocate_quantity,
@@ -37,10 +54,17 @@ from orders.fulfillment import (
 )
 from orders.coupons import bump_usage, discount_for, is_free_shipping, resolve_coupon
 from orders.models import AccountingReset, ContactMessage, Coupon, FulfillmentRequest, Order, OrderItem
-from orders.serializers import FulfillmentRequestSerializer, OrderSerializer
+from orders.order_numbers import allocate_group_id
+from orders.serializers import (
+    FulfillmentRequestSerializer,
+    OrderSerializer,
+    group_customer_order_payloads,
+)
+from orders.shop_config import checkout_limit_error, resolve_shipping_option
 from orders.btcpay import BtcPayError, create_invoice, is_configured, serialize_invoice
 from orders.pay_token import checkout_url
 from orders.accounting import TILE_KEYS, accounting_response, parse_accounting_warehouse, resolve_warehouse
+from orders.totals import affiliate_commission, allocate_weighted, customer_checkout_totals, money
 
 logger = logging.getLogger(__name__)
 
@@ -49,17 +73,6 @@ def product_price(product: Product) -> float:
     if product.sale_price is not None and product.sale_price > 0:
         return product.sale_price
     return product.regular_price
-
-
-def to_base36(number: int) -> str:
-    chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    if number == 0:
-        return "0"
-    digits = []
-    while number:
-        number, remainder = divmod(number, 36)
-        digits.append(chars[remainder])
-    return "".join(reversed(digits))
 
 
 @api_view(["POST"])
@@ -111,11 +124,6 @@ def checkout_view(request):
             return Response({"error": str(exc)}, status=400)
 
         merchandise_total = sum(line["line_total"] for line in lines)
-        if merchandise_total < settings.MIN_ORDER_USD:
-            return Response(
-                {"error": f"${settings.MIN_ORDER_USD} minimum order on merchandise."},
-                status=400,
-            )
 
         coupon = None
         coupon_code = (data.get("couponCode") or "").strip()
@@ -124,7 +132,12 @@ def checkout_view(request):
             if coupon_error:
                 return Response({"error": coupon_error}, status=400)
 
-        decrement_allocations(stock_ops)
+        shipping_choice = resolve_shipping_option(
+            data.get("shippingOptionId") or data.get("shipping_option_id")
+        )
+        if shipping_choice is None:
+            return Response({"error": "Select a valid shipping option."}, status=400)
+        shipping_usd = float(shipping_choice["fee"])
 
         referral_code = data.get("referralCode") or request.COOKIES.get("invictus-ref")
         affiliate = None
@@ -139,42 +152,60 @@ def checkout_view(request):
             prior = Order.objects.filter(affiliate=affiliate, customer_email=email).count()
             first_order_discount = prior == 0
 
+        after_affiliate = merchandise_total
+        if first_order_discount:
+            after_affiliate = money(
+                merchandise_total * (1 - settings.FIRST_ORDER_AFFILIATE_DISCOUNT)
+            )
+        coupon_discount = discount_for(coupon, after_affiliate) if coupon else 0.0
+        totals = customer_checkout_totals(
+            merchandise_total,
+            affiliate_discount_rate=settings.FIRST_ORDER_AFFILIATE_DISCOUNT if first_order_discount else 0.0,
+            coupon_discount=coupon_discount,
+            free_shipping=is_free_shipping(coupon),
+            shipping_usd=shipping_usd,
+        )
+        limit_error = checkout_limit_error(
+            charged_merchandise=float(totals["merchandise"]),
+            shipping=float(totals["shipping"]),
+        )
+        if limit_error:
+            return Response({"error": limit_error}, status=400)
+
+        try:
+            group_id = allocate_group_id()
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=400)
+
+        decrement_allocations(stock_ops)
+
         grouped = defaultdict(list)
         for line in lines:
             grouped[line["warehouse"]].append(line)
 
-        group_id = f"INV-{to_base36(int(timezone.now().timestamp() * 1000))}"
         created = []
         session_user = request.user if request.user.is_authenticated else None
+        warehouse_groups = [(warehouse, group_lines) for warehouse, group_lines in grouped.items()]
+        weights = [sum(line["line_total"] for line in group_lines) for _, group_lines in warehouse_groups]
+        merch_shares = allocate_weighted(float(totals["merchandise"]), weights)
+        discount_shares = allocate_weighted(float(totals["discount_total"]), weights)
+        group_commission = 0.0
+        if affiliate:
+            group_commission = affiliate_commission(
+                float(totals["merchandise"]),
+                commission_type=affiliate.commission_type,
+                rate=float(affiliate.commission_rate or 0),
+            )
+        commission_shares = (
+            allocate_weighted(group_commission, merch_shares)
+            if affiliate and affiliate.commission_type != User.CommissionType.FIXED
+            else [group_commission if index == 0 else 0.0 for index in range(len(warehouse_groups))]
+        )
+        waived = bool(totals["shipping_waived"])
 
-        warehouse_groups = []
-        for warehouse, group_lines in grouped.items():
-            merch = sum(line["line_total"] for line in group_lines)
-            if first_order_discount:
-                merch = round(merch * (1 - settings.FIRST_ORDER_AFFILIATE_DISCOUNT), 2)
-            warehouse_groups.append((warehouse, group_lines, merch))
-
-        paid_merch_total = sum(merch for _, _, merch in warehouse_groups)
-        coupon_discount = discount_for(coupon, paid_merch_total) if coupon else 0.0
-        remaining_discount = coupon_discount
-        waived = is_free_shipping(coupon)
-
-        for index, (warehouse, group_lines, merch) in enumerate(warehouse_groups):
-            if coupon_discount and paid_merch_total:
-                if index == len(warehouse_groups) - 1:
-                    share_disc = round(remaining_discount, 2)
-                else:
-                    share_disc = round(coupon_discount * (merch / paid_merch_total), 2)
-                    remaining_discount = round(remaining_discount - share_disc, 2)
-            else:
-                share_disc = 0.0
-            merch_after = round(max(0.0, merch - share_disc), 2)
-            commission_amount = 0
-            if affiliate:
-                if affiliate.commission_type == User.CommissionType.FIXED:
-                    commission_amount = affiliate.commission_rate
-                else:
-                    commission_amount = round((merch_after * affiliate.commission_rate) / 100, 2)
+        for index, (warehouse, group_lines) in enumerate(warehouse_groups):
+            merch_after = merch_shares[index]
+            share_disc = discount_shares[index]
             suffix = "W1" if warehouse == Product.Warehouse.WAREHOUSE_1 else "W2"
             order = Order.objects.create(
                 order_number=f"{group_id}-{suffix}",
@@ -197,7 +228,7 @@ def checkout_view(request):
                 shipping_postal=data["postal"],
                 notes=data.get("notes") or "",
                 affiliate=affiliate,
-                commission_amount=commission_amount,
+                commission_amount=commission_shares[index],
                 coupon=coupon,
                 coupon_code=coupon.code if coupon else "",
                 discount_total=share_disc,
@@ -218,38 +249,52 @@ def checkout_view(request):
 
         if coupon:
             bump_usage(coupon)
-        apply_group_shipping(group_id)
+        apply_group_shipping(group_id, shipping_usd=float(totals["shipping"]))
 
     payload = []
     checkout_link = None
     invoice_error = None
-    for order in created:
-        order.refresh_from_db()
-        invoice_payload = None
+    invoice_payload = None
+    created.sort(key=lambda row: (row.split_index, str(row.id)))
+    primary = created[0] if created else None
+    if primary:
+        primary.refresh_from_db()
         try:
-            invoice = create_invoice(order)
+            invoice = create_invoice(primary)
             invoice_payload = serialize_invoice(invoice)
-            link = invoice_payload.get("checkoutLink") if invoice_payload else None
-            if not checkout_link and link:
-                checkout_link = link
+            checkout_link = invoice_payload.get("checkoutLink") if invoice_payload else None
         except BtcPayError as exc:
-            logger.exception("BTCPay invoice failed for %s", order.order_number)
+            logger.exception("BTCPay invoice failed for %s", primary.order_number)
             invoice_error = str(exc)
             invoice_payload = {"error": str(exc)}
-        send_order_event("order_placed", order)
+        send_order_event("order_placed", primary)
+
+    group_total = 0.0
+    for order in created:
+        order.refresh_from_db()
+        group_total += float(order.grand_total)
         payload.append(
             {
                 "id": str(order.id),
                 "orderNumber": order.order_number,
                 "warehouse": order.warehouse,
                 "grandTotal": order.grand_total,
-                "checkoutLink": (invoice_payload or {}).get("checkoutLink"),
-                "payUrl": checkout_url(order),
+                "checkoutLink": checkout_link,
+                "payUrl": checkout_url(primary or order),
                 "invoice": invoice_payload,
             }
         )
 
-    return Response({"ok": True, "groupId": group_id, "checkoutLink": checkout_link, "orders": payload, "error": invoice_error})
+    return Response(
+        {
+            "ok": True,
+            "groupId": group_id,
+            "checkoutLink": checkout_link,
+            "grandTotal": money(group_total),
+            "orders": payload,
+            "error": invoice_error,
+        }
+    )
 
 
 @api_view(["POST"])
@@ -285,7 +330,7 @@ def account_orders_view(request):
         | Order.objects.filter(customer_email=request.user.email)
     )
     qs = qs.prefetch_related("items", "btc_invoices").distinct()
-    return Response(OrderSerializer(qs, many=True).data)
+    return Response(group_customer_order_payloads(OrderSerializer(qs, many=True).data))
 
 
 @api_view(["GET"])
@@ -316,13 +361,17 @@ def account_affiliate_view(request):
 def account_summary_view(request):
     from accounts.models import AffiliateApplication
 
-    orders = Order.objects.filter(user=request.user)[:8]
+    orders = (
+        Order.objects.filter(user=request.user)
+        .prefetch_related("items", "btc_invoices")
+        .order_by("-created_at")[:24]
+    )
     application = (
         AffiliateApplication.objects.filter(user=request.user).order_by("-created_at").first()
     )
     return Response(
         {
-            "orders": OrderSerializer(orders, many=True).data,
+            "orders": group_customer_order_payloads(OrderSerializer(orders, many=True).data)[:8],
             "application": (
                 {"id": str(application.id), "status": application.status}
                 if application
@@ -346,8 +395,9 @@ def admin_orders_view(request):
     ):
         qs = qs.filter(warehouse=requested_warehouse)
     status = request.GET.get("status")
-    if status and status not in ("all", ""):
-        qs = qs.filter(status=status.upper())
+    statuses = statuses_for_tab(status)
+    if statuses:
+        qs = qs.filter(status__in=statuses)
     q = (request.GET.get("q") or "").strip()
     if q:
         qs = qs.filter(
@@ -367,9 +417,7 @@ def admin_orders_view(request):
         base = base.filter(warehouse=warehouse)
     elif requested_warehouse in (Order.Warehouse.WAREHOUSE_1, Order.Warehouse.WAREHOUSE_2):
         base = base.filter(warehouse=requested_warehouse)
-    counts = {"all": base.count()}
-    for choice, _label in Order.Status.choices:
-        counts[choice.lower()] = base.filter(status=choice).count()
+    counts = tab_counts(base)
     return Response({"orders": OrderSerializer(qs[:300], many=True).data, "counts": counts})
 
 
@@ -395,14 +443,12 @@ def admin_order_status_view(request, pk):
     warehouse = managed_warehouse(request.user)
     if warehouse and order.warehouse != warehouse:
         return Response({"error": "Not found."}, status=404)
-    status = request.data.get("status")
-    valid = {choice[0] for choice in Order.Status.choices}
-    if status not in valid:
+    status = canonical_status(request.data.get("status"))
+    if not status:
         return Response({"error": "Invalid status."}, status=400)
     previous = order.status
     order.status = status
-    if status in (Order.Status.SHIPPED, Order.Status.DELIVERED) and not order.shipped_at:
-        order.shipped_at = timezone.now()
+    stamp_if_completed(order)
     order.save()
     if previous != Order.Status.CANCELLED and status == Order.Status.CANCELLED:
         restock_order(order)
@@ -497,18 +543,7 @@ def admin_fulfillment_request_review(request, pk):
 def admin_overview_view(request):
     from accounts.models import AffiliateApplication, User
 
-    PAID_LIKE = [
-        Order.Status.PAID,
-        Order.Status.PROCESSING,
-        Order.Status.SHIPPED,
-        Order.Status.DELIVERED,
-    ]
-    OPEN = [
-        Order.Status.PENDING,
-        Order.Status.ON_HOLD,
-        Order.Status.PAID,
-        Order.Status.PROCESSING,
-    ]
+    OPEN = list(OPEN_STATUSES)
 
     user_count_qs = User.objects.all()
     if request.user.role != User.Role.SUPERUSER:
@@ -519,33 +554,30 @@ def admin_overview_view(request):
     scoped = warehouse in (Order.Warehouse.WAREHOUSE_1, Order.Warehouse.WAREHOUSE_2)
     orders_qs = Order.objects.all()
     open_qs = Order.objects.filter(status__in=OPEN)
-    paid_qs = Order.objects.filter(status__in=PAID_LIKE)
+    revenue_qs = Order.objects.filter(status__in=REVENUE_ELIGIBLE)
     if scoped:
         orders_qs = orders_qs.filter(warehouse=warehouse)
         open_qs = open_qs.filter(warehouse=warehouse)
-        paid_qs = paid_qs.filter(warehouse=warehouse)
+        revenue_qs = revenue_qs.filter(warehouse=warehouse)
     else:
         warehouse = "BOTH"
 
     now = timezone.now()
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    week_start = today_start - timedelta(days=today_start.weekday())
-    month_start = today_start.replace(day=1)
+    today_start, week_start, week_end, month_start = dashboard_week_bounds(now)
+    year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     reset = AccountingReset.objects.order_by("-reset_at").first()
     reset_at = reset.reset_at if reset else None
-    shipping_reset_qs = paid_qs
+    shipping_reset_qs = revenue_qs
     if reset_at:
-        shipping_reset_qs = paid_qs.filter(created_at__gte=reset_at)
+        shipping_reset_qs = revenue_qs.filter(created_at__gte=reset_at)
+    week_since = week_start
+    if reset_at and reset_at > week_start:
+        week_since = reset_at
 
-    if warehouse == Order.Warehouse.WAREHOUSE_1:
-        low_stock = Product.objects.filter(stock_quantity_w1__lte=5).count()
-    elif warehouse == Order.Warehouse.WAREHOUSE_2:
-        low_stock = Product.objects.filter(stock_quantity_w2__lte=5).count()
-    else:
-        low_stock = Product.objects.filter(stock_quantity__lte=5).count()
+    low_stock, out_of_stock = catalog_stock_counts(warehouse)
 
     month_items = OrderItem.objects.filter(
-        order__status__in=PAID_LIKE,
+        order__status__in=REVENUE_ELIGIBLE,
         order__created_at__gte=month_start,
     )
     if scoped:
@@ -581,7 +613,7 @@ def admin_overview_view(request):
             "productCount": Product.objects.filter(warehouse=code).count(),
             "lowStockCount": low,
             "processingCount": Order.objects.filter(
-                warehouse=code, status=Order.Status.PROCESSING
+                warehouse=code, status__in=PROCESSING_LIKE
             ).count(),
             "openOrderCount": w_open.count(),
             "openOrderValue": w_open.aggregate(total=Sum("grand_total"))["total"] or 0,
@@ -596,8 +628,7 @@ def admin_overview_view(request):
 
     open_total = open_qs.aggregate(total=Sum("grand_total"))["total"] or 0
     orders = orders_qs[:8]
-    return Response(
-        {
+    payload = {
             "productCount": Product.objects.count(),
             "openOrderValue": open_total,
             "openOrderCount": open_qs.count(),
@@ -610,39 +641,59 @@ def admin_overview_view(request):
                 ]
             ).count(),
             "lowStockCount": low_stock,
+            "outOfStockCount": out_of_stock,
             "pendingAffiliates": AffiliateApplication.objects.filter(status="pending").count(),
             "userCount": user_count_qs.count(),
             "warehouse": warehouse,
-            "salesToday": paid_qs.filter(created_at__gte=today_start).aggregate(
-                total=Sum("merchandise_total")
+            "period": dashboard_period_labels(now),
+            "salesToday": revenue_qs.filter(created_at__gte=today_start).aggregate(
+                total=Sum("grand_total")
             )["total"]
             or 0,
-            "salesThisMonth": paid_qs.filter(created_at__gte=month_start).aggregate(
-                total=Sum("merchandise_total")
+            "salesThisWeek": revenue_qs.filter(created_at__gte=week_start).aggregate(
+                total=Sum("grand_total")
+            )["total"]
+            or 0,
+            "salesThisMonth": revenue_qs.filter(created_at__gte=month_start).aggregate(
+                total=Sum("grand_total")
+            )["total"]
+            or 0,
+            "salesThisYear": revenue_qs.filter(created_at__gte=year_start).aggregate(
+                total=Sum("grand_total")
             )["total"]
             or 0,
             "shippingSinceReset": shipping_reset_qs.aggregate(total=Sum("shipping_total"))["total"]
             or 0,
-            "shippingThisWeek": paid_qs.filter(created_at__gte=week_start).aggregate(
+            "shippingThisWeek": revenue_qs.filter(created_at__gte=week_since).aggregate(
                 total=Sum("shipping_total")
             )["total"]
             or 0,
             "ordersPending": orders_qs.filter(status=Order.Status.PENDING).count(),
-            "ordersProcessing": orders_qs.filter(status=Order.Status.PROCESSING).count(),
+            "ordersFailed": orders_qs.filter(status=Order.Status.FAILED).count(),
+            "ordersProcessing": orders_qs.filter(status__in=PROCESSING_LIKE).count(),
             "ordersCompleted": orders_qs.filter(
-                status__in=[Order.Status.SHIPPED, Order.Status.DELIVERED]
+                completed_this_week_q(week_start, week_end)
             ).count(),
+            "ordersOnHold": orders_qs.filter(status=Order.Status.ON_HOLD).count(),
+            "ordersCancelled": orders_qs.filter(status=Order.Status.CANCELLED).count(),
+            "ordersRefunded": orders_qs.filter(status=Order.Status.REFUNDED).count(),
+            "ordersPartiallyFilled": orders_qs.filter(status=Order.Status.PARTIALLY_FILLED).count(),
             "topCategoryMonth": {"name": top_name, "count": top_count},
             "categoriesTotal": Category.objects.count(),
             "warehousesTotal": 2,
             "couponsTotal": Coupon.objects.count(),
             "giftCardsTotal": 0,
             "customersTotal": User.objects.filter(role=User.Role.CUSTOMER).count(),
+            "customersThisMonth": User.objects.filter(
+                role=User.Role.CUSTOMER, created_at__gte=month_start
+            ).count(),
+            "productsActive": Product.objects.filter(status="publish").count(),
             "storeCreditAvailable": 0,
             "warehouses": warehouses,
             "orders": OrderSerializer(orders, many=True).data,
         }
-    )
+    payload["dashboardTiles"] = resolve_tiles(payload)
+    return Response(payload)
 
 
 @api_view(["GET"])
@@ -677,10 +728,9 @@ def admin_accounting_reset_view(request):
 @api_view(["POST"])
 @permission_classes([IsPortalStaff])
 def admin_orders_bulk_status_view(request):
-    status = request.data.get("status")
+    status = canonical_status(request.data.get("status"))
     ids = request.data.get("ids") or []
-    valid = {choice[0] for choice in Order.Status.choices}
-    if status not in valid:
+    if not status:
         return Response({"error": "Invalid status."}, status=400)
     warehouse = managed_warehouse(request.user)
     qs = Order.objects.filter(pk__in=ids)
@@ -690,8 +740,7 @@ def admin_orders_bulk_status_view(request):
     for order in qs:
         previous = order.status
         order.status = status
-        if status in (Order.Status.SHIPPED, Order.Status.DELIVERED) and not order.shipped_at:
-            order.shipped_at = timezone.now()
+        stamp_if_completed(order)
         order.save()
         if previous != Order.Status.CANCELLED and status == Order.Status.CANCELLED:
             restock_order(order)
@@ -716,9 +765,9 @@ def admin_order_tracking_view(request, pk):
     tracking = str(request.data.get("trackingNumber") or "").strip()
     carrier = str(request.data.get("carrier") or "USPS").strip() or "USPS"
     order.tracking_number = tracking
-    if tracking and not order.shipped_at:
-        order.status = Order.Status.SHIPPED
-        order.shipped_at = timezone.now()
+    if tracking:
+        order.status = Order.Status.COMPLETED
+        stamp_if_completed(order)
     order.save()
     if tracking:
         ShippingLabel.objects.create(
@@ -745,3 +794,63 @@ def admin_accounting_split_view(request):
         return Response({"error": error, **split_public(parsed)}, status=400)
     save_split(parsed)
     return Response(split_public(parsed))
+
+
+@api_view(["GET"])
+@permission_classes([IsPortalStaff])
+def admin_order_customers_search(request):
+    from orders.admin_create import search_customers
+
+    return Response(search_customers(request.GET.get("q") or request.GET.get("query") or "", request.GET.get("limit")))
+
+
+@api_view(["GET"])
+@permission_classes([IsPortalStaff])
+def admin_order_customer_lookup(request):
+    from orders.admin_create import lookup_customer
+
+    row = lookup_customer(request.GET.get("q") or request.GET.get("username") or request.GET.get("email") or "")
+    if not row:
+        return Response({"error": "Customer not found."}, status=404)
+    return Response(row)
+
+
+@api_view(["POST"])
+@permission_classes([IsStoreStaff])
+def admin_order_preview(request):
+    from orders.admin_create import AdminCreateError, preview
+
+    try:
+        return Response(preview(request.data if isinstance(request.data, dict) else {}))
+    except AdminCreateError as exc:
+        return Response({"error": str(exc)}, status=exc.status)
+
+
+@api_view(["POST"])
+@permission_classes([IsStoreStaff])
+def admin_order_create(request):
+    from orders.admin_create import AdminCreateError, create
+
+    try:
+        return Response(create(request.data if isinstance(request.data, dict) else {}, request.user), status=201)
+    except AdminCreateError as exc:
+        return Response({"error": str(exc)}, status=exc.status)
+
+
+@api_view(["GET"])
+@permission_classes([IsPortalStaff])
+def admin_order_summary(request):
+    from orders.summary import build_summary
+
+    return Response(build_summary(request))
+
+
+@api_view(["GET"])
+@permission_classes([IsPortalStaff])
+def admin_order_summary_pdf(request):
+    from orders.summary import build_summary, summary_pdf_bytes
+
+    payload = build_summary(request)
+    response = HttpResponse(summary_pdf_bytes(payload), content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="order-summary.pdf"'
+    return response

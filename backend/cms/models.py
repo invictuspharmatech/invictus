@@ -23,6 +23,23 @@ class Page(models.Model):
 
 
 class Banner(models.Model):
+    BG_MODES = (
+        ("brand-orange", "Company orange"),
+        ("brand-green", "Company green"),
+        ("primary", "Green (primary)"),
+        ("info", "Blue (info)"),
+        ("success", "Green (success)"),
+        ("warning", "Yellow (warning)"),
+        ("danger", "Red (danger)"),
+        ("secondary", "Gray (secondary)"),
+        ("dark", "Dark"),
+    )
+    TEXT_MODES = (
+        ("light", "Light text"),
+        ("dark", "Dark text"),
+        ("accent", "Accent"),
+    )
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255)
     subtitle = models.TextField(blank=True)
@@ -31,6 +48,9 @@ class Banner(models.Model):
     cta_label = models.CharField(max_length=80, blank=True)
     is_active = models.BooleanField(default=True)
     sort_order = models.IntegerField(default=0)
+    bg_color_mode = models.CharField(max_length=32, choices=BG_MODES, default="brand-orange")
+    text_color_mode = models.CharField(max_length=16, choices=TEXT_MODES, default="light")
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["sort_order", "title"]

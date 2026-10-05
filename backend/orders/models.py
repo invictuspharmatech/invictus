@@ -41,12 +41,15 @@ class Order(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
         ON_HOLD = "ON_HOLD", "On hold"
-        PAID = "PAID", "Paid"
         PROCESSING = "PROCESSING", "Processing"
+        PARTIALLY_FILLED = "PARTIALLY_FILLED", "Partially filled"
+        COMPLETED = "COMPLETED", "Completed"
+        CANCELLED = "CANCELLED", "Cancelled"
+        REFUNDED = "REFUNDED", "Refunded"
+        FAILED = "FAILED", "Failed"
+        PAID = "PAID", "Paid"
         SHIPPED = "SHIPPED", "Shipped"
         DELIVERED = "DELIVERED", "Delivered"
-        CANCELLED = "CANCELLED", "Cancelled"
-        FAILED = "FAILED", "Failed"
 
     class Warehouse(models.TextChoices):
         WAREHOUSE_1 = "WAREHOUSE_1", "Warehouse 1"

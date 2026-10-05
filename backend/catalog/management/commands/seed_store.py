@@ -283,6 +283,8 @@ class Command(BaseCommand):
                     "cta_label": "Shop",
                     "is_active": True,
                     "sort_order": 1,
+                    "bg_color_mode": "brand-orange",
+                    "text_color_mode": "light",
                 },
             )
 
