@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 
 type TabKey = "checkout" | "shipping" | "orderNumbering" | "accounts";
+type SettingsSection = "checkout" | "shipping" | "orderNumbering" | "wholesale" | "affiliate";
 
 type ShippingFeeRow = {
   id: string;
@@ -115,7 +116,7 @@ export function OpsSettingsHub() {
     };
   }, []);
 
-  async function save(section: TabKey, payload: Record<string, unknown>) {
+  async function save(section: SettingsSection, payload: Record<string, unknown>) {
     setSaving(true);
     setMessage(null);
     setError(null);
