@@ -12,8 +12,10 @@ export function AnalyticsStat({
 }) {
   return (
     <div className={`dash-tile ${tone}`}>
-      <h3>{value}</h3>
-      <p>{title}</p>
+      <div className="dash-tile-inner">
+        <h3>{value}</h3>
+        <p>{title}</p>
+      </div>
     </div>
   );
 }

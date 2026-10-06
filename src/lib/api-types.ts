@@ -188,16 +188,9 @@ export type ApiFaq = {
   sortOrder: number;
 };
 
-export type BannerBgMode =
-  | "brand-orange"
-  | "brand-green"
-  | "primary"
-  | "info"
-  | "success"
-  | "warning"
-  | "danger"
-  | "secondary"
-  | "dark";
+import type { SelectableColorMode } from "@/lib/selectable-colors";
+
+export type BannerBgMode = SelectableColorMode;
 
 export type BannerTextMode = "light" | "dark" | "accent";
 
@@ -323,6 +316,11 @@ export type ApiDashboardTile = {
   href: string;
   periodHint: string;
   supportsDynamicColor: boolean;
+  icon?: string;
+  footerLabel?: string;
+  kind?: "link" | "shipping_reset" | "top_category" | "products_breakdown";
+  extraLabel?: string;
+  badges?: { text: string }[];
 };
 
 export type ApiDashboardOverview = {

@@ -1,13 +1,11 @@
+import {
+  SELECTABLE_COLOR_LABELS,
+  SELECTABLE_COLOR_MODES,
+  type SelectableColorMode,
+} from "@/lib/selectable-colors";
+
 export type DashboardTileColorMode =
-  | "brand-orange"
-  | "brand-green"
-  | "primary"
-  | "info"
-  | "success"
-  | "warning"
-  | "danger"
-  | "secondary"
-  | "dark"
+  | SelectableColorMode
   | "threshold_sales"
   | "threshold_low_stock"
   | "threshold_out_of_stock"
@@ -38,18 +36,13 @@ export type DashboardTileCatalogEntry = {
   footerHref: string;
   periodHint: string;
   supportsDynamicColor: boolean;
+  icon?: string;
+  footerLabel?: string;
+  kind?: "link" | "shipping_reset" | "top_category" | "products_breakdown";
 };
 
 export const DASHBOARD_TILE_COLOR_MODES: DashboardTileColorMode[] = [
-  "brand-orange",
-  "brand-green",
-  "primary",
-  "info",
-  "success",
-  "warning",
-  "danger",
-  "secondary",
-  "dark",
+  ...SELECTABLE_COLOR_MODES,
   "threshold_sales",
   "threshold_low_stock",
   "threshold_out_of_stock",
@@ -57,15 +50,7 @@ export const DASHBOARD_TILE_COLOR_MODES: DashboardTileColorMode[] = [
 ];
 
 export const DASHBOARD_TILE_COLOR_LABELS: Record<DashboardTileColorMode, string> = {
-  "brand-orange": "Company orange",
-  "brand-green": "Company green",
-  primary: "Blue (primary)",
-  info: "Blue (info)",
-  success: "Green (success)",
-  warning: "Yellow (warning)",
-  danger: "Red (danger)",
-  secondary: "Gray (secondary)",
-  dark: "Dark",
+  ...SELECTABLE_COLOR_LABELS,
   threshold_sales: "Auto (sales thresholds)",
   threshold_low_stock: "Auto (low stock)",
   threshold_out_of_stock: "Auto (out of stock)",
@@ -131,8 +116,10 @@ function fixedTone(color: DashboardTileColorMode): string {
       return "dash-tile-orange";
     case "brand-green":
       return "dash-tile-green";
+    case "brand-red":
+      return "dash-tile-red";
     case "primary":
-      return "dash-tile-primary";
+      return "dash-tile-selectable-primary";
     case "info":
       return "dash-tile-info";
     case "success":

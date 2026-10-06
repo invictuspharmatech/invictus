@@ -1,13 +1,16 @@
 export const TELEGRAM_URL = "https://t.me/invictuspharma";
 
 export const NAV_LINK_CLASS =
-  "font-mono text-[16px] font-normal leading-none uppercase tracking-[0.12em] [word-spacing:-0.55em] text-muted-foreground transition hover:text-signal";
+  "cursor-pointer font-mono text-[16px] font-normal leading-none uppercase tracking-[0.12em] [word-spacing:-0.55em] text-muted-foreground transition hover:text-signal";
+
+export const BANNER_TEXT_CLASS =
+  "font-mono text-[16px] font-normal leading-none uppercase tracking-[0.12em] [word-spacing:-0.55em]";
 
 export const FOOTER_HEADING_CLASS =
   "mb-4 font-mono text-[20px] font-bold uppercase tracking-[0.1em] text-foreground";
 
 export const FOOTER_LINK_CLASS =
-  "font-mono text-[16px] font-normal uppercase tracking-[0.1em] text-muted-foreground transition hover:text-signal";
+  "cursor-pointer font-mono text-[16px] font-normal uppercase tracking-[0.1em] text-muted-foreground transition hover:text-signal";
 
 export const SHOP_CATEGORIES: { href: string; label: string }[] = [
   { href: "/products", label: "All products" },
@@ -41,12 +44,13 @@ export const POLICY_LINKS: { href: string; label: string }[] = [
   { href: "/terms-refunds", label: "Terms & Refunds" },
 ];
 
+export const TEST_RESULTS_LINK = { href: "/test-results", label: "Test results" };
+
 export const TOOL_LINKS: { href: string; label: string }[] = [
   { href: "/bitcoin-tutorial", label: "Bitcoin tutorial" },
   { href: "/peptide-calculator", label: "Peptide calculator" },
   { href: "/peptide-protocol", label: "Peptide protocol" },
   { href: "/crashed-gear-protocol", label: "Crashed gear protocol" },
-  { href: "/test-results", label: "Test results" },
 ];
 
 export const DEFAULT_PROMO_ITEMS = [

@@ -12,6 +12,7 @@ import {
   NAV_LINK_CLASS,
   POLICY_LINKS,
   SHOP_CATEGORIES,
+  TEST_RESULTS_LINK,
   TOOL_LINKS,
 } from "@/lib/storefront-nav";
 import type { SessionUser } from "@/lib/types";
@@ -101,6 +102,7 @@ export function SiteHeader({
           </Dropdown>
           <Dropdown label="FAQ">
             <DropLink href="/faq" label="FAQ" />
+            <DropLink href={TEST_RESULTS_LINK.href} label={TEST_RESULTS_LINK.label} />
             {POLICY_LINKS.map((item) => (
               <DropLink key={item.href} href={item.href} label={item.label} />
             ))}
@@ -186,6 +188,13 @@ export function SiteHeader({
           </p>
           <Link href="/faq" className={`block py-1 pl-3 ${NAV_LINK_CLASS}`} onClick={() => setOpen(false)}>
             FAQ
+          </Link>
+          <Link
+            href={TEST_RESULTS_LINK.href}
+            className={`block py-1 pl-3 ${NAV_LINK_CLASS}`}
+            onClick={() => setOpen(false)}
+          >
+            {TEST_RESULTS_LINK.label}
           </Link>
           {POLICY_LINKS.map((item) => (
             <Link

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { bannerBgColor, bannerTextColor } from "@/lib/feature-banners";
-import { DEFAULT_PROMO_ITEMS } from "@/lib/storefront-nav";
+import { BANNER_TEXT_CLASS, DEFAULT_PROMO_ITEMS } from "@/lib/storefront-nav";
 import type { BannerBgMode, BannerTextMode } from "@/lib/api-types";
 
 export type PromoSlide = {
@@ -87,7 +87,7 @@ export function PromoTicker({
         >
           {marqueeSlides.map((slide, index) => (
             <span key={`${slide.id}-${index}`} className="feature-banner-marquee-item">
-              <SlideText slide={slide} className="font-semibold tracking-wide hover:underline" />
+              <SlideText slide={slide} className={`${BANNER_TEXT_CLASS} hover:underline`} />
               {index < marqueeSlides.length - 1 ? (
                 <span className="feature-banner-marquee-separator" aria-hidden>
                   •
@@ -111,7 +111,7 @@ export function PromoTicker({
         {slides.map((slide, index) => (
           <p
             key={slide.id}
-            className={`absolute inset-x-4 truncate text-center font-mono text-[15px] font-semibold uppercase tracking-[0.14em] transition-opacity duration-500 ${
+            className={`absolute inset-x-4 truncate text-center ${BANNER_TEXT_CLASS} transition-opacity duration-500 ${
               index === activeIndex ? "opacity-100" : "opacity-0"
             }`}
           >

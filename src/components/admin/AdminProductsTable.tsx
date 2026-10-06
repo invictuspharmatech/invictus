@@ -390,7 +390,7 @@ export function AdminProductsTable({
             <table className="min-w-[1600px] w-full text-left text-sm">
               <thead className="bg-card/80 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3">
+                  <th className="sticky left-0 z-20 w-12 bg-card px-3 py-3">
                     {admin ? (
                       <input
                         type="checkbox"
@@ -407,6 +407,9 @@ export function AdminProductsTable({
                         }}
                       />
                     ) : null}
+                  </th>
+                  <th className="sticky left-12 z-20 min-w-[7.5rem] bg-card px-3 py-3 shadow-[6px_0_10px_-8px_rgba(0,0,0,0.8)]">
+                    Actions
                   </th>
                   <th className="px-4 py-3">Image</th>
                   <th className="cursor-pointer px-4 py-3" onClick={() => toggleSort("name")}>
@@ -426,7 +429,6 @@ export function AdminProductsTable({
                   <th className="cursor-pointer px-4 py-3" onClick={() => toggleSort("createdAt")}>
                     Date{sortMark("createdAt")}
                   </th>
-                  <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -438,7 +440,11 @@ export function AdminProductsTable({
                   return (
                     <Fragment key={product.id}>
                       <tr className={`border-t border-border/40 ${open ? "bg-signal/10" : "hover:bg-card/60"}`}>
-                        <td className="px-4 py-3">
+                        <td
+                          className={`sticky left-0 z-20 w-12 px-3 py-3 ${
+                            open ? "bg-[#241410]" : "bg-card"
+                          }`}
+                        >
                           {admin ? (
                             <input
                               type="checkbox"
@@ -451,6 +457,44 @@ export function AdminProductsTable({
                                 }
                               }}
                             />
+                          ) : null}
+                        </td>
+                        <td
+                          className={`sticky left-12 z-20 min-w-[7.5rem] px-3 py-3 shadow-[6px_0_10px_-8px_rgba(0,0,0,0.8)] ${
+                            open ? "bg-[#241410]" : "bg-card"
+                          }`}
+                        >
+                          {admin ? (
+                            <div className="flex items-center gap-1">
+                              <Link
+                                href={`/admin/cms/products/${product.id}`}
+                                title="Edit"
+                                className="p-1.5 text-signal hover:bg-signal/15"
+                              >
+                                <Pencil className="size-4" />
+                              </Link>
+                              <button
+                                type="button"
+                                title="Quick edit: name, prices, quantity, backorder"
+                                onClick={() =>
+                                  setQuickEditId((id) => (id === product.id ? null : product.id))
+                                }
+                                className={`p-1.5 hover:bg-signal/15 ${
+                                  open ? "bg-signal/20 text-signal" : "text-muted-foreground hover:text-signal"
+                                }`}
+                              >
+                                <SlidersHorizontal className="size-4" />
+                              </button>
+                              <button
+                                type="button"
+                                title="Delete"
+                                disabled={busyId === `del-${product.id}`}
+                                onClick={() => void deleteProduct(product)}
+                                className="p-1.5 text-red-400 hover:bg-red-950/50 hover:text-red-300 disabled:opacity-50"
+                              >
+                                <Trash2 className="size-4" />
+                              </button>
+                            </div>
                           ) : null}
                         </td>
                         <td className="px-4 py-3">
@@ -565,53 +609,21 @@ export function AdminProductsTable({
                         <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
                           {formatListDate(product.createdAt)}
                         </td>
-                        <td className="px-4 py-3">
-                          {admin ? (
-                            <div className="flex items-center gap-1">
-                              <Link
-                                href={`/admin/cms/products/${product.id}`}
-                                title="Edit"
-                                className="p-1.5 text-signal hover:bg-signal/15"
-                              >
-                                <Pencil className="size-4" />
-                              </Link>
-                              <button
-                                type="button"
-                                title="Quick edit: name, prices, quantity, backorder"
-                                onClick={() =>
-                                  setQuickEditId((id) => (id === product.id ? null : product.id))
-                                }
-                                className={`p-1.5 hover:bg-signal/15 ${
-                                  open ? "bg-signal/20 text-signal" : "text-muted-foreground hover:text-signal"
-                                }`}
-                              >
-                                <SlidersHorizontal className="size-4" />
-                              </button>
-                              <button
-                                type="button"
-                                title="Delete"
-                                disabled={busyId === `del-${product.id}`}
-                                onClick={() => void deleteProduct(product)}
-                                className="p-1.5 text-red-400 hover:bg-red-950/50 hover:text-red-300 disabled:opacity-50"
-                              >
-                                <Trash2 className="size-4" />
-                              </button>
-                            </div>
-                          ) : null}
-                        </td>
                       </tr>
                       {admin && open ? (
                         <tr className="border-t border-border/30 bg-ink/50">
                           <td colSpan={TABLE_COLUMNS} className="p-0">
-                            <ProductQuickEditPanel
-                              product={product}
-                              onCancel={() => setQuickEditId(null)}
-                              onSaved={(updated) => {
-                                replaceRow(updated);
-                                setQuickEditId(null);
-                                router.refresh();
-                              }}
-                            />
+                            <div className="sticky left-0 max-w-[min(48rem,calc(100vw-2rem))]">
+                              <ProductQuickEditPanel
+                                product={product}
+                                onCancel={() => setQuickEditId(null)}
+                                onSaved={(updated) => {
+                                  replaceRow(updated);
+                                  setQuickEditId(null);
+                                  router.refresh();
+                                }}
+                              />
+                            </div>
                           </td>
                         </tr>
                       ) : null}

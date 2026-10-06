@@ -142,7 +142,8 @@ export function CategoryCarousel({ categories }: { categories: CategorySlide[] }
   if (categories.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+    <section className="home-band home-band-categories px-6 py-20 lg:px-10 lg:py-28">
+      <div className="home-band-inner mx-auto max-w-7xl">
       <div className="mb-12 flex flex-wrap items-end justify-between gap-5">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-signal">Product categories</p>
@@ -212,7 +213,7 @@ export function CategoryCarousel({ categories }: { categories: CategorySlide[] }
           </div>
         )}
 
-        {sliderActive ? (
+      {sliderActive ? (
           <div className="mt-6 hidden items-center justify-center gap-2 lg:flex">
             {Array.from({ length: total }, (_, i) => (
               <button
@@ -231,6 +232,7 @@ export function CategoryCarousel({ categories }: { categories: CategorySlide[] }
             ))}
           </div>
         ) : null}
+      </div>
       </div>
     </section>
   );

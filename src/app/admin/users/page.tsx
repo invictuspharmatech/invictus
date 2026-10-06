@@ -13,8 +13,7 @@ export default async function AdminUsersPage() {
         <div>
           <h1 className="display-font text-3xl">Users</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Create store and warehouse accounts, then assign a type. Super user stays hidden from
-            other admins.
+            Create store and warehouse accounts, then assign a type.
           </p>
         </div>
         <Link href="/admin/users/new" className="gold-btn">

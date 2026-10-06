@@ -131,8 +131,8 @@ export default async function HomePage() {
       <CategoryCarousel categories={slides} />
 
       {featuredSlots.length > 0 ? (
-        <section className="px-6 py-14 sm:py-16 lg:px-10">
-          <div className="mx-auto max-w-7xl">
+        <section className="home-band home-band-featured px-6 py-14 sm:py-16 lg:px-10">
+          <div className="home-band-inner mx-auto max-w-7xl">
             <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.3em] text-signal">
@@ -167,7 +167,8 @@ export default async function HomePage() {
       ) : null}
 
       {arrivalSlots.length > 0 ? (
-        <section className="mx-auto max-w-7xl px-6 py-14 sm:py-16 lg:px-10">
+        <section className="home-band home-band-arrivals px-6 py-14 sm:py-16 lg:px-10">
+          <div className="home-band-inner mx-auto max-w-7xl">
           <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-signal">Just in</p>
@@ -192,6 +193,7 @@ export default async function HomePage() {
             >
               View all
             </Link>
+          </div>
           </div>
         </section>
       ) : null}

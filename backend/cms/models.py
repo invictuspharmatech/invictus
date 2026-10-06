@@ -24,8 +24,9 @@ class Page(models.Model):
 
 class Banner(models.Model):
     BG_MODES = (
-        ("brand-orange", "Company orange"),
-        ("brand-green", "Company green"),
+        ("brand-orange", "Orange"),
+        ("brand-green", "Green"),
+        ("brand-red", "Dark red"),
         ("primary", "Green (primary)"),
         ("info", "Blue (info)"),
         ("success", "Green (success)"),

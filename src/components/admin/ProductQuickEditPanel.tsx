@@ -108,13 +108,13 @@ export function ProductQuickEditPanel({ product, onCancel, onSaved }: Props) {
   }
 
   return (
-    <form onSubmit={handleSave} className="flex flex-col gap-4 bg-card/80 p-4">
-      <div className="flex flex-wrap items-end gap-4">
-        <label className="min-w-[200px] flex-1 grid gap-1 text-xs">
+    <form onSubmit={handleSave} className="max-w-3xl bg-card/80 p-4">
+      <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+        <label className="grid gap-1 text-xs sm:col-span-2">
           Product name
           <input className="field" value={name} onChange={(e) => setName(e.target.value)} />
         </label>
-        <label className="w-28 grid gap-1 text-xs">
+        <label className="grid gap-1 text-xs">
           Price
           <input
             className="field"
@@ -125,7 +125,7 @@ export function ProductQuickEditPanel({ product, onCancel, onSaved }: Props) {
             onChange={(e) => setRegularPrice(e.target.value)}
           />
         </label>
-        <label className="w-28 grid gap-1 text-xs">
+        <label className="grid gap-1 text-xs">
           Sale price
           <input
             className="field"
@@ -137,7 +137,36 @@ export function ProductQuickEditPanel({ product, onCancel, onSaved }: Props) {
             onChange={(e) => setSalePrice(e.target.value)}
           />
         </label>
-        <label className="flex items-center gap-2 pb-2 text-xs">
+        {canEditW1 ? (
+          <label className="grid gap-1 text-xs">
+            Warehouse 1 qty
+            <input
+              className="field"
+              type="number"
+              min={0}
+              value={w1}
+              onChange={(e) => setW1(e.target.value)}
+            />
+          </label>
+        ) : null}
+        {canEditW2 ? (
+          <label className="grid gap-1 text-xs">
+            Warehouse 2 qty
+            <input
+              className="field"
+              type="number"
+              min={0}
+              value={w2}
+              onChange={(e) => setW2(e.target.value)}
+            />
+          </label>
+        ) : null}
+        {canEditW1 || canEditW2 ? (
+          <p className="text-xs text-muted-foreground sm:col-span-2">
+            Quantity total: <strong className="text-foreground">{draftTotal}</strong>
+          </p>
+        ) : null}
+        <label className="flex items-center gap-2 text-xs">
           <input
             type="checkbox"
             checked={allowBackorder}
@@ -145,7 +174,7 @@ export function ProductQuickEditPanel({ product, onCancel, onSaved }: Props) {
           />
           Allow backorder
         </label>
-        <label className="flex items-center gap-2 pb-2 text-xs">
+        <label className="flex items-center gap-2 text-xs">
           <input
             type="checkbox"
             checked={limitQty}
@@ -154,7 +183,7 @@ export function ProductQuickEditPanel({ product, onCancel, onSaved }: Props) {
           Limit per order
         </label>
         {limitQty ? (
-          <label className="w-24 grid gap-1 text-xs">
+          <label className="grid gap-1 text-xs">
             Max qty
             <input
               className="field"
@@ -165,7 +194,7 @@ export function ProductQuickEditPanel({ product, onCancel, onSaved }: Props) {
             />
           </label>
         ) : null}
-        <label className="flex items-center gap-2 pb-2 text-xs">
+        <label className="flex items-center gap-2 text-xs">
           <input
             type="checkbox"
             checked={isFeatured}
@@ -173,7 +202,7 @@ export function ProductQuickEditPanel({ product, onCancel, onSaved }: Props) {
           />
           Featured
         </label>
-        <label className="flex items-center gap-2 pb-2 text-xs">
+        <label className="flex items-center gap-2 text-xs">
           <input
             type="checkbox"
             checked={isNewArrival}
@@ -183,48 +212,9 @@ export function ProductQuickEditPanel({ product, onCancel, onSaved }: Props) {
         </label>
       </div>
 
-      {canEditW1 || canEditW2 ? (
-        <div className="border border-border/50 bg-ink/40 p-3">
-          <div className="mb-2 flex flex-wrap items-baseline gap-2 text-xs">
-            <span className="font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Quantity by warehouse
-            </span>
-            <span className="text-muted-foreground">
-              Total: <strong className="text-foreground">{draftTotal}</strong>
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-4">
-            {canEditW1 ? (
-              <label className="grid gap-1 text-xs">
-                Warehouse 1
-                <input
-                  className="field w-24"
-                  type="number"
-                  min={0}
-                  value={w1}
-                  onChange={(e) => setW1(e.target.value)}
-                />
-              </label>
-            ) : null}
-            {canEditW2 ? (
-              <label className="grid gap-1 text-xs">
-                Warehouse 2
-                <input
-                  className="field w-24"
-                  type="number"
-                  min={0}
-                  value={w2}
-                  onChange={(e) => setW2(e.target.value)}
-                />
-              </label>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
+      {error ? <p className="mt-3 text-sm text-red-400">{error}</p> : null}
 
-      {error ? <p className="text-sm text-red-400">{error}</p> : null}
-
-      <div className="ml-auto flex items-center gap-2">
+      <div className="mt-4 flex items-center gap-2">
         <button type="button" className="ghost-btn" onClick={onCancel} disabled={saving}>
           Close
         </button>

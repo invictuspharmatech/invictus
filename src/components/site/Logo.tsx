@@ -1,9 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
 
-export function Logo({ compact = false }: { compact?: boolean }) {
+export function Logo({ compact = false, href = "/" }: { compact?: boolean; href?: string }) {
   return (
-    <Link href="/" className="group flex items-center gap-3 text-foreground">
+    <Link href={href} className="group flex items-center gap-3 text-foreground">
       <Image
         src="/images/invictus-logo.png"
         alt="Invictus Pharma"

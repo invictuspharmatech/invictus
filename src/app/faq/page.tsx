@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/site/PageHeader";
 import { djangoJsonSafe } from "@/lib/django";
-import { POLICY_LINKS } from "@/lib/storefront-nav";
+import { POLICY_LINKS, TEST_RESULTS_LINK } from "@/lib/storefront-nav";
 import type { ApiFaq } from "@/lib/api-types";
 
 export default async function FaqPage() {
@@ -22,6 +22,11 @@ export default async function FaqPage() {
       <section className="tile mb-10">
         <h2 className="display-font text-2xl">Policies</h2>
         <ul className="mt-4 space-y-2">
+          <li>
+            <Link href={TEST_RESULTS_LINK.href} className="text-sm text-signal hover:underline">
+              {TEST_RESULTS_LINK.label}
+            </Link>
+          </li>
           {POLICY_LINKS.map((item) => (
             <li key={item.href}>
               <Link href={item.href} className="text-sm text-signal hover:underline">

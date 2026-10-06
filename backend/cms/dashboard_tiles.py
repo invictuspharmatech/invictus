@@ -7,6 +7,7 @@ LAYOUT_KEY = "dashboard.tiles_layout"
 COLOR_MODES = {
     "brand-orange",
     "brand-green",
+    "brand-red",
     "primary",
     "info",
     "success",
@@ -147,6 +148,9 @@ def catalog() -> list[dict]:
             "/admin/accounting",
             "Since last reset · revenue eligible",
             supports_dynamic=True,
+            icon="truck",
+            footer_label="Reset shipping collected",
+            kind="shipping_reset",
         ),
         _metric(
             "shipping_this_week",
@@ -226,6 +230,19 @@ def catalog() -> list[dict]:
             "count",
             "/admin/products",
             "All products · live count",
+            icon="package",
+            kind="products_breakdown",
+        ),
+        _metric(
+            "top_category_month",
+            "Top Category (This Month)",
+            "Catalog",
+            "topCategoryMonthRevenue",
+            "currency",
+            "/admin/analytics/categories",
+            "month",
+            icon="layers",
+            kind="top_category",
         ),
         _metric(
             "products_active",
@@ -312,6 +329,23 @@ def resolve_tiles(overview: dict) -> list[dict]:
         if not entry:
             continue
         value = overview.get(entry["valuePath"], 0)
+        extra_label = ""
+        badges: list[dict] = []
+        kind = entry.get("kind") or "link"
+        if kind == "top_category":
+            extra_label = str(
+                overview.get("topCategoryMonthName")
+                or (overview.get("topCategoryMonth") or {}).get("name")
+                or "—"
+            )
+            value = overview.get("topCategoryMonthRevenue", 0)
+        if kind == "products_breakdown":
+            active = int(overview.get("productsActive") or 0)
+            total = int(overview.get("productCount") or 0)
+            badges = [
+                {"text": f"Active: {active}"},
+                {"text": f"Inactive: {max(total - active, 0)}"},
+            ]
         items.append(
             {
                 "id": tile["id"],
@@ -325,6 +359,11 @@ def resolve_tiles(overview: dict) -> list[dict]:
                 "href": entry["footerHref"],
                 "periodHint": entry["periodHint"],
                 "supportsDynamicColor": bool(entry.get("supportsDynamicColor")),
+                "icon": entry.get("icon") or "",
+                "footerLabel": entry.get("footerLabel") or "More info",
+                "kind": entry.get("kind") or "link",
+                "extraLabel": extra_label,
+                "badges": badges,
             }
         )
     return items
@@ -410,6 +449,9 @@ def _metric(
     href: str,
     hint: str,
     supports_dynamic: bool = False,
+    icon: str = "",
+    footer_label: str = "More info",
+    kind: str = "link",
 ) -> dict:
     return {
         "id": tile_id,
@@ -420,6 +462,9 @@ def _metric(
         "footerHref": href,
         "periodHint": hint,
         "supportsDynamicColor": supports_dynamic,
+        "icon": icon,
+        "footerLabel": footer_label,
+        "kind": kind,
     }
 
 

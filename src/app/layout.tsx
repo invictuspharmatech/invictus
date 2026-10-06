@@ -6,11 +6,9 @@ import { CartProvider } from "@/components/shop/CartProvider";
 import { ReferralCapture } from "@/components/shop/ReferralCapture";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { ConditionalFooter } from "@/components/site/ConditionalFooter";
-import { readSession, isUserView } from "@/lib/auth";
+import { readSession } from "@/lib/auth";
 import { djangoJsonSafe } from "@/lib/django";
 import { SHOP_CATEGORIES } from "@/lib/storefront-nav";
-import { isStaff } from "@/lib/roles";
-import { UserViewBanner } from "@/components/site/UserViewBanner";
 import type { ApiCategory } from "@/lib/api-types";
 import { asBannerRuntime } from "@/lib/feature-banners";
 import "./globals.css";
@@ -57,7 +55,6 @@ export default async function RootLayout({
   const pathname = headerList.get("x-invictus-pathname") || "";
   const isAdminApp = pathname.startsWith("/admin");
   const session = isAdminApp ? null : await readSession();
-  const userView = Boolean(session && isStaff(session.role) && (await isUserView()));
   const [categories, bannerPayload] = (
     isAdminApp
       ? [[], { items: [], enabled: true, displayMode: "marquee" }]
@@ -97,20 +94,15 @@ export default async function RootLayout({
           <Suspense fallback={null}>
             <ReferralCapture />
           </Suspense>
-          {isAdminApp ? null : (
-            <>
-              {userView ? <UserViewBanner /> : null}
-              <SiteHeader
-                session={session}
-                shopLinks={shopLinks}
-                promoItems={promoItems}
-                promoEnabled={banners.enabled}
-                promoDisplayMode={banners.displayMode}
-              />
-            </>
-          )}
+          <SiteHeader
+            session={session}
+            shopLinks={shopLinks}
+            promoItems={promoItems}
+            promoEnabled={banners.enabled}
+            promoDisplayMode={banners.displayMode}
+          />
           <main className="flex-1">{children}</main>
-          {isAdminApp ? null : <ConditionalFooter />}
+          <ConditionalFooter />
         </CartProvider>
       </body>
     </html>

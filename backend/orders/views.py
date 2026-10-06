@@ -8,6 +8,7 @@ from django.db import transaction
 from django.db.models import Q, Sum
 from django.http import HttpResponse
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -23,6 +24,7 @@ from accounts.permissions import (
 from catalog.models import Category, Product
 from cms.mailer import send_event, send_order_event, send_order_status_event
 from cms.dashboard_tiles import resolve_tiles
+from cms.ops_settings import get_json
 from orders.analytics import (
     REVENUE_ELIGIBLE,
     catalog_stock_counts,
@@ -567,6 +569,12 @@ def admin_overview_view(request):
     year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     reset = AccountingReset.objects.order_by("-reset_at").first()
     reset_at = reset.reset_at if reset else None
+    dash_reset_raw = get_json("dashboard.shipping_reset_at", None)
+    dash_reset_at = parse_datetime(dash_reset_raw) if isinstance(dash_reset_raw, str) else None
+    if dash_reset_at and timezone.is_naive(dash_reset_at):
+        dash_reset_at = timezone.make_aware(dash_reset_at, timezone.get_current_timezone())
+    if dash_reset_at and (reset_at is None or dash_reset_at > reset_at):
+        reset_at = dash_reset_at
     shipping_reset_qs = revenue_qs
     if reset_at:
         shipping_reset_qs = revenue_qs.filter(created_at__gte=reset_at)
@@ -590,6 +598,14 @@ def admin_overview_view(request):
     )
     top_name = (top or {}).get("product__categories__name") or "—"
     top_count = int((top or {}).get("total") or 0)
+    top_rev = (
+        month_items.values("product__categories__name")
+        .annotate(revenue=Sum("line_total"))
+        .order_by("-revenue")
+        .first()
+    )
+    top_rev_name = (top_rev or {}).get("product__categories__name") or top_name
+    top_rev_amount = (top_rev or {}).get("revenue") or 0
 
     settings_row = get_warehouse_settings()
 
@@ -679,6 +695,8 @@ def admin_overview_view(request):
             "ordersRefunded": orders_qs.filter(status=Order.Status.REFUNDED).count(),
             "ordersPartiallyFilled": orders_qs.filter(status=Order.Status.PARTIALLY_FILLED).count(),
             "topCategoryMonth": {"name": top_name, "count": top_count},
+            "topCategoryMonthRevenue": top_rev_amount,
+            "topCategoryMonthName": top_rev_name,
             "categoriesTotal": Category.objects.count(),
             "warehousesTotal": 2,
             "couponsTotal": Coupon.objects.count(),

@@ -17,7 +17,7 @@ export function AdminNav({ items }: { items: AdminNavItem[] }) {
             <Link
               key={item.href}
               href={item.href}
-              className="text-[13px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
+              className="cursor-pointer text-[13px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
             >
               {item.label}
             </Link>
@@ -27,7 +27,7 @@ export function AdminNav({ items }: { items: AdminNavItem[] }) {
           <div key={item.label} className="group relative">
             <Link
               href={item.href}
-              className="inline-flex items-center text-[13px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
+              className="inline-flex cursor-pointer items-center text-[13px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
             >
               {item.label}
             </Link>
@@ -37,7 +37,7 @@ export function AdminNav({ items }: { items: AdminNavItem[] }) {
                   <Link
                     key={child.href}
                     href={child.href}
-                    className="block px-4 py-2 text-[12px] uppercase tracking-[0.16em] text-muted-foreground hover:bg-card hover:text-foreground"
+                    className="block cursor-pointer px-4 py-2 text-[12px] uppercase tracking-[0.16em] text-muted-foreground hover:bg-card hover:text-foreground"
                   >
                     {child.label}
                   </Link>

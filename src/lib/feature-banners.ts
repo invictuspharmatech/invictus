@@ -1,15 +1,8 @@
 import type { ApiBanner, ApiBannerRuntime, BannerBgMode, BannerTextMode } from "@/lib/api-types";
+import { SELECTABLE_COLOR_OPTIONS } from "@/lib/selectable-colors";
 
 export const BANNER_BG_OPTIONS: { value: BannerBgMode; label: string; color: string }[] = [
-  { value: "brand-orange", label: "Company orange", color: "#c65a1e" },
-  { value: "brand-green", label: "Company green", color: "#28885B" },
-  { value: "primary", label: "Green (primary)", color: "#1e7e34" },
-  { value: "info", label: "Blue (info)", color: "#17a2b8" },
-  { value: "success", label: "Green (success)", color: "#28a745" },
-  { value: "warning", label: "Yellow (warning)", color: "#ffc107" },
-  { value: "danger", label: "Red (danger)", color: "#dc3545" },
-  { value: "secondary", label: "Gray (secondary)", color: "#6c757d" },
-  { value: "dark", label: "Dark", color: "#212529" },
+  ...SELECTABLE_COLOR_OPTIONS,
 ];
 
 export const BANNER_TEXT_OPTIONS: { value: BannerTextMode; label: string; color: string }[] = [

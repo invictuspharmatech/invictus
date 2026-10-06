@@ -27,6 +27,7 @@ urlpatterns = [
     path("admin/cms/email-test/", views.admin_email_test),
     path("admin/cms/warehouse-settings/", views.admin_warehouse_settings),
     path("admin/dashboard/tiles/", ops_views.admin_dashboard_tiles_view),
+    path("admin/dashboard/shipping-reset/", ops_views.admin_dashboard_shipping_reset_view),
     path("admin/ops-settings/", ops_views.admin_ops_settings_view),
     path("checkout-settings/", ops_views.public_checkout_settings_view),
     path("admin/email/bulk/template/", bulk_email_views.bulk_template_view),

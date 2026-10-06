@@ -1,10 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireStaff } from "@/lib/auth";
 import { Logo } from "@/components/site/Logo";
-import { LogoutButton } from "@/components/shop/LogoutButton";
+import { AdminAccountMenu } from "@/components/admin/AdminAccountMenu";
 import { AdminNav, type AdminNavItem } from "@/components/admin/AdminNav";
-import { ShopAsCustomerToggle } from "@/components/admin/ShopAsCustomerToggle";
 import { isFullAdmin, roleLabel } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
@@ -154,23 +152,20 @@ export default async function AdminLayout({
       <header className="relative z-30 border-b border-border/50">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-6">
-            <Logo />
+            <Logo href="/admin" />
             <span className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
               {roleLabel(staff.role)}
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <ShopAsCustomerToggle />
-            <Link href="/admin/profile" className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-              Profile
-            </Link>
-            <Link href="/account" className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-              My account
-            </Link>
-            <Link href="/" className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-              Store
-            </Link>
-            <LogoutButton />
+            <a href="/" className="ghost-btn">
+              View store
+            </a>
+            <AdminAccountMenu
+              name={staff.name}
+              email={staff.email}
+              showSettings={admin}
+            />
           </div>
         </div>
         <AdminNav items={items} />

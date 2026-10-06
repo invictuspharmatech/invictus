@@ -1,9 +1,11 @@
+from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from accounts.permissions import IsStoreStaff
 from cms.dashboard_tiles import catalog, default_layout, get_layout, save_layout
+from cms.ops_settings import save_json
 from orders.order_numbers import get_order_numbering, preview_order_number, save_order_numbering
 from orders.shop_config import (
     get_affiliate_defaults,
@@ -37,6 +39,14 @@ def admin_dashboard_tiles_view(request):
             "defaultLayout": default_layout(),
         }
     )
+
+
+@api_view(["POST"])
+@permission_classes([IsStoreStaff])
+def admin_dashboard_shipping_reset_view(request):
+    stamp = timezone.now().isoformat()
+    save_json("dashboard.shipping_reset_at", stamp, "Shipping collected reset", "dashboard")
+    return Response({"ok": True, "resetAt": stamp})
 
 
 @api_view(["GET", "PUT"])
