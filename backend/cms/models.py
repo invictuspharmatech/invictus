@@ -147,6 +147,10 @@ class EmailSettings(models.Model):
         blank=True,
         help_text="Warehouse 2 manager emails, comma-separated.",
     )
+    wrapper_html = models.TextField(
+        blank=True,
+        help_text="Optional full HTML layout. Use {{EMAIL_BODY}}, {{CURRENT_YEAR}}, and {{APP_NAME}}. Blank uses the default Invictus template.",
+    )
 
     class Meta:
         verbose_name = "Email settings"

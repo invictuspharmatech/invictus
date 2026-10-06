@@ -146,8 +146,8 @@ export function CategoryCarousel({ categories }: { categories: CategorySlide[] }
       <div className="home-band-inner mx-auto max-w-7xl">
       <div className="mb-12 flex flex-wrap items-end justify-between gap-5">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-signal">Product categories</p>
-          <h2 className="mt-3 font-serif text-3xl tracking-[-0.03em] sm:text-4xl">Find your protocol.</h2>
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-signal">Find your protocol</p>
+          <h2 className="mt-3 font-serif text-3xl tracking-[-0.03em] sm:text-4xl">Product Categories</h2>
           <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground sm:text-base">
             Choose a category to explore products.
           </p>

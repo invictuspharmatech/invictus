@@ -207,28 +207,24 @@ body {
 
 .home-band-categories {
   background:
-    radial-gradient(120% 90% at 6% 18%, color-mix(in oklab, var(--brand-red) 32%, transparent), transparent 58%),
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, var(--brand-red-deep) 78%, var(--background)) 0%,
-      color-mix(in oklab, var(--muted) 55%, var(--background)) 100%
-    );
+    radial-gradient(80% 70% at 8% 12%, color-mix(in oklab, var(--brand-red) 10%, transparent), transparent 64%),
+    var(--background);
 }
 
 .home-band-categories::before {
-  left: -8%;
-  top: -18%;
-  height: 22rem;
-  width: 22rem;
-  background: color-mix(in oklab, var(--brand-red) 38%, transparent);
+  left: -10%;
+  top: -22%;
+  height: 20rem;
+  width: 20rem;
+  background: color-mix(in oklab, var(--brand-red) 12%, transparent);
 }
 
 .home-band-categories::after {
-  right: -6%;
-  bottom: -22%;
-  height: 18rem;
-  width: 18rem;
-  background: color-mix(in oklab, var(--signal) 16%, transparent);
+  right: -12%;
+  bottom: -28%;
+  height: 16rem;
+  width: 16rem;
+  background: color-mix(in oklab, var(--brand-red-deep) 18%, transparent);
 }
 
 .home-band-featured {
@@ -258,30 +254,12 @@ body {
 }
 
 .home-band-arrivals {
-  background:
-    radial-gradient(80% 70% at 10% 82%, color-mix(in oklab, var(--brand-red) 24%, transparent), transparent 52%),
-    radial-gradient(90% 70% at 92% 18%, color-mix(in oklab, var(--signal) 22%, transparent), transparent 50%),
-    linear-gradient(
-      195deg,
-      color-mix(in oklab, var(--muted) 42%, var(--background)) 0%,
-      color-mix(in oklab, var(--brand-red-deep) 58%, var(--background)) 100%
-    );
+  background: linear-gradient(180deg, var(--background) 0%, var(--ink) 100%);
 }
 
-.home-band-arrivals::before {
-  left: -12%;
-  bottom: -18%;
-  height: 20rem;
-  width: 22rem;
-  background: color-mix(in oklab, var(--brand-red) 30%, transparent);
-}
-
+.home-band-arrivals::before,
 .home-band-arrivals::after {
-  right: -8%;
-  top: 8%;
-  height: 16rem;
-  width: 16rem;
-  background: color-mix(in oklab, var(--signal) 18%, transparent);
+  display: none;
 }
 
 .store-card,

@@ -39,7 +39,7 @@ class Product(models.Model):
     stock_quantity_w1 = models.IntegerField(default=0)
     stock_quantity_w2 = models.IntegerField(default=0)
     max_quantity_per_order = models.IntegerField(null=True, blank=True)
-    allow_backorder = models.BooleanField(default=True)
+    allow_backorder = models.BooleanField(default=False)
     is_featured = models.BooleanField(default=False)
     is_new_arrival = models.BooleanField(default=False)
     warehouse = models.CharField(

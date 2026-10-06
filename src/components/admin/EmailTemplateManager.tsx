@@ -42,7 +42,8 @@ export function EmailTemplateManager({ items }: { items: ApiEmailTemplate[] }) {
         <h2 className="display-font text-2xl">Templates and recipients</h2>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
           Enable or disable each notification, then choose who gets it: admins, the
-          customer, warehouse managers, a custom list, or any combination. Placeholders:{" "}
+          customer, warehouse managers, a custom list, or any combination. The inner
+          body sits inside the main Invictus email template. Placeholders:{" "}
           <code>{"{{customer_name}}"}</code>, <code>{"{{order_number}}"}</code>,{" "}
           <code>{"{{status}}"}</code>, <code>{"{{warehouse}}"}</code>,{" "}
           <code>{"{{grand_total}}"}</code>, <code>{"{{items}}"}</code>,{" "}
@@ -101,7 +102,14 @@ export function EmailTemplateManager({ items }: { items: ApiEmailTemplate[] }) {
             />
           </label>
           <input className="field" name="subject" defaultValue={item.subject} required />
-          <textarea className="field min-h-36" name="body" defaultValue={item.body} required />
+          <label className="grid gap-1 text-sm">
+            Inner message
+            <textarea className="field min-h-36" name="body" defaultValue={item.body} required />
+          </label>
+          <p className="text-xs text-muted-foreground">
+            Write the message itself. HTML is optional — blank lines become
+            paragraphs. Header, logo, and footer come from the main template.
+          </p>
           <button className="gold-btn max-w-40" type="submit">
             Save template
           </button>

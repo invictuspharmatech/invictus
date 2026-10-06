@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ApiEmailSettings } from "@/lib/api-types";
 
 export function EmailSettingsForm({ settings }: { settings: ApiEmailSettings }) {
@@ -10,6 +10,11 @@ export function EmailSettingsForm({ settings }: { settings: ApiEmailSettings }) 
   const [saved, setSaved] = useState("");
   const [testTo, setTestTo] = useState("");
   const [testMessage, setTestMessage] = useState("");
+  const [wrapperHtml, setWrapperHtml] = useState(settings.wrapperHtml);
+
+  useEffect(() => {
+    setWrapperHtml(settings.wrapperHtml);
+  }, [settings.wrapperHtml]);
 
   return (
     <div className="space-y-6">
@@ -33,6 +38,7 @@ export function EmailSettingsForm({ settings }: { settings: ApiEmailSettings }) 
             extraAdminEmails: String(form.get("extraAdminEmails") || ""),
             warehouse1Emails: String(form.get("warehouse1Emails") || ""),
             warehouse2Emails: String(form.get("warehouse2Emails") || ""),
+            wrapperHtml,
           };
           if (password) payload.smtpPassword = password;
           const res = await fetch("/api/admin/cms/email-settings/", {
@@ -128,6 +134,33 @@ export function EmailSettingsForm({ settings }: { settings: ApiEmailSettings }) 
             defaultValue={settings.warehouse2Emails}
           />
         </label>
+        <div className="grid gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <label className="text-sm" htmlFor="email-wrapper-html">
+              Main email template
+            </label>
+            <button
+              className="ghost-btn w-fit px-3 py-1 text-xs"
+              type="button"
+              onClick={() => setWrapperHtml(settings.defaultWrapperHtml)}
+            >
+              Reset to Invictus default
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Great Life layout with Invictus colors and logo. Tokens:{" "}
+            <code>{"{{EMAIL_BODY}}"}</code>, <code>{"{{CURRENT_YEAR}}"}</code>,{" "}
+            <code>{"{{APP_NAME}}"}</code>. This wraps bulk mail, notifications, and
+            test emails.
+          </p>
+          <textarea
+            id="email-wrapper-html"
+            className="field min-h-56 font-mono text-xs"
+            value={wrapperHtml}
+            onChange={(event) => setWrapperHtml(event.target.value)}
+            spellCheck={false}
+          />
+        </div>
         {error ? <p className="text-sm text-red-400">{error}</p> : null}
         {saved ? <p className="text-sm text-muted-foreground">{saved}</p> : null}
         <button className="gold-btn max-w-48" type="submit">

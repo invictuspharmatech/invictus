@@ -250,6 +250,8 @@ export type ApiEmailSettings = {
   extraAdminEmails: string;
   warehouse1Emails: string;
   warehouse2Emails: string;
+  wrapperHtml: string;
+  defaultWrapperHtml: string;
 };
 
 export type ApiEmailTemplate = {

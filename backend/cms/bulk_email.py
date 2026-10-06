@@ -12,12 +12,20 @@ from django.db.models import Count, F, Q
 from django.utils import timezone
 
 from accounts.models import User
+from cms.email_wrapper import plain_to_html, wrap_email_body
 from cms.mailer import get_email_settings, send_message
 from cms.models import BulkEmailBatch, BulkEmailDraft, BulkEmailRecipient
 
 DEFAULT_SUBJECT = "A message from Invictus Pharma"
 DEFAULT_TITLE = ""
-DEFAULT_BODY = """<p>Dear {{recipient_name}},</p>
+DEFAULT_BODY = """Dear {{recipient_name}},
+
+We wanted to reach out with a brief update. If you have any questions, simply reply to this email.
+
+Thank you for your continued trust.
+
+— Invictus Pharma"""
+LEGACY_DEFAULT_BODY = """<p>Dear {{recipient_name}},</p>
 <p>We wanted to reach out with a brief update. If you have any questions, simply reply to this email.</p>
 <p>Thank you for your continued trust.</p>
 <p>— Invictus Pharma</p>"""
@@ -45,7 +53,11 @@ def serialize_draft(draft: BulkEmailDraft | None) -> dict[str, Any]:
     return {
         "subject": draft.subject or DEFAULT_SUBJECT,
         "title": draft.title or "",
-        "bodyHtml": draft.body_html or DEFAULT_BODY,
+        "bodyHtml": (
+            DEFAULT_BODY
+            if (draft.body_html or "").strip() in ("", LEGACY_DEFAULT_BODY.strip())
+            else draft.body_html
+        ),
         "isSaved": True,
         "savedAt": draft.saved_at.isoformat() if draft.saved_at else None,
     }
@@ -154,11 +166,16 @@ def heading_for(subject_tpl: str, title_tpl: str, name: str, email: str) -> str:
 
 def inner_html(title: str, body: str) -> str:
     return (
-        '<div style="font-family:system-ui,Segoe UI,sans-serif;color:#1c1917;line-height:1.6;">'
-        f'<h1 style="font-size:22px;margin:0 0 16px;color:#8B0000;">{escape(title)}</h1>'
-        f'<div class="bulk-body">{body}</div>'
+        '<div style="font-family:Arial,Helvetica,sans-serif;color:#3a1414;line-height:1.6;">'
+        f'<h1 style="font-size:22px;margin:0 0 16px;color:#610c0d;">{escape(title)}</h1>'
+        f'<div class="bulk-body">{plain_to_html(body)}</div>'
         "</div>"
     )
+
+
+def wrapped_inner_html(title: str, body: str) -> str:
+    settings = get_email_settings()
+    return wrap_email_body(inner_html(title, body), settings.wrapper_html)
 
 
 def serialize_batch(batch: BulkEmailBatch) -> dict[str, Any]:

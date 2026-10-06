@@ -158,7 +158,7 @@ export function ProductForm({
         ))}
       </fieldset>
       <label className="flex items-center gap-2 text-sm">
-        <input name="allowBackorder" type="checkbox" defaultChecked={product?.allowBackorder ?? true} />
+        <input name="allowBackorder" type="checkbox" defaultChecked={product?.allowBackorder ?? false} />
         Allow backorder — if off, W1 + W2 total blocks selling more than you have
       </label>
       <label className="flex items-center gap-2 text-sm">

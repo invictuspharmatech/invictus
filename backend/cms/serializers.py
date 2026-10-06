@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from cms.email_wrapper import DEFAULT_WRAPPER_HTML
 from cms.models import (
     Banner,
     EmailSettings,
@@ -115,6 +116,10 @@ class EmailSettingsSerializer(serializers.ModelSerializer):
     warehouse2Emails = serializers.CharField(
         source="warehouse_2_emails", allow_blank=True, required=False
     )
+    wrapperHtml = serializers.CharField(
+        source="wrapper_html", allow_blank=True, required=False
+    )
+    defaultWrapperHtml = serializers.SerializerMethodField()
 
     class Meta:
         model = EmailSettings
@@ -132,13 +137,27 @@ class EmailSettingsSerializer(serializers.ModelSerializer):
             "extraAdminEmails",
             "warehouse1Emails",
             "warehouse2Emails",
+            "wrapperHtml",
+            "defaultWrapperHtml",
         ]
 
     def get_hasPassword(self, obj):
         return bool(obj.smtp_password)
 
+    def get_defaultWrapperHtml(self, obj):
+        return DEFAULT_WRAPPER_HTML
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not (instance.wrapper_html or "").strip():
+            data["wrapperHtml"] = DEFAULT_WRAPPER_HTML
+        return data
+
     def update(self, instance, validated_data):
         password = validated_data.pop("smtp_password", None)
+        wrapper = validated_data.get("wrapper_html")
+        if wrapper is not None and wrapper.strip() == DEFAULT_WRAPPER_HTML.strip():
+            validated_data["wrapper_html"] = ""
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         if password:

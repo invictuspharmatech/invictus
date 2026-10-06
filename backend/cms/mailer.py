@@ -10,6 +10,7 @@ from django.core.mail import EmailMultiAlternatives, get_connection
 
 from accounts.models import User
 from cms.email_defaults import DEFAULT_TEMPLATES
+from cms.email_wrapper import plain_to_html, wrap_email_body
 from cms.models import EmailSettings, EmailTemplate
 
 logger = logging.getLogger(__name__)
@@ -199,6 +200,7 @@ def send_message(
     if not from_email:
         raise ValueError("From email is required.")
     sender = formataddr((settings.from_name or SITE_NAME, from_email))
+    html_body = wrap_email_body(plain_to_html(html_body), settings.wrapper_html)
     text_body = html_to_text(html_body)
     message = EmailMultiAlternatives(
         subject=subject,

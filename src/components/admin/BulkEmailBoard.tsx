@@ -444,18 +444,34 @@ export function BulkEmailBoard() {
             Subject
             <input className="field" value={subject} onChange={(event) => setSubject(event.target.value)} />
           </label>
-          <label className="grid gap-1 text-sm">
-            Title / heading
-            <input className="field" value={title} onChange={(event) => setTitle(event.target.value)} />
-          </label>
-          <label className="grid gap-1 text-sm">
-            Body HTML
-            <textarea
-              className="field min-h-48 font-mono text-xs"
-              value={bodyHtml}
-              onChange={(event) => setBodyHtml(event.target.value)}
-            />
-          </label>
+          <div>
+            <label className="grid gap-1 text-sm">
+              Title / heading
+              <input
+                className="field"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Leave blank to use the subject as the email heading"
+              />
+            </label>
+          </div>
+          <div>
+            <label className="grid gap-1 text-sm">
+              Message
+              <textarea
+                className="field min-h-48"
+                value={bodyHtml}
+                onChange={(event) => setBodyHtml(event.target.value)}
+                placeholder="Write your email message…"
+              />
+            </label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Type like a normal message — press Enter for a new line. The branded
+              Invictus template wraps this automatically. Placeholders such as{" "}
+              <code className="rounded bg-muted px-1">{"{{recipient_name}}"}</code> work
+              in the text.
+            </p>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <label className="grid gap-1 text-sm">
               Burst size
@@ -502,7 +518,7 @@ export function BulkEmailBoard() {
         {tplPreview ? (
           <div className="mt-4">
             <p className="mb-2 text-sm text-muted-foreground">Subject: {tplPreview.subject}</p>
-            <iframe title="Email preview" className="h-[28rem] w-full rounded border border-border bg-white" srcDoc={tplPreview.html} />
+            <iframe title="Email preview" className="h-[40rem] w-full rounded border border-border bg-white" srcDoc={tplPreview.html} />
           </div>
         ) : (
           <p className="mt-3 text-sm text-muted-foreground">The preview appears after the message loads.</p>

@@ -2,10 +2,13 @@ import { BulkEmailRecipientStatus, BulkEmailStatus } from "@/lib/enums";
 
 export const DEFAULT_BULK_SUBJECT = "A message from Invictus Pharma";
 export const DEFAULT_BULK_TITLE = "";
-export const DEFAULT_BULK_BODY = `<p>Dear {{recipient_name}},</p>
-<p>We wanted to reach out with a brief update. If you have any questions, simply reply to this email.</p>
-<p>Thank you for your continued trust.</p>
-<p>— Invictus Pharma</p>`;
+export const DEFAULT_BULK_BODY = `Dear {{recipient_name}},
+
+We wanted to reach out with a brief update. If you have any questions, simply reply to this email.
+
+Thank you for your continued trust.
+
+— Invictus Pharma`;
 
 export function asBulkEmailStatus(value: string): BulkEmailStatus {
   if (

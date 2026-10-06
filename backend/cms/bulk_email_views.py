@@ -16,7 +16,6 @@ from cms.bulk_email import (
     create_batch,
     default_template,
     heading_for,
-    inner_html,
     merge_tokens,
     process_chunk,
     process_due_batches,
@@ -24,6 +23,7 @@ from cms.bulk_email import (
     save_draft,
     serialize_batch,
     serialize_draft,
+    wrapped_inner_html,
 )
 from cms.models import BulkEmailBatch, BulkEmailDraft, BulkEmailRecipient
 
@@ -83,7 +83,7 @@ def bulk_render_preview_view(request):
     return Response(
         {
             "subject": merge_tokens(subject, name, email),
-            "html": inner_html(heading, merge_tokens(str(body), name, email)),
+            "html": wrapped_inner_html(heading, merge_tokens(str(body), name, email)),
             "previewName": name,
             "previewEmail": email,
         }
