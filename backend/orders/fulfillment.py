@@ -5,6 +5,7 @@ from accounts.permissions import is_full_admin, managed_warehouse
 from catalog.models import Product, StockTransferRequest
 from cms.models import WarehouseSettings
 from orders.models import FulfillmentRequest, Order, OrderItem
+from orders.order_numbers import warehouse_order_suffix
 from orders.totals import allocate_weighted, money
 
 W1 = Product.Warehouse.WAREHOUSE_1
@@ -142,7 +143,7 @@ def sibling_order(source: Order, warehouse: str) -> Order:
     )
     if existing:
         return existing
-    suffix = "W1" if warehouse == W1 else "W2"
+    suffix = warehouse_order_suffix(warehouse)
     return Order.objects.create(
         order_number=f"{source.group_id}-{suffix}",
         group_id=source.group_id,

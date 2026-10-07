@@ -56,7 +56,7 @@ from orders.fulfillment import (
 )
 from orders.coupons import bump_usage, discount_for, is_free_shipping, resolve_coupon
 from orders.models import AccountingReset, ContactMessage, Coupon, FulfillmentRequest, Order, OrderItem
-from orders.order_numbers import allocate_group_id
+from orders.order_numbers import allocate_group_id, warehouse_order_suffix
 from orders.serializers import (
     FulfillmentRequestSerializer,
     OrderSerializer,
@@ -208,7 +208,7 @@ def checkout_view(request):
         for index, (warehouse, group_lines) in enumerate(warehouse_groups):
             merch_after = merch_shares[index]
             share_disc = discount_shares[index]
-            suffix = "W1" if warehouse == Product.Warehouse.WAREHOUSE_1 else "W2"
+            suffix = warehouse_order_suffix(warehouse)
             order = Order.objects.create(
                 order_number=f"{group_id}-{suffix}",
                 group_id=group_id,

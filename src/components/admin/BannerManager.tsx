@@ -165,11 +165,8 @@ export function BannerManager({ initial }: { initial: ApiBannerRuntime }) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="display-font text-3xl">
-            {trashed ? "Feature Banners — Deleted items" : "Feature Banners"}
+            {trashed ? "Banners — Deleted items" : "Banners"}
           </h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            These messages appear in the strip under the navbar, same as Great Life.
-          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {trashed ? (
@@ -342,7 +339,7 @@ export function BannerManager({ initial }: { initial: ApiBannerRuntime }) {
           <div className="tile py-10 text-center text-sm text-muted-foreground">
             {trashed
               ? "No deleted banners."
-              : "No feature banners yet. Add one to show in the strip under the navbar."}
+              : "No banners yet. Add one to show in the strip under the navbar."}
           </div>
         ) : (
           <>

@@ -11,7 +11,6 @@ const EMPTY_SENDER = {
   fromState: "",
   fromZip: "",
   fromCountry: "US",
-  fromPhone: "",
   isDefault: false,
 };
 
@@ -198,7 +197,6 @@ export function BtcPostageBoard({ settings }: { settings: ApiPostageSettings }) 
           <input className="field" placeholder="City" value={senderForm.fromCity} onChange={(e) => setSenderForm({ ...senderForm, fromCity: e.target.value })} required />
           <input className="field" placeholder="State" value={senderForm.fromState} onChange={(e) => setSenderForm({ ...senderForm, fromState: e.target.value })} required />
           <input className="field" placeholder="ZIP" value={senderForm.fromZip} onChange={(e) => setSenderForm({ ...senderForm, fromZip: e.target.value })} required />
-          <input className="field" placeholder="Phone" value={senderForm.fromPhone} onChange={(e) => setSenderForm({ ...senderForm, fromPhone: e.target.value })} />
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"

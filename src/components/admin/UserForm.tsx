@@ -51,7 +51,6 @@ export function UserForm({
         const payload = {
           name: String(form.get("name") || ""),
           email: String(form.get("email") || ""),
-          phone: String(form.get("phone") || ""),
           role: String(form.get("role") || Role.CUSTOMER),
           password: String(form.get("password") || ""),
           isActive: form.get("isActive") === "on",
@@ -83,10 +82,6 @@ export function UserForm({
       <label className="grid gap-1 text-sm">
         Email
         <input className="field" name="email" type="email" defaultValue={user?.email} required />
-      </label>
-      <label className="grid gap-1 text-sm">
-        Phone
-        <input className="field" name="phone" defaultValue={user?.phone} />
       </label>
       <label className="grid gap-1 text-sm">
         Type

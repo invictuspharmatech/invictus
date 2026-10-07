@@ -11,7 +11,7 @@ from orders.btcpay import BtcPayError, create_invoice, is_configured, serialize_
 from orders.coupons import bump_usage, discount_for, is_free_shipping, resolve_coupon
 from orders.fulfillment import FulfillmentError, allocate_quantity, apply_group_shipping, decrement_allocations, get_warehouse_settings
 from orders.models import Order, OrderItem
-from orders.order_numbers import allocate_group_id
+from orders.order_numbers import allocate_group_id, warehouse_order_suffix
 from orders.pay_token import checkout_url
 from orders.serializers import OrderSerializer
 from orders.shop_config import get_default_shipping_usd
@@ -77,7 +77,6 @@ def lookup_customer(query: str) -> dict | None:
     shipping = {
         "name": (last.customer_name if last else "") or user.name,
         "email": user.email,
-        "phone": user.phone or "",
         "line1": last.shipping_line1 if last else "",
         "line2": last.shipping_line2 if last else "",
         "city": last.shipping_city if last else "",
@@ -89,7 +88,6 @@ def lookup_customer(query: str) -> dict | None:
         "id": str(user.id),
         "name": user.name,
         "email": user.email,
-        "phone": user.phone or "",
         "shipping": shipping,
     }
 
@@ -104,7 +102,7 @@ def search_customers(query: str, limit: int = 12) -> list[dict]:
         cap = 12
     rows = User.objects.filter(role=User.Role.CUSTOMER).filter(models_q(cleaned))[:cap]
     return [
-        {"id": str(row.id), "name": row.name, "email": row.email, "phone": row.phone or ""}
+        {"id": str(row.id), "name": row.name, "email": row.email}
         for row in rows
     ]
 
@@ -242,7 +240,7 @@ def create(data: dict, actor: User | None = None) -> dict:
         name = _text(shipping, "name")
         for index, (warehouse, group_lines) in enumerate(warehouse_groups):
             merch_after = merch_shares[index]
-            suffix = "W1" if warehouse == Product.Warehouse.WAREHOUSE_1 else "W2"
+            suffix = warehouse_order_suffix(warehouse)
             paid_at = timezone.now() if payment_status == Order.PaymentStatus.PAID else None
             order = Order.objects.create(
                 order_number=f"{group_id}-{suffix}",

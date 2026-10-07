@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 
 type TabKey = "checkout" | "shipping" | "orderNumbering" | "accounts";
-type SettingsSection = "checkout" | "shipping" | "orderNumbering" | "wholesale" | "affiliate";
+type SettingsSection = "checkout" | "shipping" | "orderNumbering" | "affiliate";
 
 type ShippingFeeRow = {
   id: string;
@@ -24,12 +24,6 @@ type OpsSettings = {
     prefix: string;
     numDigits: number;
     preview: string;
-  };
-  wholesale: {
-    enabled: boolean;
-    minMonthlySpend: number;
-    consecutiveMonthsToRevoke: number;
-    enforceNoMix: boolean;
   };
   affiliate: {
     payoutType: "STORE_CREDIT" | "COMMISSION";
@@ -65,13 +59,7 @@ export function OpsSettingsHub() {
     enabled: false,
     prefix: "INV",
     numDigits: 5,
-    preview: "INV-XXXXXXXX-W1",
-  });
-  const [wholesale, setWholesale] = useState({
-    enabled: false,
-    minMonthlySpend: "3000",
-    consecutiveMonthsToRevoke: "2",
-    enforceNoMix: true,
+    preview: "INV-XXXXXXXX-1",
   });
   const [affiliate, setAffiliate] = useState({
     payoutType: "STORE_CREDIT" as "STORE_CREDIT" | "COMMISSION",
@@ -98,12 +86,6 @@ export function OpsSettingsHub() {
       });
       setFees(data.shipping.fees);
       setOrderNumbering(data.orderNumbering);
-      setWholesale({
-        enabled: data.wholesale.enabled,
-        minMonthlySpend: String(data.wholesale.minMonthlySpend),
-        consecutiveMonthsToRevoke: String(data.wholesale.consecutiveMonthsToRevoke),
-        enforceNoMix: data.wholesale.enforceNoMix,
-      });
       setAffiliate({
         payoutType: data.affiliate.payoutType,
         type: data.affiliate.type,
@@ -138,14 +120,6 @@ export function OpsSettingsHub() {
         minOrderAmount: moneyInput(data.checkout.minOrderAmount),
         maxOrderAmount: moneyInput(data.checkout.maxOrderAmount),
         includeShippingInOrderLimit: data.checkout.includeShippingInOrderLimit,
-      });
-    }
-    if (data.wholesale) {
-      setWholesale({
-        enabled: data.wholesale.enabled,
-        minMonthlySpend: String(data.wholesale.minMonthlySpend),
-        consecutiveMonthsToRevoke: String(data.wholesale.consecutiveMonthsToRevoke),
-        enforceNoMix: data.wholesale.enforceNoMix,
       });
     }
     if (data.affiliate) {
@@ -358,7 +332,7 @@ export function OpsSettingsHub() {
           <h2 className="text-lg">Sequential order number</h2>
           <p className="text-sm text-muted-foreground">
             When enabled, new checkouts use prefix + calendar year + a zero-padded counter (resets
-            each year). Warehouse splits still append -W1 / -W2. Off keeps random INV-XXXXXXXX IDs.
+            each year). Warehouse splits still append -1 / -2. Off keeps random INV-XXXXXXXX IDs.
           </p>
           <label className="flex items-start gap-2 text-sm">
             <input
@@ -409,79 +383,7 @@ export function OpsSettingsHub() {
       ) : null}
 
       {tab === "accounts" ? (
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <form
-            className="tile space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void save("wholesale", {
-                enabled: wholesale.enabled,
-                minMonthlySpend: wholesale.minMonthlySpend,
-                consecutiveMonthsToRevoke: wholesale.consecutiveMonthsToRevoke,
-                enforceNoMix: wholesale.enforceNoMix,
-              });
-            }}
-          >
-            <h2 className="text-lg">Wholesale defaults</h2>
-            <p className="text-sm text-muted-foreground">
-              Stored for later wholesale operations. The storefront does not open a wholesale shop
-              from this switch.
-            </p>
-            <label className="flex items-start gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={wholesale.enabled}
-                onChange={(event) =>
-                  setWholesale((prev) => ({ ...prev, enabled: event.target.checked }))
-                }
-              />
-              Enable wholesale
-            </label>
-            <label className="flex items-start gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={wholesale.enforceNoMix}
-                disabled={!wholesale.enabled}
-                onChange={(event) =>
-                  setWholesale((prev) => ({ ...prev, enforceNoMix: event.target.checked }))
-                }
-              />
-              Enforce no mix (wholesale and retail cannot share a cart)
-            </label>
-            <label className="text-sm">
-              Minimum monthly spend ($)
-              <input
-                className="field mt-1"
-                type="number"
-                min={0}
-                disabled={!wholesale.enabled}
-                value={wholesale.minMonthlySpend}
-                onChange={(event) =>
-                  setWholesale((prev) => ({ ...prev, minMonthlySpend: event.target.value }))
-                }
-              />
-            </label>
-            <label className="text-sm">
-              Consecutive months to revoke
-              <input
-                className="field mt-1"
-                type="number"
-                min={1}
-                disabled={!wholesale.enabled}
-                value={wholesale.consecutiveMonthsToRevoke}
-                onChange={(event) =>
-                  setWholesale((prev) => ({
-                    ...prev,
-                    consecutiveMonthsToRevoke: event.target.value,
-                  }))
-                }
-              />
-            </label>
-            <button className="gold-btn" type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save wholesale settings"}
-            </button>
-          </form>
-
+        <div className="mt-6 max-w-xl">
           <form
             className="tile space-y-4"
             onSubmit={(event) => {

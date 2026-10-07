@@ -48,12 +48,16 @@ def save_order_numbering(payload: dict) -> dict:
     return saved
 
 
+def warehouse_order_suffix(warehouse: str) -> str:
+    return "1" if warehouse == "WAREHOUSE_1" else "2"
+
+
 def preview_order_number(config: dict | None = None) -> str:
     cfg = config or get_order_numbering()
     if not cfg["enabled"]:
-        return "INV-XXXXXXXX-W1"
+        return "INV-XXXXXXXX-1"
     year = timezone.now().year
-    return f"{cfg['prefix']}{year}{'1'.zfill(cfg['numDigits'])}-W1"
+    return f"{cfg['prefix']}{year}{'1'.zfill(cfg['numDigits'])}-1"
 
 
 def allocate_group_id() -> str:

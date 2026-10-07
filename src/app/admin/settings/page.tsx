@@ -8,8 +8,7 @@ export default async function AdminSettingsPage() {
     <div>
       <h1 className="display-font text-3xl">Settings</h1>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        Checkout limits, named shipping fees, sequential order numbers, and wholesale/affiliate
-        defaults.
+        Checkout limits, named shipping fees, sequential order numbers, and affiliate defaults.
       </p>
       <OpsSettingsHub />
     </div>

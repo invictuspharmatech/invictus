@@ -287,7 +287,6 @@ export type ApiAdminUser = {
   email: string;
   name: string;
   role: string;
-  phone: string;
   isAffiliate: boolean;
   affiliateCode: string | null;
   isActive: boolean;

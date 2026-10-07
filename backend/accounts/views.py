@@ -172,8 +172,6 @@ def _apply_user_fields(user, data, actor, *, creating: bool):
     user.email = email
     user.name = name
     user.role = role
-    if "phone" in data:
-        user.phone = str(data.get("phone") or "")
     if "isActive" in data:
         user.is_active = bool(data.get("isActive"))
     if "isAffiliate" in data:

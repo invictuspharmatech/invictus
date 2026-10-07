@@ -17,7 +17,6 @@ type Customer = {
   id: string;
   name: string;
   email: string;
-  phone?: string;
   shipping?: Record<string, string>;
 };
 
@@ -33,7 +32,6 @@ type Preview = {
 const emptyShip = {
   name: "",
   email: "",
-  phone: "",
   line1: "",
   line2: "",
   city: "",
@@ -147,9 +145,11 @@ export function CreateOrderBoard() {
     if (!response.ok) return;
     setCustomer(data);
     if (data.shipping) {
-      setShip({ ...emptyShip, ...data.shipping });
+      const shipping = { ...data.shipping };
+      delete shipping.phone;
+      setShip({ ...emptyShip, ...shipping });
     } else {
-      setShip({ ...emptyShip, name: data.name, email: data.email, phone: data.phone || "" });
+      setShip({ ...emptyShip, name: data.name, email: data.email });
     }
     setQuery("");
     setMatches([]);

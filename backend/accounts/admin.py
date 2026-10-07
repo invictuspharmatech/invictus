@@ -18,7 +18,6 @@ class InvictusUserChangeForm(UserChangeForm):
             "email",
             "name",
             "role",
-            "phone",
             "is_affiliate",
             "affiliate_code",
             "commission_type",
@@ -41,7 +40,7 @@ class UserAdmin(BaseUserAdmin):
     filter_horizontal = ()
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Profile", {"fields": ("name", "role", "phone")}),
+        ("Profile", {"fields": ("name", "role")}),
         (
             "Affiliate",
             {

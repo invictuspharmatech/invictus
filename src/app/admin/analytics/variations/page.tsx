@@ -67,9 +67,6 @@ export default function VariationsAnalyticsPage() {
   return (
     <div>
       {header}
-      <p className="mb-6 text-sm text-muted-foreground">
-        Invictus sells at SKU level, so this tab is SKU performance — the same role as Great Life variations.
-      </p>
       <div className="grid gap-3 sm:grid-cols-3">
         <AnalyticsStat title="SKUs with sales" value={String(data.top_variations.length)} />
         <AnalyticsStat title="Units sold" value={String(totalUnits)} tone="dash-tile-primary" />

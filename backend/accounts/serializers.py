@@ -25,7 +25,6 @@ class UserAdminSerializer(serializers.ModelSerializer):
             "email",
             "name",
             "role",
-            "phone",
             "isAffiliate",
             "affiliateCode",
             "isActive",

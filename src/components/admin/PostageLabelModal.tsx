@@ -18,7 +18,6 @@ type LabelForm = {
   fromState: string;
   fromZip: string;
   fromCountry: string;
-  fromPhone: string;
   toName: string;
   toStreet: string;
   toStreet2: string;
@@ -26,7 +25,6 @@ type LabelForm = {
   toState: string;
   toZip: string;
   toCountry: string;
-  toPhone: string;
   carrier: string;
   packageType: string;
   service: string;
@@ -47,7 +45,6 @@ function emptyForm(order: ApiOrder): LabelForm {
     fromState: "",
     fromZip: "",
     fromCountry: "US",
-    fromPhone: "",
     toName: order.customerName,
     toStreet: order.shippingLine1 || "",
     toStreet2: order.shippingLine2 || "",
@@ -55,7 +52,6 @@ function emptyForm(order: ApiOrder): LabelForm {
     toState: order.shippingState || "",
     toZip: order.shippingPostal || "",
     toCountry: order.shippingCountry || "US",
-    toPhone: "",
     carrier: "usps",
     packageType: "USPScustom",
     service: "GroundAdvantage",
@@ -78,7 +74,6 @@ function applySender(form: LabelForm, sender: ApiPostageSender): LabelForm {
     fromState: sender.fromState,
     fromZip: sender.fromZip,
     fromCountry: sender.fromCountry || "US",
-    fromPhone: sender.fromPhone,
   };
 }
 
@@ -208,7 +203,6 @@ export function PostageLabelModal({
               <input className="field" placeholder="State" value={form.fromState} onChange={(e) => setField("fromState", e.target.value)} />
               <input className="field" placeholder="ZIP" value={form.fromZip} onChange={(e) => setField("fromZip", e.target.value)} />
             </div>
-            <input className="field" placeholder="Phone" value={form.fromPhone} onChange={(e) => setField("fromPhone", e.target.value)} />
           </fieldset>
           <fieldset className="grid gap-2">
             <legend className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
@@ -222,7 +216,6 @@ export function PostageLabelModal({
               <input className="field" placeholder="State" value={form.toState} onChange={(e) => setField("toState", e.target.value)} />
               <input className="field" placeholder="ZIP" value={form.toZip} onChange={(e) => setField("toZip", e.target.value)} />
             </div>
-            <input className="field" placeholder="Phone" value={form.toPhone} onChange={(e) => setField("toPhone", e.target.value)} />
           </fieldset>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
