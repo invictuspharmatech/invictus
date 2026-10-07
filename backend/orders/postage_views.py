@@ -8,6 +8,7 @@ from orders.bitcoinpostage import (
     create_label,
     get_credits,
     get_settings,
+    normalize_api_base,
     serialize_label,
     serialize_sender,
 )
@@ -28,7 +29,7 @@ def postage_settings_view(request):
     if request.method == "PUT":
         if not is_full_admin(request.user):
             return Response({"error": "Only admins can change postage credentials."}, status=403)
-        row.api_url = str(request.data.get("apiUrl") or row.api_url)
+        row.api_url = normalize_api_base(str(request.data.get("apiUrl") or row.api_url))
         if "apiKey" in request.data:
             row.api_key = str(request.data.get("apiKey") or "")
         if "apiSecret" in request.data:

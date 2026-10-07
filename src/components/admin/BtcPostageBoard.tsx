@@ -57,7 +57,9 @@ export function BtcPostageBoard({ settings }: { settings: ApiPostageSettings }) 
       <section className="tile grid max-w-3xl gap-3">
         <h2 className="text-lg">API credentials</h2>
         <p className="text-sm text-muted-foreground">
-          Key and secret from bitcoinpostage.info. Labels are purchased from the orders list.
+          Key and secret from bitcoinpostage.info. Use the API base URL only
+          (https://bitcoinpostage.info/api), not the create-purchase path. Labels are purchased
+          from the orders list.
         </p>
         <p className="text-sm">
           Status: {settings.isConfigured ? "Connected" : <span className="text-brand-red">Not connected</span>}

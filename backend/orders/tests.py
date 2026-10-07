@@ -370,3 +370,24 @@ class AdminCreateAndSummaryTests(TestCase):
         self.assertTrue(pdf.startswith(b"%PDF"))
         self.assertIn(b"INV-1-W2", pdf)
 
+
+class BitcoinPostageUrlTests(SimpleTestCase):
+    def test_normalize_strips_create_purchase_path(self):
+        from orders.bitcoinpostage import DEFAULT_API_BASE, normalize_api_base
+
+        self.assertEqual(normalize_api_base(""), DEFAULT_API_BASE)
+        self.assertEqual(normalize_api_base("https://bitcoinpostage.info"), DEFAULT_API_BASE)
+        self.assertEqual(normalize_api_base("https://bitcoinpostage.info/api"), DEFAULT_API_BASE)
+        self.assertEqual(
+            normalize_api_base("https://bitcoinpostage.info/api/create-purchase"),
+            DEFAULT_API_BASE,
+        )
+        self.assertEqual(
+            normalize_api_base("https://bitcoinpostage.info/api/create-purchase/"),
+            DEFAULT_API_BASE,
+        )
+        self.assertEqual(
+            normalize_api_base("https://btcpostage.com/api/create-purchase"),
+            "https://btcpostage.com/api",
+        )
+

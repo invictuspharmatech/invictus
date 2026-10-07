@@ -18,13 +18,43 @@ def get_settings() -> BitcoinPostageSettings:
     return row
 
 
+DEFAULT_API_BASE = "https://bitcoinpostage.info/api"
+_API_ENDPOINTS = (
+    "create-purchase",
+    "create-batch-purchase",
+    "get-credits",
+    "charge-credits",
+    "get-rates",
+    "retrieve-purchase",
+    "retrieve-order",
+    "verify-address",
+    "orders",
+    "register-track",
+    "stop-track",
+    "retrack-shipment",
+    "track-shipment",
+)
+
+
 def normalize_api_base(url: str) -> str:
-    url = (url or "").strip().rstrip("/")
+    """Return the API root (…/api), even if a full create-purchase URL was saved."""
+    url = (url or "").strip()
     if not url:
-        return "https://bitcoinpostage.info/api"
-    if url.endswith("/api"):
-        return url
-    return f"{url}/api"
+        return DEFAULT_API_BASE
+    url = url.split("#", 1)[0].split("?", 1)[0].rstrip("/")
+    lowered = url.lower()
+    for name in _API_ENDPOINTS:
+        suffix = f"/{name}"
+        if lowered.endswith(suffix):
+            url = url[: -len(suffix)].rstrip("/")
+            lowered = url.lower()
+            break
+    while lowered.endswith("/api/api"):
+        url = url[:-4].rstrip("/")
+        lowered = url.lower()
+    if not lowered.endswith("/api"):
+        url = f"{url.rstrip('/')}/api"
+    return url
 
 
 def credentials() -> dict:
@@ -59,7 +89,27 @@ BTCPOSTAGE_USER_AGENT = (
 )
 
 
+def _error_detail(status: int, url: str, body: str) -> str:
+    text = (body or "").strip()
+    try:
+        data = json.loads(text) if text else {}
+    except json.JSONDecodeError:
+        data = None
+    if isinstance(data, dict):
+        message = data.get("message") or data.get("error") or data.get("msg")
+        if isinstance(message, str) and message.strip():
+            return f"Bitcoin Postage HTTP {status} ({url}): {message.strip()}"
+    if text.lstrip().startswith("<!") or "<html" in text[:80].lower():
+        return (
+            f"Bitcoin Postage HTTP {status} ({url}): that path is not the API. "
+            f"Use {DEFAULT_API_BASE} as the base URL (POST …/create-purchase)."
+        )
+    snippet = " ".join(text.split())[:240]
+    return f"Bitcoin Postage HTTP {status} ({url}): {snippet or 'empty response'}"
+
+
 def _post_form(url: str, form: dict) -> dict:
+    url = (url or "").rstrip("/")
     payload = urllib.parse.urlencode({k: "" if v is None else str(v) for k, v in form.items()}).encode()
     req = urllib.request.Request(url, data=payload, method="POST")
     req.add_header("Content-Type", "application/x-www-form-urlencoded")
@@ -71,13 +121,13 @@ def _post_form(url: str, form: dict) -> dict:
             body = response.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace") if exc.fp else str(exc)
-        raise BitcoinPostageError(f"Bitcoin Postage HTTP {exc.code}: {detail[:500]}") from exc
+        raise BitcoinPostageError(_error_detail(exc.code, url, detail)) from exc
     except urllib.error.URLError as exc:
-        raise BitcoinPostageError(f"Bitcoin Postage request failed: {exc.reason}") from exc
+        raise BitcoinPostageError(f"Bitcoin Postage request failed ({url}): {exc.reason}") from exc
     try:
         data = json.loads(body) if body else {}
     except json.JSONDecodeError as exc:
-        raise BitcoinPostageError(f"Bitcoin Postage returned non-JSON: {body[:300]}") from exc
+        raise BitcoinPostageError(_error_detail(200, url, body)) from exc
     if not isinstance(data, dict):
         raise BitcoinPostageError("Bitcoin Postage returned an unexpected payload.")
     return data
