@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ApiOrder, ApiPostageSender } from "@/lib/api-types";
 
+export const MAX_BTCPOSTAGE_LABEL_BATCH = 10;
+
 const PACKAGE_PRESETS = [
   { key: "envelope", label: '10" × 14" envelope', length: "10", width: "14", height: "0.75" },
   { key: "4x6x2", label: '4" × 6" × 2"', length: "4", width: "6", height: "2" },
@@ -36,7 +38,7 @@ type LabelForm = {
   testMode: boolean;
 };
 
-function emptyForm(order: ApiOrder): LabelForm {
+function emptyForm(order?: ApiOrder): LabelForm {
   return {
     fromName: "",
     fromStreet: "",
@@ -45,18 +47,18 @@ function emptyForm(order: ApiOrder): LabelForm {
     fromState: "",
     fromZip: "",
     fromCountry: "US",
-    toName: order.customerName,
-    toStreet: order.shippingLine1 || "",
-    toStreet2: order.shippingLine2 || "",
-    toCity: order.shippingCity || "",
-    toState: order.shippingState || "",
-    toZip: order.shippingPostal || "",
-    toCountry: order.shippingCountry || "US",
+    toName: order?.customerName || "",
+    toStreet: order?.shippingLine1 || "",
+    toStreet2: order?.shippingLine2 || "",
+    toCity: order?.shippingCity || "",
+    toState: order?.shippingState || "",
+    toZip: order?.shippingPostal || "",
+    toCountry: order?.shippingCountry || "US",
     carrier: "usps",
     packageType: "USPScustom",
     service: "GroundAdvantage",
     weightLbs: "1",
-    weightOz: "",
+    weightOz: "0",
     length: PACKAGE_PRESETS[0].length,
     width: PACKAGE_PRESETS[0].width,
     height: PACKAGE_PRESETS[0].height,
@@ -77,19 +79,44 @@ function applySender(form: LabelForm, sender: ApiPostageSender): LabelForm {
   };
 }
 
+function recipientAddress(order: ApiOrder) {
+  return {
+    toName: order.customerName,
+    toStreet: order.shippingLine1 || "",
+    toStreet2: order.shippingLine2 || "",
+    toCity: order.shippingCity || "",
+    toState: order.shippingState || "",
+    toZip: order.shippingPostal || "",
+    toCountry: order.shippingCountry || "US",
+  };
+}
+
+function createPurchaseBody(form: LabelForm, recipient: ReturnType<typeof recipientAddress>) {
+  return {
+    ...form,
+    ...recipient,
+    weightOz: form.weightOz.trim() || "0",
+    testMode: form.carrier === "usps" ? form.testMode : false,
+    labelFormat: "PDF",
+  };
+}
+
 export function PostageLabelModal({
-  order,
+  orders,
   onClose,
   onCreated,
 }: {
-  order: ApiOrder;
+  orders: ApiOrder[];
   onClose: () => void;
-  onCreated: (next: ApiOrder) => void;
+  onCreated: (updated: ApiOrder[]) => void;
 }) {
-  const [form, setForm] = useState<LabelForm>(() => emptyForm(order));
+  const first = orders[0];
+  const bulk = orders.length > 1;
+  const [form, setForm] = useState<LabelForm>(() => emptyForm(first));
   const [senders, setSenders] = useState<ApiPostageSender[]>([]);
   const [senderId, setSenderId] = useState("");
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -127,36 +154,67 @@ export function PostageLabelModal({
         return;
       }
     }
-    if (!form.toName.trim() || !form.toStreet.trim() || !form.toCity.trim() || !form.toZip.trim()) {
-      setError("Fill the recipient address before creating a label.");
-      return;
-    }
     const lbs = Number(form.weightLbs || 0);
     const oz = Number(form.weightOz || 0);
     if (lbs * 16 + oz <= 0) {
       setError("Enter a package weight.");
       return;
     }
-    setBusy(true);
-    const response = await fetch(`/api/admin/orders/${order.id}/label`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        testMode: form.carrier === "usps" ? form.testMode : false,
-        labelFormat: "PDF",
-      }),
-    });
-    const payload = (await response.json().catch(() => null)) as
-      | { error?: string; order?: ApiOrder }
-      | null;
-    setBusy(false);
-    if (!response.ok || !payload?.order) {
-      setError(payload?.error || "Could not create the Bitcoin Postage label.");
-      return;
+    const targets = bulk
+      ? orders
+      : [
+          {
+            ...first,
+            customerName: form.toName,
+            shippingLine1: form.toStreet,
+            shippingLine2: form.toStreet2,
+            shippingCity: form.toCity,
+            shippingState: form.toState,
+            shippingPostal: form.toZip,
+            shippingCountry: form.toCountry,
+          },
+        ];
+    for (const row of targets) {
+      const to = recipientAddress(row);
+      if (!to.toName.trim() || !to.toStreet.trim() || !to.toCity.trim() || !to.toZip.trim()) {
+        setError(`Fill the recipient address for ${row.orderNumber} before creating a label.`);
+        return;
+      }
     }
-    onCreated(payload.order);
+    setBusy(true);
+    const updated: ApiOrder[] = [];
+    try {
+      for (let index = 0; index < targets.length; index += 1) {
+        const row = targets[index];
+        setProgress(`${index + 1} / ${targets.length}`);
+        const response = await fetch(`/api/admin/orders/${row.id}/label`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(createPurchaseBody(form, recipientAddress(row))),
+        });
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string; order?: ApiOrder }
+          | null;
+        if (!response.ok || !payload?.order) {
+          const done = updated.length;
+          setError(
+            payload?.error ||
+              `Could not create the Bitcoin Postage label for ${row.orderNumber}.` +
+                (done ? ` ${done} label(s) were created before this.` : ""),
+          );
+          if (updated.length) onCreated(updated);
+          return;
+        }
+        updated.push(payload.order);
+      }
+      onCreated(updated);
+    } finally {
+      setBusy(false);
+      setProgress("");
+    }
   }
+
+  if (!first) return null;
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4">
@@ -164,9 +222,13 @@ export function PostageLabelModal({
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-lg">Bitcoin Postage label</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{order.orderNumber}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {bulk
+                ? `${orders.length} order(s) · max ${MAX_BTCPOSTAGE_LABEL_BATCH} per batch · create-purchase once per order`
+                : first.orderNumber}
+            </p>
           </div>
-          <button type="button" className="ghost-btn" onClick={onClose}>
+          <button type="button" className="ghost-btn" onClick={onClose} disabled={busy}>
             Close
           </button>
         </div>
@@ -204,19 +266,41 @@ export function PostageLabelModal({
               <input className="field" placeholder="ZIP" value={form.fromZip} onChange={(e) => setField("fromZip", e.target.value)} />
             </div>
           </fieldset>
-          <fieldset className="grid gap-2">
-            <legend className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              To
-            </legend>
-            <input className="field" placeholder="Name" value={form.toName} onChange={(e) => setField("toName", e.target.value)} />
-            <input className="field" placeholder="Street" value={form.toStreet} onChange={(e) => setField("toStreet", e.target.value)} />
-            <input className="field" placeholder="Street 2" value={form.toStreet2} onChange={(e) => setField("toStreet2", e.target.value)} />
-            <input className="field" placeholder="City" value={form.toCity} onChange={(e) => setField("toCity", e.target.value)} />
-            <div className="grid grid-cols-2 gap-2">
-              <input className="field" placeholder="State" value={form.toState} onChange={(e) => setField("toState", e.target.value)} />
-              <input className="field" placeholder="ZIP" value={form.toZip} onChange={(e) => setField("toZip", e.target.value)} />
-            </div>
-          </fieldset>
+          {bulk ? (
+            <fieldset className="grid gap-2">
+              <legend className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                Recipients
+              </legend>
+              <ul className="max-h-64 space-y-2 overflow-y-auto text-sm">
+                {orders.map((row) => (
+                  <li key={row.id} className="border border-border/40 p-2">
+                    <p className="font-mono text-xs">{row.orderNumber}</p>
+                    <p>{row.customerName}</p>
+                    <p className="text-muted-foreground">
+                      {row.shippingLine1}
+                      {row.shippingLine2 ? `, ${row.shippingLine2}` : ""}
+                      {row.shippingCity ? `, ${row.shippingCity}` : ""} {row.shippingState}{" "}
+                      {row.shippingPostal}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </fieldset>
+          ) : (
+            <fieldset className="grid gap-2">
+              <legend className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                To
+              </legend>
+              <input className="field" placeholder="Name" value={form.toName} onChange={(e) => setField("toName", e.target.value)} />
+              <input className="field" placeholder="Street" value={form.toStreet} onChange={(e) => setField("toStreet", e.target.value)} />
+              <input className="field" placeholder="Street 2" value={form.toStreet2} onChange={(e) => setField("toStreet2", e.target.value)} />
+              <input className="field" placeholder="City" value={form.toCity} onChange={(e) => setField("toCity", e.target.value)} />
+              <div className="grid grid-cols-2 gap-2">
+                <input className="field" placeholder="State" value={form.toState} onChange={(e) => setField("toState", e.target.value)} />
+                <input className="field" placeholder="ZIP" value={form.toZip} onChange={(e) => setField("toZip", e.target.value)} />
+              </div>
+            </fieldset>
+          )}
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <label className="grid gap-1 text-sm">
@@ -279,11 +363,12 @@ export function PostageLabelModal({
           ) : null}
         </div>
         {error ? <p className="mt-3 text-sm text-brand-red">{error}</p> : null}
+        {progress ? <p className="mt-3 text-sm text-muted-foreground">Creating {progress}…</p> : null}
         <div className="mt-5 flex gap-2">
           <button type="button" className="gold-btn" disabled={busy} onClick={() => void submit()}>
-            {busy ? "Creating…" : "Create label"}
+            {busy ? "Creating…" : bulk ? "Create labels" : "Create label"}
           </button>
-          <button type="button" className="ghost-btn" onClick={onClose}>
+          <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
             Cancel
           </button>
         </div>

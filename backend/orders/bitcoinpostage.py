@@ -52,10 +52,19 @@ def _option(options: dict, *keys: str, default: str = "") -> str:
     return default
 
 
+CREATE_PURCHASE_PATH = "/create-purchase"
+# Great Life / WooCommerce plugin: POST https://bitcoinpostage.info/api/create-purchase
+BTCPOSTAGE_USER_AGENT = (
+    "BitcoinPostage-WooCommerce-Plugin/1.09 (compatible; InvictusPharma)"
+)
+
+
 def _post_form(url: str, form: dict) -> dict:
     payload = urllib.parse.urlencode({k: "" if v is None else str(v) for k, v in form.items()}).encode()
     req = urllib.request.Request(url, data=payload, method="POST")
     req.add_header("Content-Type", "application/x-www-form-urlencoded")
+    req.add_header("User-Agent", BTCPOSTAGE_USER_AGENT)
+    req.add_header("Accept", "application/json, text/plain, */*")
     ctx = ssl.create_default_context()
     try:
         with urllib.request.urlopen(req, timeout=90, context=ctx) as response:
@@ -199,8 +208,8 @@ def create_label(order: Order, options: dict) -> ShippingLabel:
             options, "toCountry", "to_country", default=order.shipping_country or "US"
         ),
         "to_phone": _option(options, "toPhone", "to_phone"),
-        "weight_lbs": _option(options, "weightLbs", "weight_lbs", "input_weight_lbs", default="0"),
-        "weight_oz": _option(options, "weightOz", "weight_oz", "input_weight_oz", default="0"),
+        "weight_lbs": _option(options, "weightLbs", "weight_lbs", "input_weight_lbs", default="0") or "0",
+        "weight_oz": _option(options, "weightOz", "weight_oz", "input_weight_oz", default="0") or "0",
         "width": _option(options, "width", "input_width"),
         "height": _option(options, "height", "input_height"),
         "depth": _option(options, "length", "input_length"),
@@ -212,7 +221,7 @@ def create_label(order: Order, options: dict) -> ShippingLabel:
         if options.get("testMode") or options.get("test_mode"):
             form["test_mode"] = "true"
 
-    result = _post_form(f"{creds['api_url']}/create-purchase", form)
+    result = _post_form(f"{creds['api_url']}{CREATE_PURCHASE_PATH}", form)
     item = _first_item(result)
     filename = _label_url(item)
     if not filename:

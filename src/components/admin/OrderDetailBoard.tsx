@@ -158,9 +158,11 @@ export function OrderDetailBoard({
       </section>
       {labelOpen ? (
         <PostageLabelModal
-          order={order}
+          orders={[order]}
           onClose={() => setLabelOpen(false)}
-          onCreated={(next) => {
+          onCreated={(updated) => {
+            const next = updated[0];
+            if (!next) return;
             setOrder(next);
             setTracking(next.trackingNumber || "");
             setLabelOpen(false);

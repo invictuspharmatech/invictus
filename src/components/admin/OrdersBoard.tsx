@@ -7,7 +7,7 @@ import { formatMoney } from "@/lib/constants";
 import { isFullAdmin } from "@/lib/roles";
 import { warehouseLabel, warehouseShort } from "@/lib/warehouse";
 import { OrderStatusSelect } from "@/components/admin/OrderStatusSelect";
-import { PostageLabelModal } from "@/components/admin/PostageLabelModal";
+import { MAX_BTCPOSTAGE_LABEL_BATCH, PostageLabelModal } from "@/components/admin/PostageLabelModal";
 import type { AdminOrdersResponse, ApiOrder } from "@/lib/api-types";
 
 const STATUS_TABS = [
@@ -51,7 +51,7 @@ export function OrdersBoard({
   const [dateTo, setDateTo] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState("");
-  const [labelOrder, setLabelOrder] = useState<ApiOrder | null>(null);
+  const [labelOrders, setLabelOrders] = useState<ApiOrder[] | null>(null);
   const [trackingDraft, setTrackingDraft] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
 
@@ -89,8 +89,28 @@ export function OrdersBoard({
 
   const allSelected = orders.length > 0 && selected.length === orders.length;
 
+  function selectedOrders() {
+    return orders.filter((order) => selected.includes(order.id));
+  }
+
+  function openLabelModal(rows: ApiOrder[]) {
+    if (rows.length === 0) return;
+    if (rows.length > MAX_BTCPOSTAGE_LABEL_BATCH) {
+      setError(
+        `Select up to ${MAX_BTCPOSTAGE_LABEL_BATCH} orders per Bitcoin Postage label batch.`,
+      );
+      return;
+    }
+    setError("");
+    setLabelOrders(rows);
+  }
+
   async function applyBulk() {
     if (!bulkStatus || selected.length === 0) return;
+    if (bulkStatus === "create_labels") {
+      openLabelModal(selectedOrders());
+      return;
+    }
     const response = await fetch("/api/admin/orders/bulk-status", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -221,6 +241,7 @@ export function OrdersBoard({
                 Mark {formatOrderStatus(item)}
               </option>
             ))}
+            <option value="create_labels">Create Bitcoin Postage labels</option>
           </select>
           <button
             type="button"
@@ -231,7 +252,18 @@ export function OrdersBoard({
             Apply
           </button>
           {selected.length > 0 ? (
-            <span className="text-sm text-muted-foreground">{selected.length} selected</span>
+            <>
+              <span className="text-sm text-muted-foreground">
+                {selected.length}/{MAX_BTCPOSTAGE_LABEL_BATCH} selected for label batch
+              </span>
+              <button
+                type="button"
+                className="gold-btn"
+                onClick={() => openLabelModal(selectedOrders())}
+              >
+                Create Bitcoin Postage labels
+              </button>
+            </>
           ) : null}
         </div>
       </div>
@@ -306,52 +338,62 @@ export function OrdersBoard({
                       <p className="text-xs text-muted-foreground">{warehouseLabel(order.warehouse)}</p>
                     </td>
                     <td className="py-4 pr-3">
-                      <Link href={`/admin/orders/${order.id}`} className="ghost-btn">
-                        View
-                      </Link>
+                      <div className="flex flex-wrap gap-2">
+                        <Link href={`/admin/orders/${order.id}`} className="ghost-btn">
+                          View
+                        </Link>
+                        <button
+                          type="button"
+                          className="gold-btn"
+                          onClick={() => openLabelModal([order])}
+                        >
+                          Create label
+                        </button>
+                      </div>
                     </td>
                     <td className="py-4 pr-3">
-                      <button type="button" className="gold-btn" onClick={() => setLabelOrder(order)}>
-                        Create label
-                      </button>
+                      <div className="space-y-2">
+                        {labels.length === 0 ? (
+                          <span className="text-xs text-muted-foreground">No label yet</span>
+                        ) : (
+                          labels.map((label) => (
+                            <div key={label.id} className="text-xs">
+                              {label.trackingUrl ? (
+                                <a href={label.trackingUrl} target="_blank" rel="noreferrer">
+                                  {label.trackingNumber || "Track"}
+                                </a>
+                              ) : (
+                                <span>{label.trackingNumber || "Label"}</span>
+                              )}
+                              {label.labelUrl ? (
+                                <>
+                                  {" · "}
+                                  <a href={label.labelUrl} target="_blank" rel="noreferrer">
+                                    Print
+                                  </a>
+                                </>
+                              ) : null}
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </td>
                     <td className="py-4">
-                      <div className="space-y-2">
-                        {labels.map((label) => (
-                          <div key={label.id} className="text-xs">
-                            {label.trackingUrl ? (
-                              <a href={label.trackingUrl} target="_blank" rel="noreferrer">
-                                {label.trackingNumber || "Track"}
-                              </a>
-                            ) : (
-                              <span>{label.trackingNumber || "Label"}</span>
-                            )}
-                            {label.labelUrl ? (
-                              <>
-                                {" · "}
-                                <a href={label.labelUrl} target="_blank" rel="noreferrer">
-                                  Print
-                                </a>
-                              </>
-                            ) : null}
-                          </div>
-                        ))}
-                        <div className="flex gap-2">
-                          <input
-                            className="field"
-                            placeholder="Tracking #"
-                            value={trackingDraft[order.id] ?? order.trackingNumber ?? ""}
-                            onChange={(event) =>
-                              setTrackingDraft((current) => ({
-                                ...current,
-                                [order.id]: event.target.value,
-                              }))
-                            }
-                          />
-                          <button type="button" className="ghost-btn" onClick={() => void saveTracking(order)}>
-                            Save
-                          </button>
-                        </div>
+                      <div className="flex gap-2">
+                        <input
+                          className="field"
+                          placeholder="Tracking #"
+                          value={trackingDraft[order.id] ?? order.trackingNumber ?? ""}
+                          onChange={(event) =>
+                            setTrackingDraft((current) => ({
+                              ...current,
+                              [order.id]: event.target.value,
+                            }))
+                          }
+                        />
+                        <button type="button" className="ghost-btn" onClick={() => void saveTracking(order)}>
+                          Save
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -362,13 +404,16 @@ export function OrdersBoard({
         </div>
       )}
 
-      {labelOrder ? (
+      {labelOrders?.length ? (
         <PostageLabelModal
-          order={labelOrder}
-          onClose={() => setLabelOrder(null)}
-          onCreated={(next) => {
-            setOrders((current) => current.map((row) => (row.id === next.id ? next : row)));
-            setLabelOrder(null);
+          orders={labelOrders}
+          onClose={() => setLabelOrders(null)}
+          onCreated={(updated) => {
+            setOrders((current) =>
+              current.map((row) => updated.find((next) => next.id === row.id) ?? row),
+            );
+            setLabelOrders(null);
+            setSelected([]);
           }}
         />
       ) : null}
