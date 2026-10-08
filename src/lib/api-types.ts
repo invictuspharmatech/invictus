@@ -247,6 +247,15 @@ export type ApiEmailSettings = {
   useSsl: boolean;
   fromEmail: string;
   fromName: string;
+  bulkSmtpHost: string;
+  bulkSmtpPort: number;
+  bulkSmtpUsername: string;
+  hasBulkPassword: boolean;
+  bulkUseTls: boolean;
+  bulkUseSsl: boolean;
+  bulkFromEmail: string;
+  bulkFromName: string;
+  fallbackTransactionalToBulk: boolean;
   extraAdminEmails: string;
   warehouse1Emails: string;
   warehouse2Emails: string;

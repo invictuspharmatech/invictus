@@ -16,9 +16,9 @@ export default async function CmsEmailPage() {
     <div>
       <h1 className="display-font text-3xl">Email settings & templates</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-        SMTP, the branded email layout, and notification copy. Bulk email lives
-        on the Email tab. Every send uses the Invictus header and footer around
-        the inner message.
+        Separate SMTP for transactional mail and bulk campaigns, plus the
+        branded layout and notification copy. Bulk sending lives on the Email
+        tab.
       </p>
       <div className="mt-8">
         <EmailSettingsForm settings={settings} />

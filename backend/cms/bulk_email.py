@@ -13,7 +13,7 @@ from django.utils import timezone
 
 from accounts.models import User
 from cms.email_wrapper import plain_to_html, wrap_email_body
-from cms.mailer import get_email_settings, send_message
+from cms.mailer import get_email_settings, mail_channel_ready, send_message
 from cms.models import BulkEmailBatch, BulkEmailDraft, BulkEmailRecipient
 
 DEFAULT_SUBJECT = "A message from Invictus Pharma"
@@ -244,8 +244,8 @@ def reconcile_batch(batch: BulkEmailBatch) -> BulkEmailBatch:
 
 def send_one(batch: BulkEmailBatch, recipient: BulkEmailRecipient) -> None:
     settings = get_email_settings()
-    if not settings.enabled or not settings.smtp_host:
-        raise ValueError("Email sending is disabled or SMTP is not configured.")
+    if not mail_channel_ready(settings, "bulk"):
+        raise ValueError("Email sending is disabled or bulk SMTP is not configured.")
     subject = merge_tokens(batch.subject_tpl, recipient.name, recipient.email)
     title = heading_for(batch.subject_tpl, batch.title_tpl, recipient.name, recipient.email)
     body = merge_tokens(batch.body_tpl, recipient.name, recipient.email)
@@ -254,6 +254,7 @@ def send_one(batch: BulkEmailBatch, recipient: BulkEmailRecipient) -> None:
         to=[recipient.email],
         subject=subject,
         html_body=inner_html(title, body),
+        channel="bulk",
     )
 
 

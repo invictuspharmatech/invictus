@@ -53,7 +53,7 @@ class MediaAssetAdmin(admin.ModelAdmin):
 
 @admin.register(EmailSettings)
 class EmailSettingsAdmin(admin.ModelAdmin):
-    list_display = ("from_email", "smtp_host", "enabled")
+    list_display = ("from_email", "smtp_host", "bulk_smtp_host", "fallback_transactional_to_bulk", "enabled")
 
 
 @admin.register(EmailTemplate)

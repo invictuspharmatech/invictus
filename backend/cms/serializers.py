@@ -107,6 +107,25 @@ class EmailSettingsSerializer(serializers.ModelSerializer):
     useSsl = serializers.BooleanField(source="use_ssl", required=False)
     fromEmail = serializers.EmailField(source="from_email", allow_blank=True, required=False)
     fromName = serializers.CharField(source="from_name", allow_blank=True, required=False)
+    bulkSmtpHost = serializers.CharField(source="bulk_smtp_host", allow_blank=True, required=False)
+    bulkSmtpPort = serializers.IntegerField(source="bulk_smtp_port", required=False)
+    bulkSmtpUsername = serializers.CharField(
+        source="bulk_smtp_username", allow_blank=True, required=False
+    )
+    bulkSmtpPassword = serializers.CharField(
+        source="bulk_smtp_password",
+        allow_blank=True,
+        required=False,
+        write_only=True,
+    )
+    hasBulkPassword = serializers.SerializerMethodField()
+    bulkUseTls = serializers.BooleanField(source="bulk_use_tls", required=False)
+    bulkUseSsl = serializers.BooleanField(source="bulk_use_ssl", required=False)
+    bulkFromEmail = serializers.EmailField(source="bulk_from_email", allow_blank=True, required=False)
+    bulkFromName = serializers.CharField(source="bulk_from_name", allow_blank=True, required=False)
+    fallbackTransactionalToBulk = serializers.BooleanField(
+        source="fallback_transactional_to_bulk", required=False
+    )
     extraAdminEmails = serializers.CharField(
         source="extra_admin_emails", allow_blank=True, required=False
     )
@@ -134,6 +153,16 @@ class EmailSettingsSerializer(serializers.ModelSerializer):
             "useSsl",
             "fromEmail",
             "fromName",
+            "bulkSmtpHost",
+            "bulkSmtpPort",
+            "bulkSmtpUsername",
+            "bulkSmtpPassword",
+            "hasBulkPassword",
+            "bulkUseTls",
+            "bulkUseSsl",
+            "bulkFromEmail",
+            "bulkFromName",
+            "fallbackTransactionalToBulk",
             "extraAdminEmails",
             "warehouse1Emails",
             "warehouse2Emails",
@@ -143,6 +172,9 @@ class EmailSettingsSerializer(serializers.ModelSerializer):
 
     def get_hasPassword(self, obj):
         return bool(obj.smtp_password)
+
+    def get_hasBulkPassword(self, obj):
+        return bool(obj.bulk_smtp_password)
 
     def get_defaultWrapperHtml(self, obj):
         return DEFAULT_WRAPPER_HTML
@@ -155,6 +187,7 @@ class EmailSettingsSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         password = validated_data.pop("smtp_password", None)
+        bulk_password = validated_data.pop("bulk_smtp_password", None)
         wrapper = validated_data.get("wrapper_html")
         if wrapper is not None and wrapper.strip() == DEFAULT_WRAPPER_HTML.strip():
             validated_data["wrapper_html"] = ""
@@ -162,6 +195,8 @@ class EmailSettingsSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         if password:
             instance.smtp_password = password
+        if bulk_password:
+            instance.bulk_smtp_password = bulk_password
         instance.save()
         return instance
 

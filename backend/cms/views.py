@@ -288,8 +288,10 @@ def admin_email_template_detail(request, pk):
 @permission_classes([IsStoreStaff])
 def admin_email_test(request):
     to_email = (request.data.get("to") or request.data.get("email") or "").strip()
+    raw_channel = str(request.data.get("channel") or "transactional").strip().lower()
+    channel = "bulk" if raw_channel == "bulk" else "transactional"
     try:
-        send_test_email(to_email)
+        send_test_email(to_email, channel=channel)
     except ValueError as exc:
         return Response({"error": str(exc)}, status=400)
     except Exception:

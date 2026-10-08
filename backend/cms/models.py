@@ -135,6 +135,18 @@ class EmailSettings(models.Model):
     use_ssl = models.BooleanField(default=False)
     from_email = models.EmailField(blank=True)
     from_name = models.CharField(max_length=160, blank=True, default="Invictus Pharma")
+    bulk_smtp_host = models.CharField(max_length=255, blank=True)
+    bulk_smtp_port = models.IntegerField(default=2525)
+    bulk_smtp_username = models.CharField(max_length=255, blank=True)
+    bulk_smtp_password = models.CharField(max_length=255, blank=True)
+    bulk_use_tls = models.BooleanField(default=True)
+    bulk_use_ssl = models.BooleanField(default=False)
+    bulk_from_email = models.EmailField(blank=True)
+    bulk_from_name = models.CharField(max_length=160, blank=True)
+    fallback_transactional_to_bulk = models.BooleanField(
+        default=False,
+        help_text="If transactional SMTP is missing or fails, send order and account mail through the bulk SMTP server.",
+    )
     extra_admin_emails = models.TextField(
         blank=True,
         help_text="Comma-separated extra admin recipients, in addition to staff accounts.",

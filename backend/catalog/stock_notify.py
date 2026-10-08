@@ -7,7 +7,13 @@ from django.db.models import F
 from django.utils import timezone
 
 from catalog.models import Product, ProductStockSubscription, StockNotificationBatch, StockNotificationRecipient
-from cms.mailer import ensure_default_templates, get_email_settings, render_tokens, send_message
+from cms.mailer import (
+    ensure_default_templates,
+    get_email_settings,
+    mail_channel_ready,
+    render_tokens,
+    send_message,
+)
 from cms.models import EmailTemplate
 
 CHUNK_SIZE = 20
@@ -181,7 +187,7 @@ def process_due_batches() -> int:
 
 def _send_one(batch: StockNotificationBatch, recipient: StockNotificationRecipient) -> None:
     mail = get_email_settings()
-    if not mail.enabled or not mail.smtp_host:
+    if not mail_channel_ready(mail, "transactional"):
         raise ValueError("Email sending is disabled or SMTP is not configured.")
     base = settings.PUBLIC_SITE_URL.rstrip("/")
     context = {
@@ -193,4 +199,10 @@ def _send_one(batch: StockNotificationBatch, recipient: StockNotificationRecipie
     }
     subject = render_tokens(batch.subject_tpl, context)
     body = render_tokens(batch.body_tpl, context)
-    send_message(mail, to=[recipient.email], subject=subject, html_body=body)
+    send_message(
+        mail,
+        to=[recipient.email],
+        subject=subject,
+        html_body=body,
+        channel="transactional",
+    )
