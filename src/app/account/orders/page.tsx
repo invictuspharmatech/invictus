@@ -23,7 +23,7 @@ export default async function OrdersPage({
       <PageHeader title="My orders" />
       {placed ? (
         <p className="mb-6 tile text-sm">
-          Order placed. Complete Bitcoin payment if you were not redirected to BTCPay Server.
+          Order placed. Use Pay with Bitcoin to open the invoice popup.
         </p>
       ) : null}
       <div className="space-y-4">

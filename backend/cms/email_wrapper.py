@@ -21,6 +21,11 @@ DEFAULT_WRAPPER_HTML = """<!DOCTYPE html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{APP_NAME}}</title>
+  <style>
+    @media only screen and (max-width: 480px) {
+      .invictus-tagline { font-size: 11px !important; letter-spacing: 0.06em !important; }
+    }
+  </style>
 </head>
 <body style="margin:0;padding:0;background-color:#140808;">
   <table class="invictus-email-shell" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#140808;margin:0;padding:24px 12px;">
@@ -28,17 +33,17 @@ DEFAULT_WRAPPER_HTML = """<!DOCTYPE html>
       <td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(8,2,3,0.35);">
           <tr>
-            <td style="background:linear-gradient(145deg,#3a0c0c 0%,#610c0d 42%,#8B1A1A 100%);padding:28px 32px 22px;text-align:center;">
-              <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto;">
+            <td style="background:linear-gradient(145deg,#3a0c0c 0%,#610c0d 42%,#8B1A1A 100%);padding:24px 12px 20px;text-align:center;">
+              <img src="/images/invictus-logo.png" alt="{{APP_NAME}}" width="160" style="display:block;margin:0 auto;max-width:160px;height:auto;border:0;background:transparent;">
+              <table role="presentation" cellpadding="0" cellspacing="0" align="center" width="100%" style="margin:14px auto 0;width:100%;">
                 <tr>
-                  <td style="background-color:#ffffff;border-radius:10px;padding:10px 18px;">
-                    <img src="/images/invictus-logo.png" alt="{{APP_NAME}}" width="88" style="display:block;max-width:88px;height:auto;border:0;">
+                  <td align="center" style="padding:12px 0 0;border-top:1px solid #c4a06a;">
+                    <p class="invictus-tagline" style="margin:0;font-family:Georgia,Times,'Times New Roman',serif;font-size:15px;line-height:1.25;letter-spacing:0.18em;text-transform:uppercase;color:#e8c56a;white-space:nowrap;">
+                      Precision performance and wellness essentials.
+                    </p>
                   </td>
                 </tr>
               </table>
-              <p style="margin:14px 0 0;font-family:Georgia,Times,'Times New Roman',serif;font-size:13px;letter-spacing:0.12em;text-transform:uppercase;color:#e8c56a;">
-                Precision performance and wellness essentials.
-              </p>
             </td>
           </tr>
           <tr>

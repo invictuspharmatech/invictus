@@ -7,7 +7,7 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from accounts.permissions import IsAuthenticatedUser, IsStoreStaff
+from accounts.permissions import IsAuthenticatedUser, IsSuperuser
 from orders.btcpay import (
     BtcPayError,
     admin_payload,
@@ -200,7 +200,7 @@ def invoice_status_view(request, invoice_id):
 
 
 @api_view(["GET", "PUT"])
-@permission_classes([IsStoreStaff])
+@permission_classes([IsSuperuser])
 def admin_btcpay_settings_view(request):
     if request.method == "PUT":
         try:
@@ -211,7 +211,7 @@ def admin_btcpay_settings_view(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsStoreStaff])
+@permission_classes([IsSuperuser])
 def admin_btcpay_test_view(request):
     try:
         return Response(test_connection())
@@ -220,7 +220,7 @@ def admin_btcpay_test_view(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsStoreStaff])
+@permission_classes([IsSuperuser])
 def admin_btcpay_webhook_view(request):
     try:
         return Response(setup_webhook())

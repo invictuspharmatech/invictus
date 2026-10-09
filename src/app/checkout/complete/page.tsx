@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/site/PageHeader";
+import { BtcPayInvoiceModal } from "@/components/shop/BtcPayInvoiceModal";
 import { formatMoney } from "@/lib/constants";
 
 type PayOrder = {
@@ -16,6 +17,7 @@ type PayOrder = {
 
 export default function CheckoutCompletePage() {
   const [orders, setOrders] = useState<PayOrder[]>([]);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -39,7 +41,7 @@ export default function CheckoutCompletePage() {
     <div className="mx-auto max-w-3xl px-4 pb-20 sm:px-6">
       <PageHeader
         title="Pay with Bitcoin"
-        lede="Your order is reserved. Open BTCPay Server to send the exact amount for this order."
+        lede="Your order is reserved. Complete the Bitcoin invoice in the popup — you stay on this site."
       />
       {orders.length === 0 ? (
         <div className="tile text-sm">
@@ -54,9 +56,9 @@ export default function CheckoutCompletePage() {
           <h2 className="text-lg">Order total</h2>
           <p className="mt-1 text-sm">{formatMoney(total)}</p>
           {checkoutLink ? (
-            <a className="gold-btn mt-4 inline-flex" href={checkoutLink}>
-              Open BTCPay invoice
-            </a>
+            <button type="button" className="gold-btn mt-4 inline-flex" onClick={() => setInvoiceOpen(true)}>
+              Open Bitcoin invoice
+            </button>
           ) : payUrl ? (
             <Link className="gold-btn mt-4 inline-flex" href={payUrl}>
               Open payment page
@@ -71,6 +73,9 @@ export default function CheckoutCompletePage() {
       <Link href="/account/orders" className="mt-8 inline-block text-sm text-muted-foreground">
         View orders
       </Link>
+      {invoiceOpen && checkoutLink ? (
+        <BtcPayInvoiceModal checkoutLink={checkoutLink} onClose={() => setInvoiceOpen(false)} />
+      ) : null}
     </div>
   );
 }

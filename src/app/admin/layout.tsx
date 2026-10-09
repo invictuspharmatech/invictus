@@ -3,7 +3,7 @@ import { requireStaff } from "@/lib/auth";
 import { Logo } from "@/components/site/Logo";
 import { AdminAccountMenu } from "@/components/admin/AdminAccountMenu";
 import { AdminNav, type AdminNavItem } from "@/components/admin/AdminNav";
-import { isFullAdmin, roleLabel } from "@/lib/roles";
+import { isFullAdmin, isSuperuser, roleLabel } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -107,7 +107,6 @@ const ADMIN_NAV: AdminNavItem[] = [
       { href: "/admin/cms/faq", label: "FAQ" },
       { href: "/admin/cms/banners", label: "Banners / promo bar" },
       { href: "/admin/cms/email", label: "Email settings & templates" },
-      { href: "/admin/cms/btcpay", label: "BTCPay / Bitcoin" },
       { href: "/admin/cms/settings", label: "Site settings" },
       { href: "/admin/cms/test-results", label: "Test results" },
     ],
@@ -117,10 +116,25 @@ const ADMIN_NAV: AdminNavItem[] = [
     label: "Settings",
     children: [
       { href: "/admin/settings", label: "Store settings" },
+      { href: "/admin/settings/btcpay", label: "BTCPay / Bitcoin" },
       { href: "/admin/profile", label: "Staff profile" },
     ],
   },
 ];
+
+const BTCPAY_SETTINGS_HREF = "/admin/settings/btcpay";
+
+function navForStaff(admin: boolean, superuser: boolean): AdminNavItem[] {
+  if (!admin) return WAREHOUSE_NAV;
+  if (superuser) return ADMIN_NAV;
+  return ADMIN_NAV.map((item) => {
+    if (item.href !== "/admin/settings" || !item.children) return item;
+    return {
+      ...item,
+      children: item.children.filter((child) => child.href !== BTCPAY_SETTINGS_HREF),
+    };
+  });
+}
 
 const WAREHOUSE_NAV: AdminNavItem[] = [
   { href: "/admin", label: "Dashboard" },
@@ -145,7 +159,7 @@ export default async function AdminLayout({
   const staff = await requireStaff();
   if (!staff) redirect("/login?next=/admin");
   const admin = isFullAdmin(staff.role);
-  const items = admin ? ADMIN_NAV : WAREHOUSE_NAV;
+  const items = navForStaff(admin, isSuperuser(staff.role));
 
   return (
     <div className="min-h-screen bg-background">

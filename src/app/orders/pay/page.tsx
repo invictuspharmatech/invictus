@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/site/PageHeader";
+import { BtcPayInvoiceModal } from "@/components/shop/BtcPayInvoiceModal";
 import { formatMoney } from "@/lib/constants";
 import type { ApiBtcInvoice } from "@/lib/api-types";
 
@@ -26,6 +27,7 @@ function OrderPayInner() {
   const [info, setInfo] = useState<PayInfo | null>(null);
   const [invoice, setInvoice] = useState<ApiBtcInvoice | null>(null);
   const [busy, setBusy] = useState(false);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) {
@@ -69,7 +71,7 @@ function OrderPayInner() {
     }
     setInvoice(data);
     if (data.checkoutLink) {
-      window.location.assign(data.checkoutLink);
+      setInvoiceOpen(true);
     }
   }
 
@@ -119,9 +121,9 @@ function OrderPayInner() {
             This Bitcoin payment link is no longer available. Place a new order to pay.
           </p>
         ) : checkoutLink ? (
-          <a className="gold-btn inline-flex" href={checkoutLink}>
-            Open BTCPay invoice
-          </a>
+          <button type="button" className="gold-btn inline-flex" onClick={() => setInvoiceOpen(true)}>
+            Open Bitcoin invoice
+          </button>
         ) : (
           <button className="gold-btn" type="button" disabled={busy} onClick={() => void createInvoice()}>
             {busy ? "Creating invoice…" : "Create Bitcoin invoice"}
@@ -129,6 +131,9 @@ function OrderPayInner() {
         )}
         {error ? <p className="text-sm text-brand-red">{error}</p> : null}
       </div>
+      {invoiceOpen && checkoutLink ? (
+        <BtcPayInvoiceModal checkoutLink={checkoutLink} onClose={() => setInvoiceOpen(false)} />
+      ) : null}
     </div>
   );
 }

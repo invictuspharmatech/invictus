@@ -13,6 +13,23 @@ export function asRole(value: string): Role {
   return Role.CUSTOMER;
 }
 
+export function isSuperuser(role: string): boolean {
+  const resolved = asRole(role);
+  switch (resolved) {
+    case Role.SUPERUSER:
+      return true;
+    case Role.ADMIN:
+    case Role.WAREHOUSE_1:
+    case Role.WAREHOUSE_2:
+    case Role.CUSTOMER:
+      return false;
+    default: {
+      const exhaustive: never = resolved;
+      return exhaustive;
+    }
+  }
+}
+
 export function isFullAdmin(role: string): boolean {
   const resolved = asRole(role);
   switch (resolved) {

@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/site/PageHeader";
 import { readReferralCode } from "@/components/shop/ReferralCapture";
 import { useCart } from "@/components/shop/CartProvider";
+import { BtcPayInvoiceModal } from "@/components/shop/BtcPayInvoiceModal";
 import { formatMoney } from "@/lib/constants";
 import {
   fetchCheckoutSettings,
@@ -40,6 +41,8 @@ export default function CheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [settings, setSettings] = useState<CheckoutSettings | null>(null);
   const [optionId, setOptionId] = useState<string | null>(null);
+  const [invoiceLink, setInvoiceLink] = useState<string | null>(null);
+  const [placedGroup, setPlacedGroup] = useState("");
 
   useEffect(() => {
     void fetchCheckoutSettings().then((data) => {
@@ -126,13 +129,36 @@ export default function CheckoutPage() {
     if (typeof window !== "undefined") {
       window.sessionStorage.setItem("invictus-checkout-pay", JSON.stringify(orders));
     }
+    const checkoutLink = data.checkoutLink || orders.find((order) => order.checkoutLink)?.checkoutLink || null;
+    setPlacedGroup(data.groupId || "");
     clear();
-    const checkoutLink = data.checkoutLink || orders.find((order) => order.checkoutLink)?.checkoutLink;
     if (checkoutLink) {
-      window.location.assign(checkoutLink);
+      setInvoiceLink(checkoutLink);
       return;
     }
     router.push(`/checkout/complete?group=${encodeURIComponent(data.groupId || "")}`);
+  }
+
+  const closeInvoice = useCallback(() => {
+    const group = placedGroup;
+    setInvoiceLink(null);
+    router.push(`/checkout/complete?group=${encodeURIComponent(group)}`);
+  }, [placedGroup, router]);
+
+  if (invoiceLink) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-20 text-center">
+        <h1 className="display-font text-3xl">Pay with Bitcoin</h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Complete the invoice in the popup. Close it when you are finished.
+        </p>
+        <BtcPayInvoiceModal
+          checkoutLink={invoiceLink}
+          onClose={closeInvoice}
+          footer="Close when finished — you will be taken to your order summary."
+        />
+      </div>
+    );
   }
 
   if (items.length === 0) {
@@ -152,7 +178,7 @@ export default function CheckoutPage() {
     <div className="mx-auto max-w-5xl px-4 pb-20 sm:px-6">
       <PageHeader
         title="Checkout"
-        lede={`${minLabel}Bitcoin is the accepted payment method. After you place the order you will be sent to BTCPay Server to complete payment.`}
+        lede={`${minLabel}Bitcoin is the accepted payment method. After you place the order, the BTCPay invoice opens in a popup on this page.`}
       />
       <form onSubmit={onSubmit} className="grid gap-8 lg:grid-cols-2">
         <div className="tile space-y-4">

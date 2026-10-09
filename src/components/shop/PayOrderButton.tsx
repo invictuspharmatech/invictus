@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ApiBtcInvoice } from "@/lib/api-types";
+import { BtcPayInvoiceModal } from "@/components/shop/BtcPayInvoiceModal";
 
 export function PayOrderButton({
   orderId,
@@ -16,6 +17,7 @@ export function PayOrderButton({
 }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [invoiceHref, setInvoiceHref] = useState<string | null>(null);
   const blocked = [
     "CANCELLED",
     "FAILED",
@@ -29,11 +31,11 @@ export function PayOrderButton({
   const awaiting =
     !blocked &&
     ((paymentStatus || "PENDING") === "PENDING" || paymentStatus === "PARTIAL");
-  if (!awaiting) return null;
+  if (!awaiting && !invoiceHref) return null;
 
   async function openInvoice() {
     if (checkoutLink) {
-      window.location.assign(checkoutLink);
+      setInvoiceHref(checkoutLink);
       return;
     }
     setBusy(true);
@@ -49,15 +51,20 @@ export function PayOrderButton({
       setError(data.error || "Could not open Bitcoin payment.");
       return;
     }
-    window.location.assign(data.checkoutLink);
+    setInvoiceHref(data.checkoutLink);
   }
 
   return (
     <div className="mt-3">
-      <button className="gold-btn" type="button" disabled={busy} onClick={() => void openInvoice()}>
-        {busy ? "Opening…" : "Pay with Bitcoin"}
-      </button>
+      {awaiting ? (
+        <button className="gold-btn" type="button" disabled={busy} onClick={() => void openInvoice()}>
+          {busy ? "Opening…" : "Pay with Bitcoin"}
+        </button>
+      ) : null}
       {error ? <p className="mt-2 text-sm text-brand-red">{error}</p> : null}
+      {invoiceHref ? (
+        <BtcPayInvoiceModal checkoutLink={invoiceHref} onClose={() => setInvoiceHref(null)} />
+      ) : null}
     </div>
   );
 }

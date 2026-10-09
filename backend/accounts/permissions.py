@@ -5,6 +5,10 @@ WAREHOUSE_ROLES = ("WAREHOUSE_1", "WAREHOUSE_2")
 PORTAL_ROLES = ADMIN_ROLES + WAREHOUSE_ROLES
 
 
+def is_superuser(user) -> bool:
+    return bool(user and user.is_authenticated and getattr(user, "role", None) == "SUPERUSER")
+
+
 def is_full_admin(user) -> bool:
     return bool(user and user.is_authenticated and getattr(user, "role", None) in ADMIN_ROLES)
 
@@ -20,6 +24,11 @@ def managed_warehouse(user) -> str | None:
     if role == "WAREHOUSE_2":
         return "WAREHOUSE_2"
     return None
+
+
+class IsSuperuser(BasePermission):
+    def has_permission(self, request, view):
+        return is_superuser(request.user)
 
 
 class IsStoreStaff(BasePermission):
