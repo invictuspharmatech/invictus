@@ -1,5 +1,7 @@
 import { proxyDjango } from "@/lib/proxy-django";
 
+export const maxDuration = 300;
+
 export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },

@@ -391,3 +391,93 @@ class BitcoinPostageUrlTests(SimpleTestCase):
             "https://btcpostage.com/api",
         )
 
+
+class BitcoinPostagePayloadTests(SimpleTestCase):
+    def test_uspscustom_maps_to_custom_package_type(self):
+        from orders.bitcoinpostage import _api_package_type
+
+        self.assertEqual(_api_package_type("USPScustom"), "custom")
+        self.assertEqual(_api_package_type("Parcel"), "Parcel")
+        self.assertEqual(_api_package_type("FlatRateEnvelope"), "FlatRateEnvelope")
+
+    def test_weight_splits_remainder_ounces(self):
+        from orders.bitcoinpostage import _split_weight
+
+        lbs, oz = _split_weight({"weight_lbs": "1", "weight_oz": "0"})
+        self.assertEqual(lbs, 1)
+        self.assertEqual(oz, "0")
+        lbs, oz = _split_weight({"input_weight_lbs": "0", "input_weight_oz": "20"})
+        self.assertEqual(lbs, 1)
+        self.assertEqual(oz, "4")
+
+    def test_purchase_result_normalizes_filename_root(self):
+        from orders.bitcoinpostage import _first_item, _normalize_purchase_result
+
+        nested = _normalize_purchase_result(
+            {"data": {"items": [{"filename": "https://example.com/label.pdf"}]}}
+        )
+        self.assertEqual(_first_item(nested)["filename"], "https://example.com/label.pdf")
+        rooted = _normalize_purchase_result({"filename": "https://example.com/a.pdf"})
+        self.assertEqual(_first_item(rooted)["filename"], "https://example.com/a.pdf")
+
+    def test_json_object_strips_bom_and_noise(self):
+        from orders.bitcoinpostage import _parse_json_object
+
+        data = _parse_json_object('\ufeff{"items":[{"filename":"x"}]}')
+        self.assertEqual(data["items"][0]["filename"], "x")
+        wrapped = _parse_json_object('notice {"items":[{"filename":"y"}]} trailing')
+        self.assertEqual(wrapped["items"][0]["filename"], "y")
+
+
+class PostageDeleteLabelTests(TestCase):
+    def test_delete_keeps_latest_remaining_tracking(self):
+        from datetime import timedelta
+
+        from accounts.models import User
+        from django.utils import timezone
+        from orders.models import ShippingLabel
+        from rest_framework.test import APIClient
+
+        admin = User.objects.create_user(
+            email="admin-labels@example.com",
+            password="pass1234",
+            name="Admin",
+            role=User.Role.ADMIN,
+        )
+        order = Order.objects.create(
+            order_number="INV-DEL-1",
+            group_id="INV-DEL-1",
+            warehouse=Order.Warehouse.WAREHOUSE_1,
+            merchandise_total=10,
+            shipping_total=5,
+            grand_total=15,
+            customer_name="Buyer",
+            customer_email="buyer-labels@example.com",
+            shipping_line1="1 Main",
+            shipping_city="Austin",
+            shipping_state="TX",
+            shipping_postal="78701",
+            tracking_number="TRACK-NEW",
+        )
+        older = ShippingLabel.objects.create(
+            order=order,
+            tracking_number="TRACK-OLD",
+            label_url="https://example.com/old.pdf",
+        )
+        newer = ShippingLabel.objects.create(
+            order=order,
+            tracking_number="TRACK-NEW",
+            label_url="https://example.com/new.pdf",
+        )
+        older.created_at = timezone.now() - timedelta(minutes=1)
+        older.save(update_fields=["created_at"])
+        client = APIClient()
+        client.force_authenticate(user=admin)
+        response = client.delete(f"/api/admin/orders/{order.id}/labels/{newer.id}/")
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.tracking_number, "TRACK-OLD")
+        self.assertFalse(ShippingLabel.objects.filter(pk=newer.id).exists())
+        self.assertTrue(ShippingLabel.objects.filter(pk=older.id).exists())
+        self.assertEqual(len(response.data["order"]["shippingLabels"]), 1)
+

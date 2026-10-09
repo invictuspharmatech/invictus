@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { Printer } from "lucide-react";
 import { STAFF_ORDER_STATUSES, formatOrderStatus, orderStatusTab } from "@/lib/enums";
 import { formatMoney } from "@/lib/constants";
 import { isFullAdmin } from "@/lib/roles";
 import { warehouseLabel, warehouseShort } from "@/lib/warehouse";
 import { OrderStatusSelect } from "@/components/admin/OrderStatusSelect";
 import { MAX_BTCPOSTAGE_LABEL_BATCH, PostageLabelModal } from "@/components/admin/PostageLabelModal";
+import { ShippingLabelActions } from "@/components/admin/ShippingLabelActions";
 import type { AdminOrdersResponse, ApiOrder } from "@/lib/api-types";
 
 const STATUS_TABS = [
@@ -258,6 +260,27 @@ export function OrdersBoard({
               </span>
               <button
                 type="button"
+                className="ghost-btn inline-flex items-center gap-2"
+                onClick={() => {
+                  const urls = selectedOrders()
+                    .flatMap((order) => order.shippingLabels ?? [])
+                    .map((label) => label.labelUrl)
+                    .filter((url) => url.trim());
+                  if (urls.length === 0) {
+                    setError("No shipping labels on the selected orders.");
+                    return;
+                  }
+                  setError("");
+                  for (const url of urls) {
+                    window.open(url, "_blank", "noopener,noreferrer");
+                  }
+                }}
+              >
+                <Printer className="size-4" aria-hidden />
+                Print labels
+              </button>
+              <button
+                type="button"
                 className="gold-btn"
                 onClick={() => openLabelModal(selectedOrders())}
               >
@@ -352,31 +375,16 @@ export function OrdersBoard({
                       </div>
                     </td>
                     <td className="py-4 pr-3">
-                      <div className="space-y-2">
-                        {labels.length === 0 ? (
-                          <span className="text-xs text-muted-foreground">No label yet</span>
-                        ) : (
-                          labels.map((label) => (
-                            <div key={label.id} className="text-xs">
-                              {label.trackingUrl ? (
-                                <a href={label.trackingUrl} target="_blank" rel="noreferrer">
-                                  {label.trackingNumber || "Track"}
-                                </a>
-                              ) : (
-                                <span>{label.trackingNumber || "Label"}</span>
-                              )}
-                              {label.labelUrl ? (
-                                <>
-                                  {" · "}
-                                  <a href={label.labelUrl} target="_blank" rel="noreferrer">
-                                    Print
-                                  </a>
-                                </>
-                              ) : null}
-                            </div>
-                          ))
-                        )}
-                      </div>
+                      <ShippingLabelActions
+                        orderId={order.id}
+                        labels={labels}
+                        onDeleted={(next) =>
+                          setOrders((current) =>
+                            current.map((row) => (row.id === next.id ? next : row)),
+                          )
+                        }
+                        onError={setError}
+                      />
                     </td>
                     <td className="py-4">
                       <div className="flex gap-2">

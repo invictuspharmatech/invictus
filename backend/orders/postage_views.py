@@ -132,3 +132,30 @@ def postage_create_label_view(request, pk):
         return Response({"error": str(exc)}, status=400)
     order = Order.objects.prefetch_related("items", "btc_invoices", "shipping_labels").get(pk=order.pk)
     return Response({"ok": True, "label": serialize_label(label), "order": OrderSerializer(order).data})
+
+
+def _order_for_postage(request, pk) -> Order | None:
+    order = Order.objects.filter(pk=pk).first()
+    if not order:
+        return None
+    warehouse = managed_warehouse(request.user)
+    if warehouse and order.warehouse != warehouse:
+        return None
+    return order
+
+
+@api_view(["DELETE"])
+@permission_classes([IsPortalStaff])
+def postage_delete_label_view(request, pk, label_id):
+    order = _order_for_postage(request, pk)
+    if not order:
+        return Response({"error": "Not found."}, status=404)
+    label = order.shipping_labels.filter(pk=label_id).first()
+    if not label:
+        return Response({"error": "Not found."}, status=404)
+    label.delete()
+    latest = order.shipping_labels.order_by("-created_at").first()
+    order.tracking_number = latest.tracking_number if latest else ""
+    order.save(update_fields=["tracking_number", "updated_at"])
+    order = Order.objects.prefetch_related("items", "btc_invoices", "shipping_labels").get(pk=order.pk)
+    return Response({"ok": True, "order": OrderSerializer(order).data})

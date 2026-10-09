@@ -12,6 +12,35 @@ const PACKAGE_PRESETS = [
   { key: "8x6x3", label: '8" × 6" × 3"', length: "8", width: "6", height: "3" },
 ] as const;
 
+const USPS_PACKAGE_TYPES = [
+  {
+    value: "USPScustom",
+    label: "Custom Box/Package",
+  },
+  { value: "Parcel", label: "Parcel" },
+  { value: "LargeParcel", label: "Large Parcel" },
+  { value: "Flat", label: "Flat" },
+  {
+    value: "FlatRateEnvelope",
+    label: "Flat Rate Envelope (12.5\" × 9.5\")",
+  },
+  {
+    value: "MediumFlatRateBox",
+    label: "Medium Flat Rate Box (11\" × 8.5\" × 5.5\")",
+  },
+] as const;
+
+function isUspsPriorityFlatRate(packageType: string) {
+  return packageType === "FlatRateEnvelope" || packageType === "MediumFlatRateBox";
+}
+
+function flatRateDimensions(packageType: string) {
+  if (packageType === "MediumFlatRateBox") {
+    return { length: "11", width: "8.5", height: "5.5" };
+  }
+  return { length: "12.5", width: "9.5", height: "0.75" };
+}
+
 type LabelForm = {
   fromName: string;
   fromStreet: string;
@@ -92,12 +121,45 @@ function recipientAddress(order: ApiOrder) {
 }
 
 function createPurchaseBody(form: LabelForm, recipient: ReturnType<typeof recipientAddress>) {
+  const flat = form.carrier === "usps" && isUspsPriorityFlatRate(form.packageType);
+  const dims = flat
+    ? flatRateDimensions(form.packageType)
+    : { length: form.length, width: form.width, height: form.height };
+  const service = flat ? "Priority" : form.service;
   return {
-    ...form,
-    ...recipient,
-    weightOz: form.weightOz.trim() || "0",
-    testMode: form.carrier === "usps" ? form.testMode : false,
+    carrier: form.carrier,
+    service,
+    label_format: "PDF",
     labelFormat: "PDF",
+    from_name: form.fromName,
+    from_street: form.fromStreet,
+    from_apt: form.fromApt,
+    from_city: form.fromCity,
+    from_state: form.fromState,
+    from_zip: form.fromZip,
+    from_country: form.fromCountry || "US",
+    to_name: recipient.toName,
+    to_street: recipient.toStreet,
+    to_street2: recipient.toStreet2,
+    to_city: recipient.toCity,
+    to_state: recipient.toState,
+    to_zip: recipient.toZip,
+    to_country: recipient.toCountry || "US",
+    package_type: form.packageType,
+    packagetype_usps: form.packageType,
+    packageType: form.packageType,
+    weight_lbs: form.weightLbs.trim() || "0",
+    weight_oz: form.weightOz.trim() || "0",
+    input_weight_lbs: form.weightLbs.trim() || "0",
+    input_weight_oz: form.weightOz.trim() || "0",
+    input_length: dims.length,
+    input_width: dims.width,
+    input_height: dims.height,
+    length: dims.length,
+    width: dims.width,
+    height: dims.height,
+    test_mode: form.carrier === "usps" ? form.testMode : false,
+    testMode: form.carrier === "usps" ? form.testMode : false,
   };
 }
 
@@ -176,7 +238,13 @@ export function PostageLabelModal({
         ];
     for (const row of targets) {
       const to = recipientAddress(row);
-      if (!to.toName.trim() || !to.toStreet.trim() || !to.toCity.trim() || !to.toZip.trim()) {
+      if (
+        !to.toName.trim() ||
+        !to.toStreet.trim() ||
+        !to.toCity.trim() ||
+        !to.toState.trim() ||
+        !to.toZip.trim()
+      ) {
         setError(`Fill the recipient address for ${row.orderNumber} before creating a label.`);
         return;
       }
@@ -312,37 +380,71 @@ export function PostageLabelModal({
             </select>
           </label>
           <label className="grid gap-1 text-sm">
-            Service
-            <select className="field" value={form.service} onChange={(e) => setField("service", e.target.value)}>
-              <option value="GroundAdvantage">Ground Advantage</option>
-              <option value="Priority">Priority</option>
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm">
-            Package
+            USPS package
             <select
               className="field"
-              value={`${form.length}|${form.width}|${form.height}`}
+              value={form.packageType}
               onChange={(e) => {
-                const preset = PACKAGE_PRESETS.find(
-                  (row) => `${row.length}|${row.width}|${row.height}` === e.target.value,
-                );
-                if (!preset) return;
+                const packageType = e.target.value;
+                const flat = isUspsPriorityFlatRate(packageType);
+                const dims = flat ? flatRateDimensions(packageType) : PACKAGE_PRESETS[0];
                 setForm((current) => ({
                   ...current,
-                  length: preset.length,
-                  width: preset.width,
-                  height: preset.height,
+                  packageType,
+                  service: flat ? "Priority" : current.service || "GroundAdvantage",
+                  length: dims.length,
+                  width: dims.width,
+                  height: dims.height,
                 }));
               }}
             >
-              {PACKAGE_PRESETS.map((row) => (
-                <option key={row.key} value={`${row.length}|${row.width}|${row.height}`}>
+              {USPS_PACKAGE_TYPES.map((row) => (
+                <option key={row.value} value={row.value}>
                   {row.label}
                 </option>
               ))}
             </select>
           </label>
+          <label className="grid gap-1 text-sm">
+            Service
+            {isUspsPriorityFlatRate(form.packageType) ? (
+              <select className="field" value="Priority" disabled>
+                <option value="Priority">Priority (required for flat rate)</option>
+              </select>
+            ) : (
+              <select className="field" value={form.service} onChange={(e) => setField("service", e.target.value)}>
+                <option value="GroundAdvantage">Ground Advantage</option>
+                <option value="Priority">Priority</option>
+              </select>
+            )}
+          </label>
+          {form.packageType === "USPScustom" ? (
+            <label className="grid gap-1 text-sm">
+              Custom size
+              <select
+                className="field"
+                value={`${form.length}|${form.width}|${form.height}`}
+                onChange={(e) => {
+                  const preset = PACKAGE_PRESETS.find(
+                    (row) => `${row.length}|${row.width}|${row.height}` === e.target.value,
+                  );
+                  if (!preset) return;
+                  setForm((current) => ({
+                    ...current,
+                    length: preset.length,
+                    width: preset.width,
+                    height: preset.height,
+                  }));
+                }}
+              >
+                {PACKAGE_PRESETS.map((row) => (
+                  <option key={row.key} value={`${row.length}|${row.width}|${row.height}`}>
+                    {row.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <label className="grid gap-1 text-sm">
             Weight lbs
             <input className="field" value={form.weightLbs} onChange={(e) => setField("weightLbs", e.target.value)} />

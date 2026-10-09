@@ -43,6 +43,10 @@ urlpatterns = [
     path("admin/orders/<uuid:pk>/move-item/", views.admin_order_move_item),
     path("admin/orders/<uuid:pk>/tracking/", views.admin_order_tracking_view),
     path("admin/orders/<uuid:pk>/label/", postage_views.postage_create_label_view),
+    path(
+        "admin/orders/<uuid:pk>/labels/<uuid:label_id>/",
+        postage_views.postage_delete_label_view,
+    ),
     path("admin/fulfillment-requests/", views.admin_fulfillment_requests),
     path("admin/fulfillment-requests/<uuid:pk>/review/", views.admin_fulfillment_request_review),
     path("admin/btcpostage/", postage_views.postage_settings_view),

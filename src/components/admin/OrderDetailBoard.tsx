@@ -7,6 +7,7 @@ import { warehouseLabel } from "@/lib/warehouse";
 import { OrderStatusSelect } from "@/components/admin/OrderStatusSelect";
 import { OrderFulfillmentControls } from "@/components/admin/OrderFulfillmentControls";
 import { PostageLabelModal } from "@/components/admin/PostageLabelModal";
+import { ShippingLabelActions } from "@/components/admin/ShippingLabelActions";
 import type { ApiOrder, ApiWarehouseSettings } from "@/lib/api-types";
 
 export function OrderDetailBoard({
@@ -21,6 +22,7 @@ export function OrderDetailBoard({
   const [order, setOrder] = useState(initial);
   const [labelOpen, setLabelOpen] = useState(false);
   const [tracking, setTracking] = useState(initial.trackingNumber || "");
+  const [labelError, setLabelError] = useState("");
 
   async function reload() {
     const response = await fetch(`/api/admin/orders/${order.id}`);
@@ -132,29 +134,19 @@ export function OrderDetailBoard({
             Create Bitcoin Postage label
           </button>
         </div>
-        <ul className="mt-4 space-y-2 text-sm">
-          {(order.shippingLabels ?? []).map((label) => (
-            <li key={label.id}>
-              {label.carrier} · {label.trackingNumber || "No tracking"}
-              {label.trackingUrl ? (
-                <>
-                  {" · "}
-                  <a href={label.trackingUrl} target="_blank" rel="noreferrer">
-                    Track
-                  </a>
-                </>
-              ) : null}
-              {label.labelUrl ? (
-                <>
-                  {" · "}
-                  <a href={label.labelUrl} target="_blank" rel="noreferrer">
-                    Print label
-                  </a>
-                </>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+        {labelError ? <p className="mt-3 text-sm text-brand-red">{labelError}</p> : null}
+        <div className="mt-4">
+          <ShippingLabelActions
+            orderId={order.id}
+            labels={order.shippingLabels ?? []}
+            onDeleted={(next) => {
+              setLabelError("");
+              setOrder(next);
+              setTracking(next.trackingNumber || "");
+            }}
+            onError={setLabelError}
+          />
+        </div>
       </section>
       {labelOpen ? (
         <PostageLabelModal
