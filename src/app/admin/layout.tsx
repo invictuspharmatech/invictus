@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { requireStaff } from "@/lib/auth";
 import { Logo } from "@/components/site/Logo";
 import { AdminAccountMenu } from "@/components/admin/AdminAccountMenu";
-import { AdminNav, type AdminNavItem } from "@/components/admin/AdminNav";
+import { AdminMobileNav, AdminNav, type AdminNavItem } from "@/components/admin/AdminNav";
 import { isFullAdmin, isSuperuser, roleLabel } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
@@ -171,8 +171,8 @@ export default async function AdminLayout({
               {roleLabel(staff.role)}
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <a href="/" className="ghost-btn">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <a href="/" className="ghost-btn hidden xl:inline-flex">
               View store
             </a>
             <AdminAccountMenu
@@ -180,6 +180,7 @@ export default async function AdminLayout({
               email={staff.email}
               showSettings={admin}
             />
+            <AdminMobileNav items={items} />
           </div>
         </div>
         <AdminNav items={items} />

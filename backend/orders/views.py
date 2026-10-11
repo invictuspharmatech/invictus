@@ -363,17 +363,18 @@ def account_affiliate_view(request):
 def account_summary_view(request):
     from accounts.models import AffiliateApplication
 
-    orders = (
-        Order.objects.filter(user=request.user)
-        .prefetch_related("items", "btc_invoices")
-        .order_by("-created_at")[:24]
-    )
+    base = Order.objects.filter(user=request.user)
+    order_count = base.values("group_id").distinct().count()
+    lifetime_savings = float(base.aggregate(total=Sum("discount_total"))["total"] or 0)
+    orders = base.prefetch_related("items", "btc_invoices").order_by("-created_at")[:24]
     application = (
         AffiliateApplication.objects.filter(user=request.user).order_by("-created_at").first()
     )
     return Response(
         {
             "orders": group_customer_order_payloads(OrderSerializer(orders, many=True).data)[:8],
+            "orderCount": order_count,
+            "lifetimeSavings": lifetime_savings,
             "application": (
                 {"id": str(application.id), "status": application.status}
                 if application
