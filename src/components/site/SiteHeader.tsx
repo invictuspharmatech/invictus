@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, Menu, X } from "lucide-react";
 import { useCart } from "@/components/shop/CartProvider";
+import { HeaderAccountMenu } from "@/components/site/HeaderAccountMenu";
 import { HeaderSearch } from "@/components/site/HeaderSearch";
 import { PromoTicker, type PromoSlide } from "@/components/site/PromoTicker";
 import { isStaff } from "@/lib/roles";
@@ -195,18 +196,17 @@ export function SiteHeader({
             <Link href="/contact" className={NAV_LINK_CLASS}>
               Contact
             </Link>
-            <Link href={accountHref} className={NAV_LINK_CLASS}>
-              My account
-            </Link>
-            {staff ? (
-              <Link href="/admin" className={NAV_LINK_CLASS}>
-                Admin
-              </Link>
-            ) : null}
             <Link href="/cart" className={`${NAV_LINK_CLASS} relative inline-flex items-center gap-2`}>
               Cart
               <CartCount count={count} />
             </Link>
+            {session ? (
+              <HeaderAccountMenu session={session} staff={staff} />
+            ) : (
+              <Link href={accountHref} className={NAV_LINK_CLASS}>
+                My account
+              </Link>
+            )}
           </nav>
           <button
             type="button"
