@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { ProductMediaPicker } from "@/components/admin/ProductMediaPicker";
 import type { ApiProduct } from "@/lib/api-types";
 
 type Props = {
@@ -34,6 +35,7 @@ export function ProductQuickEditPanel({ product, onCancel, onSaved }: Props) {
   );
   const [isFeatured, setIsFeatured] = useState(product.isFeatured);
   const [isNewArrival, setIsNewArrival] = useState(product.isNewArrival);
+  const [image, setImage] = useState(product.image ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -48,6 +50,7 @@ export function ProductQuickEditPanel({ product, onCancel, onSaved }: Props) {
     setMaxQty(Math.max(1, Number(product.maxQuantityPerOrder ?? 1) || 1));
     setIsFeatured(product.isFeatured);
     setIsNewArrival(product.isNewArrival);
+    setImage(product.image ?? "");
     setError("");
   }, [product]);
 
@@ -81,6 +84,7 @@ export function ProductQuickEditPanel({ product, onCancel, onSaved }: Props) {
       allowBackorder,
       isFeatured,
       isNewArrival,
+      image,
       maxQuantityPerOrder: limitQty ? Math.max(1, Number(maxQty) || 1) : null,
     };
     if (canEditW1) payload.stockQuantityW1 = Math.max(0, parseInt(w1, 10) || 0);
@@ -114,6 +118,7 @@ export function ProductQuickEditPanel({ product, onCancel, onSaved }: Props) {
           Product name
           <input className="field" value={name} onChange={(e) => setName(e.target.value)} />
         </label>
+        <ProductMediaPicker value={image} onChange={setImage} />
         <label className="grid gap-1 text-xs">
           Price
           <input

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ProductMediaPicker } from "@/components/admin/ProductMediaPicker";
 import type { ApiCategory, ApiProduct } from "@/lib/api-types";
 
 export function ProductForm({
@@ -13,6 +14,7 @@ export function ProductForm({
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [image, setImage] = useState(product?.image ?? "");
   const selected = new Set(product?.categoryIds ?? []);
 
   return (
@@ -28,7 +30,7 @@ export function ProductForm({
           sku: String(form.get("sku") || ""),
           shortDescription: String(form.get("shortDescription") || ""),
           description: String(form.get("description") || ""),
-          image: String(form.get("image") || ""),
+          image,
           regularPrice: Number(form.get("regularPrice") || 0),
           salePrice: form.get("salePrice") ? Number(form.get("salePrice")) : null,
           warehouse: String(form.get("warehouse") || "WAREHOUSE_2"),
@@ -77,10 +79,7 @@ export function ProductForm({
         Description
         <textarea className="field min-h-40" name="description" defaultValue={product?.description} />
       </label>
-      <label className="grid gap-1 text-sm">
-        Image URL
-        <input className="field" name="image" defaultValue={product?.image ?? ""} />
-      </label>
+      <ProductMediaPicker value={image} onChange={setImage} />
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-1 text-sm">
           Regular price

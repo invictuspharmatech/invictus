@@ -475,7 +475,7 @@ export function AdminProductsTable({
                               </Link>
                               <button
                                 type="button"
-                                title="Quick edit: name, prices, quantity, backorder"
+                                title="Quick edit: name, image, prices, quantity, backorder"
                                 onClick={() =>
                                   setQuickEditId((id) => (id === product.id ? null : product.id))
                                 }
