@@ -37,10 +37,47 @@ export const CATEGORY_BLURBS: Record<string, string> = {
   "womens-line": "Formulas selected for a focused women's line.",
 };
 
+/** Catalog photos shipped in `public/images/products` and served same-origin. */
+const LOCAL_PRODUCT_IMAGE_DIR = "/images/products";
+
+const LOCAL_PRODUCT_IMAGES = new Set([
+  "anastrozole-adex-1mg-10-pack.jpg",
+  "cabergoline-250mcg-4-pack.png",
+  "cabergoline-500mcg-4-pack.jpg",
+  "clenbuterol-clen-40mcg-10-pack.jpg",
+  "clomiphene-clomid-50mg-10-pack.jpg",
+  "enhanced-cock-bombs-10ct.jpg",
+  "exemestane-aromasin-25mg-10-pack.jpg",
+  "ezetimibe-10mg-10-pack.jpg",
+  "humalog-rapid-kwikpen-100iu-3ml.jpg",
+  "hydrochlorothiazide-hctz-25mg-15-pack.jpg",
+  "isotretinoin-accutane-20mg-10-pack.jpg",
+  "lantus-long-acting-solostar-1-pen-100iu-3ml-1.jpg",
+  "metformin-500mg-10-pack.jpg",
+  "modafinil-100mg-10-pack.jpg",
+  "nebivolol-5mg-10-pack.jpg",
+  "progesterone-100mg-10-pack.jpg",
+  "sildenafil-viagra-100mg-10-pack.jpg",
+  "tadalafil-cialis-10mg-10-pack.png",
+  "tadalafil-cialis-20mg-10-pack.jpg",
+  "tamoxifen-citrate-nolva-20mg-10-pack.jpg",
+  "telmisartan-80mg-15-pack.jpg",
+]);
+
+const LOCAL_PRODUCT_IMAGE_ALIASES: Record<string, string> = {
+  "cock-bombs.png": "enhanced-cock-bombs-10ct.jpg",
+};
+
 export function mediaUrl(path: string | null | undefined): string | null {
   if (!path) return null;
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
   const normalized = path.startsWith("/") ? path : `/${path}`;
+  if (normalized.startsWith("/images/")) return normalized;
+  const filename = normalized.split("/").pop() ?? "";
+  const localName = LOCAL_PRODUCT_IMAGE_ALIASES[filename] ?? filename;
+  if (LOCAL_PRODUCT_IMAGES.has(localName)) {
+    return `${LOCAL_PRODUCT_IMAGE_DIR}/${localName}`;
+  }
   return `${IMAGE_ORIGIN}${normalized}`;
 }
 
