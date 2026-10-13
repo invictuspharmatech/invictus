@@ -59,6 +59,7 @@ def _map_stock_status(raw: str) -> str:
 
 
 def import_products(raw: str) -> dict[str, Any]:
+    """Add products from CSV. Never deletes existing catalog rows."""
     imported = 0
     skipped = 0
     errors: list[str] = []

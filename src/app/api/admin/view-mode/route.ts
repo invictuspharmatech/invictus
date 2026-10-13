@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { requireStaff, setUserViewCookie } from "@/lib/auth";
+import { requireFullAdmin, setUserViewCookie } from "@/lib/auth";
 
 export async function POST(request: Request) {
-  const staff = await requireStaff();
+  const staff = await requireFullAdmin();
   if (!staff) {
     return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }

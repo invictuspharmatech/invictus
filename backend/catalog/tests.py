@@ -27,6 +27,27 @@ class CatalogCsvTests(TestCase):
         self.assertEqual(result["imported"], 0)
         self.assertEqual(result["skipped"], 1)
 
+    def test_single_category_import_adds_without_removing_others(self):
+        oils = Category.objects.create(name="Oils", slug="oils")
+        peptides = Category.objects.create(name="Peptides", slug="peptides")
+        kept = Product.objects.create(name="Keep Oil", slug="keep-oil", sku="OIL-KEEP", regular_price=20)
+        kept.category_links.create(category=oils)
+        before_ids = set(Product.objects.values_list("id", flat=True))
+
+        result = import_products(
+            "post_title,sku,regular_price,stock,tax:product_cat\n"
+            "New Peptide,PEP-NEW,40,8,Peptides\n"
+        )
+
+        self.assertEqual(result["imported"], 1)
+        self.assertEqual(result["skipped"], 0)
+        self.assertTrue(Product.objects.filter(pk=kept.pk).exists())
+        self.assertEqual(Product.objects.count(), 2)
+        self.assertEqual(set(Product.objects.values_list("id", flat=True)) - {Product.objects.get(sku="PEP-NEW").id}, before_ids)
+        self.assertEqual(Product.objects.filter(category_links__category=oils).count(), 1)
+        added = Product.objects.get(sku="PEP-NEW")
+        self.assertTrue(added.category_links.filter(category=peptides).exists())
+
     def test_import_and_export_categories(self):
         result = import_categories("name,description,sort_order\nResearch,Lab use,2\n")
         self.assertEqual(result["imported"], 1)

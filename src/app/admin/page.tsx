@@ -8,7 +8,7 @@ import type { ApiDashboardOverview } from "@/lib/api-types";
 
 export default async function AdminHomePage() {
   const staff = await requireStaff();
-  if (!staff) redirect("/login?next=/admin");
+  if (!staff) redirect("/account");
   const overview = await djangoAuthed<ApiDashboardOverview>("/api/admin/overview/");
 
   return (

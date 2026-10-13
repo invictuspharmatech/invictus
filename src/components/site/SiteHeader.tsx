@@ -8,7 +8,7 @@ import { useCart } from "@/components/shop/CartProvider";
 import { HeaderAccountMenu } from "@/components/site/HeaderAccountMenu";
 import { HeaderSearch } from "@/components/site/HeaderSearch";
 import { PromoTicker, type PromoSlide } from "@/components/site/PromoTicker";
-import { isStaff } from "@/lib/roles";
+import { isFullAdmin } from "@/lib/roles";
 import {
   NAV_LINK_CLASS,
   POLICY_LINKS,
@@ -122,7 +122,7 @@ export function SiteHeader({
   const pathname = usePathname();
   const router = useRouter();
   const { count } = useCart();
-  const staff = session ? isStaff(session.role) : false;
+  const showAdmin = session ? isFullAdmin(session.role) : false;
   const [open, setOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
@@ -201,7 +201,7 @@ export function SiteHeader({
               <CartCount count={count} />
             </Link>
             {session ? (
-              <HeaderAccountMenu session={session} staff={staff} />
+              <HeaderAccountMenu session={session} showAdmin={showAdmin} />
             ) : (
               <Link href={accountHref} className={NAV_LINK_CLASS}>
                 My account
@@ -311,7 +311,7 @@ export function SiteHeader({
                   Affiliate tracking
                 </Link>
               ) : null}
-              {staff ? (
+              {showAdmin ? (
                 <Link href="/admin" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
                   Admin
                 </Link>

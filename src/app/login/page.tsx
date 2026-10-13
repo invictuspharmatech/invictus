@@ -6,13 +6,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/site/PageHeader";
 import { Suspense } from "react";
 
+function safeReturnPath(raw: string | null): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/admin")) {
+    return "/account";
+  }
+  return raw;
+}
+
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const [error, setError] = useState<string | null>(
     params.get("error") ? "Invalid email or password." : null,
   );
-  const next = params.get("next") || "/account";
+  const next = safeReturnPath(params.get("next"));
 
   useEffect(() => {
     if (!params.get("email") && !params.get("password")) return;

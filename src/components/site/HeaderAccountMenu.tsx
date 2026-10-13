@@ -17,10 +17,10 @@ const ITEM_CLASS =
 
 export function HeaderAccountMenu({
   session,
-  staff,
+  showAdmin,
 }: {
   session: SessionUser;
-  staff: boolean;
+  showAdmin: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -61,7 +61,7 @@ export function HeaderAccountMenu({
     { href: "/account/orders", label: "Orders" },
     { href: "/account/profile", label: "Profile" },
     ...(session.isAffiliate ? [{ href: "/account/affiliate", label: "Affiliate tracking" }] : []),
-    ...(staff ? [{ href: "/admin", label: "Admin" }] : []),
+    ...(showAdmin ? [{ href: "/admin", label: "Admin" }] : []),
   ];
 
   function isActive(href: string) {

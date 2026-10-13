@@ -11,29 +11,32 @@ function withPathname(request: NextRequest) {
   return headers;
 }
 
-async function isStaffSession(token: string | undefined): Promise<boolean> {
-  if (!token) return false;
+async function sessionRole(token: string | undefined): Promise<string | null> {
+  if (!token) return null;
   const secret = process.env.AUTH_SECRET;
-  if (!secret) return false;
+  if (!secret) return null;
   try {
     const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
-    return typeof payload.role === "string" && STAFF_ROLES.has(payload.role);
+    return typeof payload.role === "string" ? payload.role : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
 export async function middleware(request: NextRequest) {
-  const { pathname, search } = request.nextUrl;
+  const { pathname } = request.nextUrl;
   const requestHeaders = withPathname(request);
 
   if (pathname.startsWith("/admin")) {
     const token = request.cookies.get(SESSION_COOKIE)?.value;
-    if (!(await isStaffSession(token))) {
-      const login = new URL("/login", request.url);
-      login.searchParams.set("next", `${pathname}${search}`);
-      return NextResponse.redirect(login);
+    const role = await sessionRole(token);
+    if (role && STAFF_ROLES.has(role)) {
+      return NextResponse.next({
+        request: { headers: requestHeaders },
+      });
     }
+    const destination = role ? "/account" : "/login";
+    return NextResponse.redirect(new URL(destination, request.url));
   }
 
   return NextResponse.next({

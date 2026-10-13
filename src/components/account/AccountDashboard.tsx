@@ -107,14 +107,12 @@ function StatWidget({
 
 export function AccountDashboard({
   session,
-  staff,
   orders,
   orderCount,
   lifetimeSavings,
   application,
 }: {
   session: SessionUser;
-  staff: boolean;
   orders: ApiOrder[];
   orderCount: number;
   lifetimeSavings: number;
@@ -178,11 +176,6 @@ export function AccountDashboard({
                   Affiliate tracking
                 </Link>
               ) : null}
-              {staff ? (
-                <Link href="/admin" className="text-sm font-medium text-signal hover:underline">
-                  Admin
-                </Link>
-              ) : null}
               <button
                 type="button"
                 className="text-sm font-medium text-muted-foreground hover:text-brand-red"
@@ -225,19 +218,6 @@ export function AccountDashboard({
         </div>
       </div>
 
-      {staff ? (
-        <div className="mt-8 max-w-sm">
-          <StatWidget
-            title="Admin"
-            value="Panel"
-            subtext="Manage store"
-            href="/admin"
-            icon="⚙️"
-            tone="ink"
-          />
-        </div>
-      ) : null}
-
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="space-y-6">
           <CardWidget
@@ -264,16 +244,6 @@ export function AccountDashboard({
               </>
             )}
           </CardWidget>
-          {staff ? (
-            <CardWidget title="Admin dashboard" footerHref="/admin" footerLabel="Open admin">
-              <p className="mb-3 text-sm text-muted-foreground">
-                You have admin access. Manage orders, products, and settings.
-              </p>
-              <Link href="/admin" className="inline-block w-full bg-secondary px-4 py-2 text-center font-medium text-foreground hover:opacity-90">
-                Open Admin →
-              </Link>
-            </CardWidget>
-          ) : null}
         </div>
 
         <div className="lg:col-span-2" id="orders">

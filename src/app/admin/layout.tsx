@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import { requireStaff } from "@/lib/auth";
+import { readSession } from "@/lib/auth";
 import { Logo } from "@/components/site/Logo";
 import { AdminAccountMenu } from "@/components/admin/AdminAccountMenu";
 import { AdminMobileNav, AdminNav, type AdminNavItem } from "@/components/admin/AdminNav";
-import { isFullAdmin, isSuperuser, roleLabel } from "@/lib/roles";
+import { isFullAdmin, isStaff, isSuperuser, roleLabel } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -156,8 +156,9 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const staff = await requireStaff();
-  if (!staff) redirect("/login?next=/admin");
+  const staff = await readSession();
+  if (!staff) redirect("/login");
+  if (!isStaff(staff.role)) redirect("/account");
   const admin = isFullAdmin(staff.role);
   const items = navForStaff(admin, isSuperuser(staff.role));
 
