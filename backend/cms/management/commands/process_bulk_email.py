@@ -4,7 +4,11 @@ from cms.bulk_email import process_due_batches
 
 
 class Command(BaseCommand):
-    help = "Send the next due burst of bulk email and back-in-stock batches."
+    help = (
+        "Send the next due burst of bulk email and back-in-stock batches. "
+        "Also starts any mass-email batches whose scheduled start time has arrived. "
+        "Run on a short cron (e.g. every minute) so scheduled sends begin on time."
+    )
 
     def handle(self, *args, **options):
         attempted = process_due_batches()

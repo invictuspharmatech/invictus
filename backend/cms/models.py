@@ -194,6 +194,7 @@ class BulkEmailDraft(models.Model):
 
 class BulkEmailBatch(models.Model):
     class Status(models.TextChoices):
+        SCHEDULED = "scheduled", "Scheduled"
         RUNNING = "running", "Sending"
         PAUSED = "paused", "Paused"
         STOPPED = "stopped", "Stopped"

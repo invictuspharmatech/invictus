@@ -28,6 +28,22 @@ function apiError(data: unknown, fallback: string) {
   return fallback;
 }
 
+/** Local datetime-local value a few hours ahead (browser local time). */
+function defaultScheduleLocal(hoursAhead = 2): string {
+  const date = new Date(Date.now() + hoursAhead * 60 * 60 * 1000);
+  date.setMinutes(Math.ceil(date.getMinutes() / 5) * 5, 0, 0);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function localInputToIso(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const date = new Date(trimmed);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+}
+
 export function BulkEmailBoard() {
   const [users, setUsers] = useState<ApiAdminUser[]>([]);
   const [search, setSearch] = useState("");
@@ -41,6 +57,8 @@ export function BulkEmailBoard() {
   const [bodyHtml, setBodyHtml] = useState(DEFAULT_BULK_BODY);
   const [chunkSize, setChunkSize] = useState(20);
   const [chunkGapMinutes, setChunkGapMinutes] = useState(5);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduleLocal, setScheduleLocal] = useState(defaultScheduleLocal);
   const [preview, setPreview] = useState<ApiBulkEmailPreview | null>(null);
   const [tplPreview, setTplPreview] = useState<{ subject: string; html: string } | null>(null);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
@@ -70,7 +88,7 @@ export function BulkEmailBoard() {
   const selectedCount = Object.values(selectedIds).filter(Boolean).length;
 
   const payload = useCallback(
-    (includeContent: boolean) => ({
+    (includeContent: boolean, scheduledAt?: string | null) => ({
       userIds: Object.keys(selectedIds).filter((id) => selectedIds[id]),
       selectAllUsers: selectAllDb,
       userSearch: search.trim(),
@@ -83,6 +101,7 @@ export function BulkEmailBoard() {
             bodyHtml,
             chunkSize,
             chunkGapMinutes,
+            ...(scheduledAt ? { scheduledAt } : {}),
           }
         : {}),
     }),
@@ -181,7 +200,12 @@ export function BulkEmailBoard() {
   }, [subject, title, bodyHtml, preview]);
 
   useEffect(() => {
-    if (!batch || batch.status !== BulkEmailStatus.RUNNING) return;
+    if (
+      !batch ||
+      (batch.status !== BulkEmailStatus.RUNNING && batch.status !== BulkEmailStatus.SCHEDULED)
+    ) {
+      return;
+    }
     const timer = setInterval(() => {
       void openBatch(batch.id);
       void loadBatches();
@@ -244,33 +268,43 @@ export function BulkEmailBoard() {
     setPreview(data as ApiBulkEmailPreview);
   }
 
-  async function runSend() {
+  async function runSend(schedule: boolean) {
     if (!preview || preview.count < 1) {
       setError("Preview recipients first and ensure at least one valid address.");
       return;
     }
-    if (
-      !window.confirm(
-        `Send ${preview.count} email(s) in bursts of ${chunkSize}, with a ${chunkGapMinutes} minute pause between each burst?`,
-      )
-    ) {
-      return;
+    let scheduledAt: string | null = null;
+    if (schedule) {
+      scheduledAt = localInputToIso(scheduleLocal);
+      if (!scheduledAt) {
+        setError("Choose a valid date and time to schedule.");
+        return;
+      }
+      if (new Date(scheduledAt).getTime() <= Date.now() + 30_000) {
+        setError("Schedule time must be at least about a minute in the future.");
+        return;
+      }
     }
-    setPending("send");
+    const confirmMessage = schedule
+      ? `Schedule ${preview.count} email(s) for ${new Date(scheduledAt!).toLocaleString()}? Sending will start then in bursts of ${chunkSize}, every ${chunkGapMinutes} minute(s).`
+      : `Send ${preview.count} email(s) in bursts of ${chunkSize}, with a ${chunkGapMinutes} minute pause between each burst?`;
+    if (!window.confirm(confirmMessage)) return;
+
+    setPending(schedule ? "schedule" : "send");
     setError(null);
     const res = await fetch("/api/admin/email/bulk/send", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload(true)),
+      body: JSON.stringify(payload(true, scheduledAt)),
     });
     const data = await res.json().catch(() => ({}));
     setPending("");
     if (!res.ok) {
-      setError(apiError(data, "Could not start sending."));
+      setError(apiError(data, schedule ? "Could not schedule send." : "Could not start sending."));
       return;
     }
     const sent = data as { message?: string; batchId?: string; batch?: ApiBulkEmailBatch };
-    setMessage(sent.message || "Sending started.");
+    setMessage(sent.message || (schedule ? "Send scheduled." : "Sending started."));
     if (sent.batch) setBatch(sent.batch);
     if (sent.batchId) {
       localStorage.setItem(BATCH_KEY, sent.batchId);
@@ -281,8 +315,26 @@ export function BulkEmailBoard() {
 
   async function batchAction(action: "pause" | "stop" | "resume" | "delete") {
     if (!batch) return;
-    if (action === "stop" && !window.confirm("Stop this batch? Remaining recipients will not be sent.")) return;
+    if (action === "stop") {
+      const scheduled = batch.status === BulkEmailStatus.SCHEDULED;
+      if (
+        !window.confirm(
+          scheduled
+            ? "Cancel this scheduled send? No emails will go out."
+            : "Stop this batch? Remaining recipients will not be sent.",
+        )
+      ) {
+        return;
+      }
+    }
     if (action === "delete" && !window.confirm("Delete this batch from history?")) return;
+    if (
+      action === "resume" &&
+      batch.status === BulkEmailStatus.SCHEDULED &&
+      !window.confirm("Start this scheduled batch now instead of waiting?")
+    ) {
+      return;
+    }
     setPending(action);
     setError(null);
     const res = await fetch(`/api/admin/email/bulk/batches/${batch.id}${action === "delete" ? "" : `/${action}`}`, {
@@ -311,8 +363,8 @@ export function BulkEmailBoard() {
         <h1 className="display-font text-3xl">Bulk email</h1>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
           Select customers, paste addresses, or upload a CSV. Messages send in bursts, then pause so the mailbox
-          is not flooded. Use <code>{"{{recipient_name}}"}</code> and <code>{"{{recipient_email}}"}</code> in the
-          subject, title, or body.
+          is not flooded. You can also schedule a send for later. Use <code>{"{{recipient_name}}"}</code> and{" "}
+          <code>{"{{recipient_email}}"}</code> in the subject, title, or body.
         </p>
       </div>
       {error ? <p className="text-sm text-brand-red">{error}</p> : null}
@@ -496,6 +548,35 @@ export function BulkEmailBoard() {
               />
             </label>
           </div>
+          <div className="space-y-3 rounded border border-border/50 bg-card/40 p-3">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={scheduleEnabled}
+                onChange={(event) => {
+                  setScheduleEnabled(event.target.checked);
+                  if (event.target.checked && !scheduleLocal) setScheduleLocal(defaultScheduleLocal());
+                }}
+              />
+              Schedule for later
+            </label>
+            {scheduleEnabled ? (
+              <label className="grid gap-1 text-sm">
+                Start sending at
+                <input
+                  className="field max-w-xs"
+                  type="datetime-local"
+                  value={scheduleLocal}
+                  min={defaultScheduleLocal(0.02)}
+                  onChange={(event) => setScheduleLocal(event.target.value)}
+                />
+                <span className="text-xs text-muted-foreground">
+                  Uses your local time. The batch is saved now and begins automatically at this time
+                  (when the bulk email worker runs).
+                </span>
+              </label>
+            ) : null}
+          </div>
           <div className="flex flex-wrap gap-2">
             <button className="ghost-btn" type="button" disabled={pending === "draft"} onClick={() => void saveDraft()}>
               Save draft
@@ -503,9 +584,25 @@ export function BulkEmailBoard() {
             <button className="ghost-btn" type="button" disabled={pending === "draft"} onClick={() => void resetDraft()}>
               Reset defaults
             </button>
-            <button className="gold-btn" type="button" disabled={pending === "send"} onClick={() => void runSend()}>
-              {pending === "send" ? "Starting…" : "Start sending"}
-            </button>
+            {scheduleEnabled ? (
+              <button
+                className="gold-btn"
+                type="button"
+                disabled={pending === "schedule" || pending === "send"}
+                onClick={() => void runSend(true)}
+              >
+                {pending === "schedule" ? "Scheduling…" : "Schedule send"}
+              </button>
+            ) : (
+              <button
+                className="gold-btn"
+                type="button"
+                disabled={pending === "send" || pending === "schedule"}
+                onClick={() => void runSend(false)}
+              >
+                {pending === "send" ? "Starting…" : "Start sending"}
+              </button>
+            )}
           </div>
           {draftSavedAt ? (
             <p className="text-xs text-muted-foreground">Draft saved {new Date(draftSavedAt).toLocaleString()}</p>
@@ -559,7 +656,14 @@ export function BulkEmailBoard() {
               batches.map((row) => (
                 <tr key={row.id} className="border-t border-border/40">
                   <td className="py-3">{row.subjectPreview || "—"}</td>
-                  <td>{bulkEmailStatusLabel(row.status)}</td>
+                  <td>
+                    {bulkEmailStatusLabel(row.status)}
+                    {row.status === BulkEmailStatus.SCHEDULED && (row.scheduledAt || row.nextSendAt) ? (
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        {new Date(row.scheduledAt || row.nextSendAt!).toLocaleString()}
+                      </span>
+                    ) : null}
+                  </td>
                   <td>
                     {row.sentCount}/{row.totalCount}
                   </td>
@@ -581,7 +685,11 @@ export function BulkEmailBoard() {
           <p className="text-sm text-muted-foreground">
             {bulkEmailStatusLabel(batch.status)} · {batch.sentCount} sent · {batch.failedCount} failed ·{" "}
             {batch.pendingCount} pending
-            {batch.nextSendAt ? ` · next burst ${new Date(batch.nextSendAt).toLocaleString()}` : ""}
+            {batch.status === BulkEmailStatus.SCHEDULED && (batch.scheduledAt || batch.nextSendAt)
+              ? ` · starts ${new Date(batch.scheduledAt || batch.nextSendAt!).toLocaleString()}`
+              : batch.nextSendAt
+                ? ` · next burst ${new Date(batch.nextSendAt).toLocaleString()}`
+                : ""}
           </p>
           <div className="h-2 overflow-hidden rounded bg-border">
             <div
@@ -600,15 +708,15 @@ export function BulkEmailBoard() {
             ) : null}
             {batch.canResume ? (
               <button className="ghost-btn" type="button" disabled={!!pending} onClick={() => void batchAction("resume")}>
-                Resume
+                {batch.status === BulkEmailStatus.SCHEDULED ? "Send now" : "Resume"}
               </button>
             ) : null}
             {batch.canStop ? (
               <button className="ghost-btn" type="button" disabled={!!pending} onClick={() => void batchAction("stop")}>
-                Stop
+                {batch.status === BulkEmailStatus.SCHEDULED ? "Cancel schedule" : "Stop"}
               </button>
             ) : null}
-            {batch.status !== BulkEmailStatus.RUNNING ? (
+            {batch.status !== BulkEmailStatus.RUNNING && batch.status !== BulkEmailStatus.SCHEDULED ? (
               <button className="ghost-btn" type="button" disabled={!!pending} onClick={() => void batchAction("delete")}>
                 Delete
               </button>

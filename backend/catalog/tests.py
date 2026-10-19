@@ -1,9 +1,11 @@
 from django.test import TestCase
 from unittest.mock import patch
 
+from accounts.models import User
 from catalog.csv_io import export_categories, export_products, import_categories, import_products
-from catalog.models import Category, Product, ProductStockSubscription
+from catalog.models import Category, Product, ProductCategory, ProductStockSubscription
 from catalog.stock_notify import dispatch_for_product, subscribe
+from rest_framework.test import APIClient
 
 
 class CatalogCsvTests(TestCase):
@@ -90,3 +92,109 @@ class StockNotifyTests(TestCase):
             ProductStockSubscription.objects.get(email="wait@example.com").status,
             ProductStockSubscription.Status.NOTIFIED,
         )
+
+
+class ProductBulkEditTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            email="bulk-admin@example.com",
+            password="pass1234",
+            name="Admin",
+            role=User.Role.ADMIN,
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.admin)
+        self.cat_a = Category.objects.create(name="Oils", slug="oils")
+        self.cat_b = Category.objects.create(name="Orals", slug="orals")
+        self.p1 = Product.objects.create(
+            name="Alpha",
+            slug="alpha-bulk",
+            sku="BULK-A",
+            regular_price=100,
+            sale_price=None,
+            warehouse=Product.Warehouse.WAREHOUSE_2,
+            status="publish",
+        )
+        self.p2 = Product.objects.create(
+            name="Beta",
+            slug="beta-bulk",
+            sku="BULK-B",
+            regular_price=80,
+            sale_price=70,
+            warehouse=Product.Warehouse.WAREHOUSE_2,
+            status="publish",
+        )
+        ProductCategory.objects.create(product=self.p1, category=self.cat_a)
+
+    def test_sale_percent_and_flat(self):
+        res = self.client.post(
+            "/api/admin/products/bulk/",
+            {"ids": [str(self.p1.id), str(self.p2.id)], "action": "sale_percent", "percent": 20},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.p1.refresh_from_db()
+        self.p2.refresh_from_db()
+        self.assertEqual(self.p1.sale_price, 80.0)
+        self.assertEqual(self.p2.sale_price, 64.0)
+
+        res = self.client.post(
+            "/api/admin/products/bulk/",
+            {"ids": [str(self.p1.id)], "action": "sale_flat", "amount": 50},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.p1.refresh_from_db()
+        self.assertEqual(self.p1.sale_price, 50.0)
+
+    def test_set_category_status_warehouse_delete(self):
+        res = self.client.post(
+            "/api/admin/products/bulk/",
+            {
+                "ids": [str(self.p1.id), str(self.p2.id)],
+                "action": "set_categories",
+                "categoryIds": [str(self.cat_b.id)],
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(
+            list(self.p1.category_links.values_list("category_id", flat=True)),
+            [self.cat_b.id],
+        )
+        self.assertEqual(
+            list(self.p2.category_links.values_list("category_id", flat=True)),
+            [self.cat_b.id],
+        )
+
+        res = self.client.post(
+            "/api/admin/products/bulk/",
+            {"ids": [str(self.p1.id)], "action": "set_status", "status": "draft"},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.p1.refresh_from_db()
+        self.assertEqual(self.p1.status, "draft")
+
+        res = self.client.post(
+            "/api/admin/products/bulk/",
+            {
+                "ids": [str(self.p1.id), str(self.p2.id)],
+                "action": "set_warehouse",
+                "warehouse": Product.Warehouse.WAREHOUSE_1,
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.p1.refresh_from_db()
+        self.p2.refresh_from_db()
+        self.assertEqual(self.p1.warehouse, Product.Warehouse.WAREHOUSE_1)
+        self.assertEqual(self.p2.warehouse, Product.Warehouse.WAREHOUSE_1)
+
+        res = self.client.post(
+            "/api/admin/products/bulk/",
+            {"ids": [str(self.p2.id)], "action": "delete"},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertFalse(Product.objects.filter(pk=self.p2.pk).exists())

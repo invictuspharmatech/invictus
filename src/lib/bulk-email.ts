@@ -12,6 +12,7 @@ Thank you for your continued trust.
 
 export function asBulkEmailStatus(value: string): BulkEmailStatus {
   if (
+    value === BulkEmailStatus.SCHEDULED ||
     value === BulkEmailStatus.RUNNING ||
     value === BulkEmailStatus.PAUSED ||
     value === BulkEmailStatus.STOPPED ||
@@ -26,6 +27,8 @@ export function asBulkEmailStatus(value: string): BulkEmailStatus {
 export function bulkEmailStatusLabel(value: string): string {
   const status = asBulkEmailStatus(value);
   switch (status) {
+    case BulkEmailStatus.SCHEDULED:
+      return "Scheduled";
     case BulkEmailStatus.RUNNING:
       return "Sending";
     case BulkEmailStatus.PAUSED:

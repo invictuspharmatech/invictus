@@ -192,6 +192,7 @@ def serialize_batch(batch: BulkEmailBatch) -> dict[str, Any]:
         and pending > 0
         and status
         in (
+            BulkEmailBatch.Status.SCHEDULED,
             BulkEmailBatch.Status.PAUSED,
             BulkEmailBatch.Status.STOPPED,
             BulkEmailBatch.Status.INTERRUPTED,
@@ -199,8 +200,21 @@ def serialize_batch(batch: BulkEmailBatch) -> dict[str, Any]:
         and bool(batch.subject_tpl and batch.body_tpl)
     )
     can_pause = status == BulkEmailBatch.Status.RUNNING and pending > 0 and has_rows
-    can_stop = status in (BulkEmailBatch.Status.RUNNING, BulkEmailBatch.Status.PAUSED) and pending > 0
+    can_stop = (
+        status
+        in (
+            BulkEmailBatch.Status.SCHEDULED,
+            BulkEmailBatch.Status.RUNNING,
+            BulkEmailBatch.Status.PAUSED,
+        )
+        and pending > 0
+    )
     gap = max(60, int(batch.interval_seconds or DEFAULT_CHUNK_GAP_SECONDS))
+    scheduled_at = (
+        batch.next_send_at.isoformat()
+        if status == BulkEmailBatch.Status.SCHEDULED and batch.next_send_at
+        else None
+    )
     return {
         "id": str(batch.id),
         "totalCount": batch.total_count,
@@ -216,6 +230,7 @@ def serialize_batch(batch: BulkEmailBatch) -> dict[str, Any]:
         "chunkGapMinutes": max(1, round(gap / 60)),
         "intervalSeconds": gap,
         "nextSendAt": batch.next_send_at.isoformat() if batch.next_send_at else None,
+        "scheduledAt": scheduled_at,
         "canResume": can_resume,
         "canPause": can_pause,
         "canStop": can_stop,
@@ -315,7 +330,26 @@ def process_chunk(batch: BulkEmailBatch) -> int:
     return attempted
 
 
+def promote_due_scheduled() -> int:
+    """Flip scheduled batches whose start time has arrived into running."""
+    now = timezone.now()
+    due_ids = list(
+        BulkEmailBatch.objects.filter(
+            status=BulkEmailBatch.Status.SCHEDULED,
+            next_send_at__isnull=False,
+            next_send_at__lte=now,
+        ).values_list("pk", flat=True)
+    )
+    if not due_ids:
+        return 0
+    return BulkEmailBatch.objects.filter(
+        pk__in=due_ids,
+        status=BulkEmailBatch.Status.SCHEDULED,
+    ).update(status=BulkEmailBatch.Status.RUNNING, last_error="")
+
+
 def process_due_batches() -> int:
+    promote_due_scheduled()
     sent = 0
     now = timezone.now()
     due = BulkEmailBatch.objects.filter(status=BulkEmailBatch.Status.RUNNING).filter(
@@ -334,21 +368,27 @@ def create_batch(
     body_html: str,
     chunk_size: int,
     gap_seconds: int,
+    scheduled_at=None,
 ) -> BulkEmailBatch:
     chunk_size = max(1, min(MAX_CHUNK_SIZE, chunk_size))
     gap_seconds = max(60, gap_seconds)
+    start_later = scheduled_at is not None
     with transaction.atomic():
         batch = BulkEmailBatch.objects.create(
             user=actor,
             total_count=len(recipients),
-            status=BulkEmailBatch.Status.RUNNING,
+            status=(
+                BulkEmailBatch.Status.SCHEDULED
+                if start_later
+                else BulkEmailBatch.Status.RUNNING
+            ),
             subject_preview=subject[:255],
             subject_tpl=subject,
             title_tpl=title,
             body_tpl=body_html,
             interval_seconds=gap_seconds,
             chunk_size=chunk_size,
-            next_send_at=timezone.now(),
+            next_send_at=scheduled_at if start_later else timezone.now(),
         )
         BulkEmailRecipient.objects.bulk_create(
             [
@@ -362,5 +402,6 @@ def create_batch(
             ],
             batch_size=500,
         )
-    process_chunk(batch)
+    if not start_later:
+        process_chunk(batch)
     return BulkEmailBatch.objects.get(pk=batch.pk)

@@ -96,20 +96,38 @@ async function patchProduct(id: string, payload: Record<string, unknown>): Promi
   return data;
 }
 
+type BulkAction =
+  | ""
+  | "set_active"
+  | "set_inactive"
+  | "set_categories"
+  | "sale_percent"
+  | "sale_flat"
+  | "clear_sale"
+  | "set_warehouse"
+  | "delete";
+
 export function AdminProductsTable({
   products,
   categories,
   admin,
+  enableWarehouseBulk = true,
 }: {
   products: ApiProduct[];
   categories: ApiCategory[];
   admin: boolean;
+  /** Invictus dual-warehouse; turn off for GreatLife-style single-warehouse catalogs. */
+  enableWarehouseBulk?: boolean;
 }) {
   const router = useRouter();
   const [rows, setRows] = useState(products);
   const [quickEditId, setQuickEditId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [bulkAction, setBulkAction] = useState("");
+  const [bulkAction, setBulkAction] = useState<BulkAction>("");
+  const [bulkPercent, setBulkPercent] = useState("10");
+  const [bulkFlat, setBulkFlat] = useState("50");
+  const [bulkCategoryId, setBulkCategoryId] = useState("");
+  const [bulkWarehouse, setBulkWarehouse] = useState("WAREHOUSE_1");
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [status, setStatus] = useState("all");
@@ -121,6 +139,7 @@ export function AdminProductsTable({
   const [page, setPage] = useState(1);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState("");
 
   useEffect(() => {
     setRows(products);
@@ -251,25 +270,104 @@ export function AdminProductsTable({
     }
   }
 
+  function buildBulkPayload(): Record<string, unknown> | null {
+    const ids = selectedIds;
+    switch (bulkAction) {
+      case "set_active":
+        return { ids, action: "set_status", status: "publish" };
+      case "set_inactive":
+        return { ids, action: "set_status", status: "draft" };
+      case "set_categories":
+        if (!bulkCategoryId) {
+          setBulkError("Choose a category.");
+          return null;
+        }
+        return { ids, action: "set_categories", categoryIds: [bulkCategoryId] };
+      case "sale_percent": {
+        const percent = Number(bulkPercent);
+        if (Number.isNaN(percent) || percent < 0 || percent > 100) {
+          setBulkError("Enter a percent between 0 and 100.");
+          return null;
+        }
+        return { ids, action: "sale_percent", percent };
+      }
+      case "sale_flat": {
+        const amount = Number(bulkFlat);
+        if (Number.isNaN(amount) || amount < 0) {
+          setBulkError("Enter a valid dollar amount.");
+          return null;
+        }
+        return { ids, action: "sale_flat", amount };
+      }
+      case "clear_sale":
+        return { ids, action: "clear_sale" };
+      case "set_warehouse":
+        if (!enableWarehouseBulk) {
+          setBulkError("Warehouse bulk edit is not enabled.");
+          return null;
+        }
+        return { ids, action: "set_warehouse", warehouse: bulkWarehouse };
+      case "delete":
+        return { ids, action: "delete" };
+      default:
+        setBulkError("Choose a bulk action.");
+        return null;
+    }
+  }
+
   async function applyBulk() {
-    if (!admin || bulkAction !== "delete" || selectedIds.length === 0) {
-      window.alert("Select products and a bulk action.");
+    if (!admin || selectedIds.length === 0 || !bulkAction) {
+      setBulkError("Select products and a bulk action.");
       return;
     }
-    if (!window.confirm(`Delete ${selectedIds.length} product(s)? This cannot be undone.`)) return;
+    setBulkError("");
+    const payload = buildBulkPayload();
+    if (!payload) return;
+
+    if (bulkAction === "delete") {
+      if (!window.confirm(`Delete ${selectedIds.length} product(s)? This cannot be undone.`)) return;
+    } else {
+      const label =
+        bulkAction === "sale_percent"
+          ? `${bulkPercent}% off`
+          : bulkAction === "sale_flat"
+            ? `$${bulkFlat} off`
+            : bulkAction.replace(/_/g, " ");
+      if (!window.confirm(`Apply “${label}” to ${selectedIds.length} product(s)?`)) return;
+    }
+
     setBulkBusy(true);
     try {
-      const results = await Promise.all(
-        selectedIds.map(async (id) => {
-          const res = await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
-          return res.ok ? id : null;
-        }),
-      );
-      const removed = new Set(results.filter((id): id is string => Boolean(id)));
-      setRows((prev) => prev.filter((row) => !removed.has(row.id)));
+      const res = await fetch("/api/admin/products/bulk", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        products?: ApiProduct[];
+        deleted?: number;
+        updated?: number;
+      };
+      if (!res.ok) {
+        setBulkError(data.error || "Bulk update failed.");
+        return;
+      }
+
+      if (bulkAction === "delete") {
+        const removed = new Set(selectedIds);
+        setRows((prev) => prev.filter((row) => !removed.has(row.id)));
+        if (quickEditId && removed.has(quickEditId)) setQuickEditId(null);
+      } else if (Array.isArray(data.products)) {
+        const byId = new Map(data.products.map((product) => [product.id, product]));
+        setRows((prev) => prev.map((row) => (byId.has(row.id) ? { ...row, ...byId.get(row.id)! } : row)));
+      }
+
       setSelectedIds([]);
       setBulkAction("");
       router.refresh();
+    } catch {
+      setBulkError("Bulk update failed.");
     } finally {
       setBulkBusy(false);
     }
@@ -285,6 +383,9 @@ export function AdminProductsTable({
   }
 
   const allOnPageSelected = pageRows.length > 0 && pageRows.every((row) => selectedIds.includes(row.id));
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((row) => selectedIds.includes(row.id));
+  const someSelected = selectedIds.length > 0;
 
   return (
     <div className="mt-6">
@@ -341,23 +442,117 @@ export function AdminProductsTable({
         </div>
         <div className="flex flex-wrap items-center justify-between gap-4">
           {admin ? (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <select
-                className="field max-w-48"
+                className="field max-w-56"
                 value={bulkAction}
-                onChange={(event) => setBulkAction(event.target.value)}
+                onChange={(event) => {
+                  setBulkAction(event.target.value as BulkAction);
+                  setBulkError("");
+                }}
               >
                 <option value="">Bulk actions</option>
+                <option value="set_active">Set active</option>
+                <option value="set_inactive">Set inactive</option>
+                <option value="set_categories">Set category</option>
+                <option value="sale_percent">Sale: % off</option>
+                <option value="sale_flat">Sale: $ off</option>
+                <option value="clear_sale">Clear sale prices</option>
+                {enableWarehouseBulk ? (
+                  <option value="set_warehouse">Move to warehouse</option>
+                ) : null}
                 <option value="delete">Delete</option>
               </select>
+              {bulkAction === "set_categories" ? (
+                <select
+                  className="field max-w-48"
+                  value={bulkCategoryId}
+                  onChange={(event) => setBulkCategoryId(event.target.value)}
+                >
+                  <option value="">Choose category</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+              {bulkAction === "sale_percent" ? (
+                <label className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <input
+                    className="field w-20"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={bulkPercent}
+                    onChange={(event) => setBulkPercent(event.target.value)}
+                  />
+                  % off
+                </label>
+              ) : null}
+              {bulkAction === "sale_flat" ? (
+                <label className="flex items-center gap-1 text-sm text-muted-foreground">
+                  $
+                  <input
+                    className="field w-24"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={bulkFlat}
+                    onChange={(event) => setBulkFlat(event.target.value)}
+                  />
+                  off
+                </label>
+              ) : null}
+              {bulkAction === "set_warehouse" && enableWarehouseBulk ? (
+                <select
+                  className="field max-w-44"
+                  value={bulkWarehouse}
+                  onChange={(event) => setBulkWarehouse(event.target.value)}
+                >
+                  <option value="WAREHOUSE_1">Warehouse 1</option>
+                  <option value="WAREHOUSE_2">Warehouse 2</option>
+                </select>
+              ) : null}
+              <button
+                type="button"
+                className="ghost-btn"
+                disabled={bulkBusy || filtered.length === 0 || allFilteredSelected}
+                onClick={() => setSelectedIds(filtered.map((row) => row.id))}
+                title={
+                  filtersOn
+                    ? `Select every product matching the current filters (${filtered.length})`
+                    : `Select every product (${filtered.length})`
+                }
+              >
+                Select all ({filtered.length})
+              </button>
+              {someSelected ? (
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  disabled={bulkBusy}
+                  onClick={() => setSelectedIds([])}
+                >
+                  Clear selection
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="ghost-btn"
                 disabled={bulkBusy || !bulkAction || selectedIds.length === 0}
                 onClick={() => void applyBulk()}
               >
-                Apply
+                {bulkBusy ? "Applying…" : "Apply"}
               </button>
+              {someSelected ? (
+                <span className="text-sm text-muted-foreground">
+                  {allFilteredSelected
+                    ? `All ${selectedIds.length} selected`
+                    : `${selectedIds.length} selected`}
+                </span>
+              ) : null}
             </div>
           ) : (
             <div />
@@ -376,10 +571,25 @@ export function AdminProductsTable({
             ) : null}
           </div>
         </div>
+        {admin && bulkError ? <p className="mt-3 text-sm text-brand-red">{bulkError}</p> : null}
+        {admin && allOnPageSelected && !allFilteredSelected && filtered.length > pageRows.length ? (
+          <div className="mt-3 rounded border border-signal/40 bg-signal/10 px-3 py-2 text-sm">
+            All {pageRows.length} products on this page are selected.{" "}
+            <button
+              type="button"
+              className="font-medium text-signal underline-offset-2 hover:underline"
+              onClick={() => setSelectedIds(filtered.map((row) => row.id))}
+            >
+              Select all {filtered.length} products
+            </button>{" "}
+            across every page instead.
+          </div>
+        ) : null}
       </div>
 
       <p className="mb-3 text-sm text-muted-foreground">
         {filtered.length} items • Page {currentPage} of {lastPage}
+        {someSelected ? ` • ${selectedIds.length} selected` : ""}
       </p>
 
       {filtered.length === 0 ? (
@@ -394,8 +604,23 @@ export function AdminProductsTable({
                     {admin ? (
                       <input
                         type="checkbox"
-                        checked={allOnPageSelected}
+                        title={
+                          allFilteredSelected
+                            ? "Clear selection"
+                            : "Select this page (use Select all for every product)"
+                        }
+                        checked={allOnPageSelected || allFilteredSelected}
+                        ref={(el) => {
+                          if (el) {
+                            el.indeterminate =
+                              someSelected && !allOnPageSelected && !allFilteredSelected;
+                          }
+                        }}
                         onChange={(event) => {
+                          if (allFilteredSelected) {
+                            setSelectedIds([]);
+                            return;
+                          }
                           if (event.target.checked) {
                             setSelectedIds((prev) => [
                               ...new Set([...prev, ...pageRows.map((row) => row.id)]),

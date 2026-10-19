@@ -103,6 +103,7 @@ export type AccountingWarehouse =
   (typeof AccountingWarehouse)[keyof typeof AccountingWarehouse];
 
 export const BulkEmailStatus = {
+  SCHEDULED: "scheduled",
   RUNNING: "running",
   PAUSED: "paused",
   STOPPED: "stopped",

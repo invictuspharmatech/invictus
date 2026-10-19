@@ -1,6 +1,9 @@
+from datetime import timedelta
+
 from django.core.paginator import Paginator
 from django.db.models import Count
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
@@ -33,6 +36,27 @@ def _int(value, default: int) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _parse_scheduled_at(raw) -> tuple[object | None, str | None]:
+    """Return (aware datetime, error). None raw means send immediately."""
+    if raw in (None, ""):
+        return None, None
+    text = str(raw).strip()
+    if not text:
+        return None, None
+    parsed = parse_datetime(text.replace("Z", "+00:00"))
+    if parsed is None:
+        return None, "Could not parse scheduled time. Use an ISO datetime."
+    if timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed, timezone.get_current_timezone())
+    now = timezone.now()
+    if parsed <= now + timedelta(seconds=30):
+        return None, "Schedule time must be at least about a minute in the future."
+    # Cap how far out to avoid accidents (1 year).
+    if parsed > now + timedelta(days=366):
+        return None, "Schedule time cannot be more than one year ahead."
+    return parsed, None
 
 
 @api_view(["GET", "PUT", "DELETE"])
@@ -113,6 +137,11 @@ def bulk_send_view(request):
         return Response({"error": f"Too many recipients (max {MAX_RECIPIENTS})."}, status=400)
     chunk_size = max(1, min(MAX_CHUNK_SIZE, _int(request.data.get("chunkSize") or request.data.get("chunk_size"), DEFAULT_CHUNK_SIZE)))
     gap_minutes = max(1, min(1440, _int(request.data.get("chunkGapMinutes") or request.data.get("chunk_gap_minutes"), 5)))
+    scheduled_at, schedule_error = _parse_scheduled_at(
+        request.data.get("scheduledAt") or request.data.get("scheduled_at")
+    )
+    if schedule_error:
+        return Response({"error": schedule_error}, status=400)
     save_draft(request.user, subject, title, str(body))
     batch = create_batch(
         request.user,
@@ -122,15 +151,25 @@ def bulk_send_view(request):
         str(body),
         chunk_size,
         gap_minutes * 60,
+        scheduled_at=scheduled_at,
     )
     batch = reconcile_batch(batch)
+    if scheduled_at:
+        when = timezone.localtime(scheduled_at).strftime("%b %d, %Y %I:%M %p")
+        message = (
+            f"Scheduled for {when}. {batch.total_count} recipient(s) are queued; "
+            f"sending will start automatically, then continue in bursts of {batch.chunk_size} "
+            f"every {max(1, round(batch.interval_seconds / 60))} minute(s)."
+        )
+    else:
+        message = (
+            f"Sending started. First burst of up to {batch.chunk_size} email(s) goes out now, "
+            f"then every {max(1, round(batch.interval_seconds / 60))} minute(s)."
+        )
     return Response(
         {
             "ok": True,
-            "message": (
-                f"Sending started. First burst of up to {batch.chunk_size} email(s) goes out now, "
-                f"then every {max(1, round(batch.interval_seconds / 60))} minute(s)."
-            ),
+            "message": message,
             "batchId": str(batch.id),
             "batch": serialize_batch(batch),
         },
@@ -156,7 +195,11 @@ def bulk_batch_list_view(request):
         qs = qs.filter(user=request.user)
     rows = []
     for batch in qs[:15]:
-        if batch.status in (BulkEmailBatch.Status.RUNNING, BulkEmailBatch.Status.PAUSED):
+        if batch.status in (
+            BulkEmailBatch.Status.SCHEDULED,
+            BulkEmailBatch.Status.RUNNING,
+            BulkEmailBatch.Status.PAUSED,
+        ):
             batch = reconcile_batch(batch)
         rows.append(serialize_batch(batch))
     return Response(rows)
@@ -171,6 +214,11 @@ def bulk_batch_detail_view(request, pk):
     if request.method == "DELETE":
         if batch.status == BulkEmailBatch.Status.RUNNING:
             return Response({"error": "Pause or stop the batch before deleting it."}, status=400)
+        if batch.status == BulkEmailBatch.Status.SCHEDULED:
+            return Response(
+                {"error": "Cancel the schedule first, then delete it from history."},
+                status=400,
+            )
         batch.delete()
         return Response({"ok": True})
     process_due_batches()
@@ -249,12 +297,24 @@ def bulk_batch_stop_view(request, pk):
     batch = _get_batch(request, pk)
     if isinstance(batch, Response):
         return batch
-    if batch.status not in (BulkEmailBatch.Status.RUNNING, BulkEmailBatch.Status.PAUSED):
-        return Response({"error": "Only a sending or paused batch can be stopped."}, status=400)
+    if batch.status not in (
+        BulkEmailBatch.Status.SCHEDULED,
+        BulkEmailBatch.Status.RUNNING,
+        BulkEmailBatch.Status.PAUSED,
+    ):
+        return Response(
+            {"error": "Only a scheduled, sending, or paused batch can be stopped."},
+            status=400,
+        )
+    was_scheduled = batch.status == BulkEmailBatch.Status.SCHEDULED
     BulkEmailBatch.objects.filter(pk=batch.pk).update(
         status=BulkEmailBatch.Status.STOPPED,
         next_send_at=None,
-        last_error="Stopped by admin. Remaining recipients were not sent.",
+        last_error=(
+            "Cancelled before the scheduled start. No emails were sent."
+            if was_scheduled
+            else "Stopped by admin. Remaining recipients were not sent."
+        ),
     )
     return Response(serialize_batch(reconcile_batch(BulkEmailBatch.objects.get(pk=pk))))
 
@@ -273,6 +333,13 @@ def bulk_batch_resume_view(request, pk):
     pending = batch.recipients.filter(status=BulkEmailRecipient.Status.PENDING).count()
     if pending == 0:
         return Response({"error": "No pending recipients remain for this batch."}, status=400)
+    if batch.status not in (
+        BulkEmailBatch.Status.SCHEDULED,
+        BulkEmailBatch.Status.PAUSED,
+        BulkEmailBatch.Status.STOPPED,
+        BulkEmailBatch.Status.INTERRUPTED,
+    ):
+        return Response({"error": "This batch cannot be started from its current status."}, status=400)
     BulkEmailBatch.objects.filter(pk=batch.pk).update(
         status=BulkEmailBatch.Status.RUNNING,
         next_send_at=timezone.now(),

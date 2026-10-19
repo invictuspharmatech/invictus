@@ -447,6 +447,7 @@ export type ApiBulkEmailBatch = {
   chunkGapMinutes: number;
   intervalSeconds: number;
   nextSendAt: string | null;
+  scheduledAt?: string | null;
   canResume: boolean;
   canPause: boolean;
   canStop: boolean;

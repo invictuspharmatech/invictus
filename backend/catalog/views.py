@@ -147,6 +147,129 @@ def admin_product_warehouse(request, pk):
     return Response({"ok": True, "warehouse": product.warehouse})
 
 
+def _sale_from_percent(regular: float, percent: float) -> float | None:
+    if percent <= 0:
+        return None
+    if percent >= 100:
+        return 0.0
+    sale = round(float(regular or 0) * (1 - percent / 100.0), 2)
+    if sale >= float(regular or 0):
+        return None
+    return max(0.0, sale)
+
+
+def _sale_from_flat(regular: float, amount: float) -> float | None:
+    if amount <= 0:
+        return None
+    sale = round(max(0.0, float(regular or 0) - amount), 2)
+    if sale >= float(regular or 0):
+        return None
+    return sale
+
+
+@api_view(["POST"])
+@permission_classes([IsPortalStaff])
+def admin_products_bulk(request):
+    """Apply one bulk action to many products (admin only)."""
+    if not is_full_admin(request.user):
+        return Response({"error": "Not allowed."}, status=403)
+
+    ids = request.data.get("ids") or []
+    if not isinstance(ids, list) or not ids:
+        return Response({"error": "Select at least one product."}, status=400)
+
+    action = str(request.data.get("action") or "").strip()
+    qs = Product.objects.prefetch_related("category_links__category").filter(pk__in=ids)
+    products = list(qs)
+    if not products:
+        return Response({"error": "No matching products."}, status=404)
+
+    updated = 0
+    deleted = 0
+    errors: list[str] = []
+
+    if action == "delete":
+        deleted, _ = Product.objects.filter(pk__in=[p.pk for p in products]).delete()
+        return Response({"ok": True, "deleted": deleted, "updated": 0})
+
+    if action == "set_status":
+        status = str(request.data.get("status") or "").strip()
+        if status not in ("publish", "draft"):
+            return Response({"error": "Status must be publish (active) or draft (inactive)."}, status=400)
+        for product in products:
+            product.status = status
+            product.save(update_fields=["status"])
+            updated += 1
+
+    elif action == "set_categories":
+        category_ids = request.data.get("categoryIds")
+        if not isinstance(category_ids, list):
+            return Response({"error": "categoryIds must be a list."}, status=400)
+        categories = list(Category.objects.filter(pk__in=category_ids))
+        if category_ids and not categories:
+            return Response({"error": "No matching categories."}, status=400)
+        for product in products:
+            ProductCategory.objects.filter(product=product).delete()
+            for category in categories:
+                ProductCategory.objects.get_or_create(product=product, category=category)
+            updated += 1
+
+    elif action == "sale_percent":
+        try:
+            percent = float(request.data.get("percent"))
+        except (TypeError, ValueError):
+            return Response({"error": "Enter a valid percent."}, status=400)
+        if percent < 0 or percent > 100:
+            return Response({"error": "Percent must be between 0 and 100."}, status=400)
+        for product in products:
+            product.sale_price = _sale_from_percent(product.regular_price, percent)
+            product.save(update_fields=["sale_price"])
+            updated += 1
+
+    elif action == "sale_flat":
+        try:
+            amount = float(request.data.get("amount"))
+        except (TypeError, ValueError):
+            return Response({"error": "Enter a valid dollar amount."}, status=400)
+        if amount < 0:
+            return Response({"error": "Amount cannot be negative."}, status=400)
+        for product in products:
+            product.sale_price = _sale_from_flat(product.regular_price, amount)
+            product.save(update_fields=["sale_price"])
+            updated += 1
+
+    elif action == "clear_sale":
+        for product in products:
+            product.sale_price = None
+            product.save(update_fields=["sale_price"])
+            updated += 1
+
+    elif action == "set_warehouse":
+        warehouse = str(request.data.get("warehouse") or "").strip()
+        if warehouse not in (Product.Warehouse.WAREHOUSE_1, Product.Warehouse.WAREHOUSE_2):
+            return Response({"error": "Choose Warehouse 1 or Warehouse 2."}, status=400)
+        for product in products:
+            product.warehouse = warehouse
+            product.save(update_fields=["warehouse"])
+            updated += 1
+
+    else:
+        return Response({"error": "Unknown bulk action."}, status=400)
+
+    refreshed = Product.objects.prefetch_related("category_links__category").filter(
+        pk__in=[p.pk for p in products]
+    )
+    return Response(
+        {
+            "ok": True,
+            "updated": updated,
+            "deleted": deleted,
+            "errors": errors,
+            "products": ProductSerializer(refreshed, many=True, context={"request": request}).data,
+        }
+    )
+
+
 @api_view(["GET", "POST"])
 @permission_classes([IsStoreStaff])
 def admin_test_results(request):
