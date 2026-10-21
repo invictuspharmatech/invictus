@@ -77,6 +77,92 @@ def recalc_merchandise(order: Order) -> None:
     order.save(update_fields=["merchandise_total"])
 
 
+def assert_order_editable(order: Order) -> None:
+    if order.status in (
+        Order.Status.CANCELLED,
+        Order.Status.REFUNDED,
+        Order.Status.FAILED,
+    ):
+        raise FulfillmentError("This order cannot be edited.")
+
+
+@transaction.atomic
+def set_order_item_quantity(item: OrderItem, new_qty: int) -> None:
+    """Adjust qty on a line (0 removes). Restocks or deducts against the order warehouse."""
+    order = Order.objects.select_for_update().get(pk=item.order_id)
+    assert_order_editable(order)
+    item = OrderItem.objects.select_for_update().select_related("product").get(pk=item.pk)
+    if item.order_id != order.id:
+        raise FulfillmentError("Item not found on this order.")
+    new_qty = int(new_qty)
+    if new_qty < 0:
+        raise FulfillmentError("Quantity cannot be negative.")
+    old_qty = int(item.quantity)
+    if new_qty == old_qty:
+        return
+    product = item.product
+    warehouse = order.warehouse
+    if new_qty > old_qty:
+        add = new_qty - old_qty
+        if not can_cover(product.stock_for(warehouse), add, product.allow_backorder):
+            raise FulfillmentError(f"Not enough stock for {item.name}.")
+        product.adjust_stock(warehouse, -add, save=True)
+        item.quantity = new_qty
+        item.line_total = money(float(item.unit_price) * new_qty)
+        item.save(update_fields=["quantity", "line_total"])
+    else:
+        return_qty = old_qty - new_qty
+        if return_qty > 0 and product:
+            product.adjust_stock(warehouse, return_qty, save=True)
+        if new_qty == 0:
+            item.delete()
+        else:
+            item.quantity = new_qty
+            item.line_total = money(float(item.unit_price) * new_qty)
+            item.save(update_fields=["quantity", "line_total"])
+    if not order.items.exists():
+        raise FulfillmentError("The order must keep at least one line item.")
+    apply_group_shipping(order.group_id)
+
+
+@transaction.atomic
+def add_product_to_order(order: Order, product: Product, quantity: int = 1) -> OrderItem:
+    order = Order.objects.select_for_update().get(pk=order.pk)
+    assert_order_editable(order)
+    quantity = max(1, int(quantity))
+    product = Product.objects.select_for_update().get(pk=product.pk)
+    if product.status != "publish":
+        raise FulfillmentError("Only active products can be added.")
+    warehouse = order.warehouse
+    if not can_cover(product.stock_for(warehouse), quantity, product.allow_backorder):
+        raise FulfillmentError(f"Not enough stock for {product.name}.")
+    existing = (
+        order.items.select_for_update()
+        .filter(product_id=product.id)
+        .first()
+    )
+    product.adjust_stock(warehouse, -quantity, save=True)
+    if existing:
+        existing.quantity += quantity
+        existing.line_total = money(float(existing.unit_price) * existing.quantity)
+        existing.save(update_fields=["quantity", "line_total"])
+        apply_group_shipping(order.group_id)
+        return existing
+    unit = float(product.sale_price if product.sale_price is not None and product.sale_price > 0 else product.regular_price or 0)
+    item = OrderItem.objects.create(
+        order=order,
+        product=product,
+        name=product.name,
+        sku=product.sku or "",
+        unit_price=unit,
+        quantity=quantity,
+        line_total=money(unit * quantity),
+        warehouse=warehouse,
+    )
+    apply_group_shipping(order.group_id)
+    return item
+
+
 def _terminal_statuses() -> list[str]:
     return [Order.Status.CANCELLED, Order.Status.FAILED]
 

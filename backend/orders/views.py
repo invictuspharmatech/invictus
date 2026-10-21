@@ -42,10 +42,12 @@ from orders.status import (
 )
 from orders.fulfillment import (
     FulfillmentError,
+    add_product_to_order,
     allocate_quantity,
     apply_group_shipping,
     approve_fulfillment_request,
     assert_can_move,
+    assert_order_editable,
     can_review_fulfillment,
     decrement_allocations,
     get_warehouse_settings,
@@ -53,6 +55,7 @@ from orders.fulfillment import (
     opposite_warehouse,
     reject_fulfillment_request,
     restock_order,
+    set_order_item_quantity,
 )
 from orders.coupons import bump_usage, discount_for, is_free_shipping, resolve_coupon
 from orders.models import AccountingReset, ContactMessage, Coupon, FulfillmentRequest, Order, OrderItem
@@ -424,9 +427,7 @@ def admin_orders_view(request):
     return Response({"orders": OrderSerializer(qs[:300], many=True).data, "counts": counts})
 
 
-@api_view(["GET"])
-@permission_classes([IsPortalStaff])
-def admin_order_detail_view(request, pk):
+def _staff_order(request, pk) -> Order | Response:
     qs = Order.objects.prefetch_related("items", "btc_invoices", "shipping_labels")
     warehouse = managed_warehouse(request.user)
     if warehouse:
@@ -434,7 +435,119 @@ def admin_order_detail_view(request, pk):
     order = qs.filter(pk=pk).first()
     if not order:
         return Response({"error": "Not found."}, status=404)
+    return order
+
+
+@api_view(["GET"])
+@permission_classes([IsPortalStaff])
+def admin_order_detail_view(request, pk):
+    order = _staff_order(request, pk)
+    if isinstance(order, Response):
+        return order
     return Response(OrderSerializer(order).data)
+
+
+@api_view(["PATCH", "PUT"])
+@permission_classes([IsPortalStaff])
+def admin_order_shipping_view(request, pk):
+    order = _staff_order(request, pk)
+    if isinstance(order, Response):
+        return order
+    if not is_full_admin(request.user):
+        return Response({"error": "Not allowed."}, status=403)
+    try:
+        assert_order_editable(order)
+    except FulfillmentError as exc:
+        return Response({"error": str(exc)}, status=400)
+    data = request.data
+    line1 = str(data.get("shippingLine1") or data.get("shipping_line1") or "").strip()
+    city = str(data.get("shippingCity") or data.get("shipping_city") or "").strip()
+    state = str(data.get("shippingState") or data.get("shipping_state") or "").strip()
+    postal = str(data.get("shippingPostal") or data.get("shipping_postal") or "").strip()
+    if not line1 or not city or not state or not postal:
+        return Response({"error": "Address line 1, city, state, and postal code are required."}, status=400)
+    order.shipping_line1 = line1[:255]
+    order.shipping_line2 = str(data.get("shippingLine2") or data.get("shipping_line2") or "").strip()[:255]
+    order.shipping_city = city[:120]
+    order.shipping_state = state[:120]
+    order.shipping_postal = postal[:40]
+    order.shipping_country = (
+        str(data.get("shippingCountry") or data.get("shipping_country") or order.shipping_country or "US").strip()[:8]
+        or "US"
+    )
+    if data.get("customerName") is not None or data.get("customer_name") is not None:
+        name = str(data.get("customerName") or data.get("customer_name") or "").strip()
+        if name:
+            order.customer_name = name[:255]
+    if data.get("customerEmail") is not None or data.get("customer_email") is not None:
+        email = str(data.get("customerEmail") or data.get("customer_email") or "").strip()
+        if email:
+            order.customer_email = email[:254]
+    order.save()
+    refreshed = Order.objects.prefetch_related("items", "btc_invoices", "shipping_labels").get(pk=order.pk)
+    return Response(OrderSerializer(refreshed).data)
+
+
+@api_view(["PUT", "PATCH"])
+@permission_classes([IsPortalStaff])
+def admin_order_line_items_view(request, pk):
+    order = _staff_order(request, pk)
+    if isinstance(order, Response):
+        return order
+    if not is_full_admin(request.user):
+        return Response({"error": "Not allowed."}, status=403)
+    rows = request.data.get("items") or []
+    if not isinstance(rows, list) or not rows:
+        return Response({"error": "items is required."}, status=400)
+    try:
+        projected = {item.id: int(item.quantity) for item in order.items.all()}
+        updates: list[tuple] = []
+        for row in rows:
+            item_id = row.get("id") or row.get("itemId")
+            if item_id is None:
+                return Response({"error": "Each item needs an id."}, status=400)
+            item = order.items.filter(pk=item_id).first()
+            if not item:
+                return Response({"error": f"Item {item_id} not found."}, status=404)
+            qty = int(row.get("quantity"))
+            if qty < 0:
+                return Response({"error": "Quantity cannot be negative."}, status=400)
+            projected[item.id] = qty
+            updates.append((item, qty))
+        if not any(qty > 0 for qty in projected.values()):
+            return Response({"error": "The order must keep at least one line item."}, status=400)
+        with transaction.atomic():
+            for item, qty in updates:
+                set_order_item_quantity(item, qty)
+    except (TypeError, ValueError):
+        return Response({"error": "Invalid quantity."}, status=400)
+    except FulfillmentError as exc:
+        return Response({"error": str(exc)}, status=400)
+    refreshed = Order.objects.prefetch_related("items", "btc_invoices", "shipping_labels").get(pk=order.pk)
+    return Response(OrderSerializer(refreshed).data)
+
+
+@api_view(["POST"])
+@permission_classes([IsPortalStaff])
+def admin_order_add_item_view(request, pk):
+    order = _staff_order(request, pk)
+    if isinstance(order, Response):
+        return order
+    if not is_full_admin(request.user):
+        return Response({"error": "Not allowed."}, status=403)
+    product_id = request.data.get("productId") or request.data.get("product_id")
+    product = Product.objects.filter(pk=product_id).first()
+    if not product:
+        return Response({"error": "Product not found."}, status=404)
+    try:
+        qty = int(request.data.get("quantity") or 1)
+        add_product_to_order(order, product, qty)
+    except (TypeError, ValueError):
+        return Response({"error": "Invalid quantity."}, status=400)
+    except FulfillmentError as exc:
+        return Response({"error": str(exc)}, status=400)
+    refreshed = Order.objects.prefetch_related("items", "btc_invoices", "shipping_labels").get(pk=order.pk)
+    return Response(OrderSerializer(refreshed).data)
 
 
 @api_view(["POST"])

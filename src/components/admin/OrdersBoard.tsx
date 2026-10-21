@@ -149,8 +149,8 @@ export function OrdersBoard({
         <div>
           <h1 className="display-font text-3xl">Orders</h1>
           <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-            Filter, bulk-update status, add tracking, and buy Bitcoin Postage labels. Split
-            checkouts share a group ID.
+            Filter by status or warehouse, bulk-update, add tracking, and create Bitcoin Postage
+            labels. Open an order to view or edit details (including warehouse fulfill moves).
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -302,7 +302,7 @@ export function OrdersBoard({
           <table className="w-full min-w-[1100px] text-left text-sm">
             <thead className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
               <tr>
-                <th className="py-3 pr-3">
+                <th className="sticky left-0 z-10 bg-card py-3 pr-3">
                   <input
                     type="checkbox"
                     checked={allSelected}
@@ -315,9 +315,9 @@ export function OrdersBoard({
                 <th>Date</th>
                 <th>Status</th>
                 <th>Total</th>
-                <th>Actions</th>
                 <th>Bitcoin Postage</th>
                 <th>Shipment tracking</th>
+                <th>Warehouse</th>
               </tr>
             </thead>
             <tbody>
@@ -325,26 +325,47 @@ export function OrdersBoard({
                 const labels = order.shippingLabels ?? [];
                 return (
                   <tr key={order.id} className="border-t border-border/40 align-top">
-                    <td className="py-4 pr-3">
-                      <input
-                        type="checkbox"
-                        checked={selected.includes(order.id)}
-                        onChange={(event) =>
-                          setSelected((current) =>
-                            event.target.checked
-                              ? [...current, order.id]
-                              : current.filter((id) => id !== order.id),
-                          )
-                        }
-                      />
+                    <td className="sticky left-0 z-10 bg-card py-4 pr-3">
+                      <div className="flex flex-col gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selected.includes(order.id)}
+                          onChange={(event) =>
+                            setSelected((current) =>
+                              event.target.checked
+                                ? [...current, order.id]
+                                : current.filter((id) => id !== order.id),
+                            )
+                          }
+                        />
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="text-[11px] uppercase tracking-[0.12em] text-signal"
+                          title="View"
+                        >
+                          View
+                        </Link>
+                        <Link
+                          href={`/admin/orders/${order.id}?edit=1`}
+                          className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground hover:text-signal"
+                          title="Edit order"
+                        >
+                          Edit
+                        </Link>
+                        <button
+                          type="button"
+                          className="text-left text-[11px] uppercase tracking-[0.12em] text-muted-foreground hover:text-signal"
+                          onClick={() => openLabelModal([order])}
+                        >
+                          Label
+                        </button>
+                      </div>
                     </td>
                     <td className="py-4 pr-3">
                       <Link href={`/admin/orders/${order.id}`} className="font-mono text-xs">
                         {order.orderNumber}
                       </Link>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {warehouseShort(order.warehouse)} · {order.customerName}
-                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">{order.customerName}</p>
                       <p className="text-xs text-muted-foreground">{order.customerEmail}</p>
                     </td>
                     <td className="py-4 pr-3 text-xs text-muted-foreground">
@@ -356,24 +377,7 @@ export function OrdersBoard({
                         {order.paymentStatus ? `pay ${order.paymentStatus.toLowerCase()}` : ""}
                       </p>
                     </td>
-                    <td className="py-4 pr-3">
-                      {formatMoney(order.grandTotal)}
-                      <p className="text-xs text-muted-foreground">{warehouseLabel(order.warehouse)}</p>
-                    </td>
-                    <td className="py-4 pr-3">
-                      <div className="flex flex-wrap gap-2">
-                        <Link href={`/admin/orders/${order.id}`} className="ghost-btn">
-                          View
-                        </Link>
-                        <button
-                          type="button"
-                          className="gold-btn"
-                          onClick={() => openLabelModal([order])}
-                        >
-                          Create label
-                        </button>
-                      </div>
-                    </td>
+                    <td className="py-4 pr-3">{formatMoney(order.grandTotal)}</td>
                     <td className="py-4 pr-3">
                       <ShippingLabelActions
                         orderId={order.id}
@@ -386,7 +390,7 @@ export function OrdersBoard({
                         onError={setError}
                       />
                     </td>
-                    <td className="py-4">
+                    <td className="py-4 pr-3">
                       <div className="flex gap-2">
                         <input
                           className="field"
@@ -403,6 +407,9 @@ export function OrdersBoard({
                           Save
                         </button>
                       </div>
+                    </td>
+                    <td className="py-4 text-xs text-muted-foreground">
+                      <span title={warehouseLabel(order.warehouse)}>{warehouseShort(order.warehouse)}</span>
                     </td>
                   </tr>
                 );
