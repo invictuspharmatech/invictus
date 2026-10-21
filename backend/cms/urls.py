@@ -1,6 +1,6 @@
 from django.urls import path
 
-from cms import bulk_email_views, ops_views, views
+from cms import bulk_email_views, ops_views, views, zoho_mail_views
 
 urlpatterns = [
     path("cms/pages/", views.public_pages),
@@ -40,4 +40,17 @@ urlpatterns = [
     path("admin/email/bulk/batches/<uuid:pk>/pause/", bulk_email_views.bulk_batch_pause_view),
     path("admin/email/bulk/batches/<uuid:pk>/stop/", bulk_email_views.bulk_batch_stop_view),
     path("admin/email/bulk/batches/<uuid:pk>/resume/", bulk_email_views.bulk_batch_resume_view),
+    path("zoho-mail/oauth/callback/", zoho_mail_views.zoho_oauth_callback_view),
+    path("admin/email/zoho/status/", zoho_mail_views.zoho_status_view),
+    path("admin/email/zoho/connect/", zoho_mail_views.zoho_connect_view),
+    path("admin/email/zoho/disconnect/", zoho_mail_views.zoho_disconnect_view),
+    path("admin/email/zoho/refresh-folders/", zoho_mail_views.zoho_refresh_folders_view),
+    path("admin/email/zoho/inbox/", zoho_mail_views.zoho_inbox_view),
+    path("admin/email/zoho/outbox/", zoho_mail_views.zoho_outbox_view),
+    path("admin/email/zoho/messages/<str:message_id>/", zoho_mail_views.zoho_message_detail_view),
+    path("admin/email/zoho/messages/<str:message_id>/reply/", zoho_mail_views.zoho_message_reply_view),
+    path(
+        "admin/email/zoho/messages/<str:message_id>/resolve/",
+        zoho_mail_views.zoho_message_resolve_view,
+    ),
 ]

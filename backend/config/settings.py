@@ -153,3 +153,20 @@ MIN_ORDER_USD = 100
 SHIPPING_USD = 20
 FIRST_ORDER_AFFILIATE_DISCOUNT = 0.1
 JWT_TTL_SECONDS = 60 * 60 * 24 * 14
+
+# Zoho Mail API (AU defaults) — admin Email → Zoho inbox
+ZOHO_MAIL_CLIENT_ID = os.environ.get("ZOHO_MAIL_CLIENT_ID", "")
+ZOHO_MAIL_CLIENT_SECRET = os.environ.get("ZOHO_MAIL_CLIENT_SECRET", "")
+ZOHO_MAIL_REFRESH_TOKEN = os.environ.get("ZOHO_MAIL_REFRESH_TOKEN", "")
+ZOHO_MAIL_ACCOUNTS_URL = os.environ.get(
+    "ZOHO_MAIL_ACCOUNTS_URL", "https://accounts.zoho.com.au"
+)
+ZOHO_MAIL_API_URL = os.environ.get("ZOHO_MAIL_API_URL", "https://mail.zoho.com.au")
+ZOHO_MAIL_REDIRECT_URI = os.environ.get("ZOHO_MAIL_REDIRECT_URI", "")
+ZOHO_MAIL_FROM_ADDRESS = os.environ.get("ZOHO_MAIL_FROM_ADDRESS", "")
+ZOHO_MAIL_RESOLVED_FOLDER_ID = os.environ.get("ZOHO_MAIL_RESOLVED_FOLDER_ID", "")
+ZOHO_MAIL_SCOPES = os.environ.get(
+    "ZOHO_MAIL_SCOPES",
+    "ZohoMail.accounts.READ,ZohoMail.folders.READ,ZohoMail.messages.READ,"
+    "ZohoMail.messages.CREATE,ZohoMail.messages.UPDATE",
+)

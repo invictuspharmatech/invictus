@@ -51,6 +51,7 @@ const ADMIN_NAV: AdminNavItem[] = [
     href: "/admin/email",
     label: "Email",
     children: [
+      { href: "/admin/email/zoho", label: "Zoho Mail" },
       { href: "/admin/email", label: "Bulk email" },
       { href: "/admin/cms/email", label: "Settings & templates" },
     ],
