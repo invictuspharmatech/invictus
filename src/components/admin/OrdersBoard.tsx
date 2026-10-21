@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Printer } from "lucide-react";
+import { ArrowRightCircle, Check, Eye, Pencil, Printer } from "lucide-react";
 import { STAFF_ORDER_STATUSES, formatOrderStatus, orderStatusTab } from "@/lib/enums";
 import { formatMoney } from "@/lib/constants";
 import { isFullAdmin } from "@/lib/roles";
@@ -11,6 +11,10 @@ import { OrderStatusSelect } from "@/components/admin/OrderStatusSelect";
 import { MAX_BTCPOSTAGE_LABEL_BATCH, PostageLabelModal } from "@/components/admin/PostageLabelModal";
 import { ShippingLabelActions } from "@/components/admin/ShippingLabelActions";
 import type { AdminOrdersResponse, ApiOrder } from "@/lib/api-types";
+
+/** Icon action chip — GreatLife layout, Invictus colors */
+const actionIconBtn =
+  "inline-flex h-8 w-8 items-center justify-center rounded border border-border bg-card text-signal hover:bg-signal/15";
 
 const STATUS_TABS = [
   { key: "all", label: "All" },
@@ -141,6 +145,29 @@ export function OrdersBoard({
       return;
     }
     setOrders((current) => current.map((row) => (row.id === order.id ? payload : row)));
+  }
+
+  async function setStatuses(ids: string[], nextStatus: string, confirmMessage: string) {
+    if (ids.length === 0) return;
+    if (!window.confirm(confirmMessage)) return;
+    setError("");
+    const response = await fetch("/api/admin/orders/bulk-status", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ids, status: nextStatus }),
+    });
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      setError(payload?.error || "Could not update status.");
+      return;
+    }
+    setSelected([]);
+    await load();
+  }
+
+  function canCreateLabel(order: ApiOrder) {
+    const key = order.status.toUpperCase();
+    return key === "PROCESSING" || key === "COMPLETED" || key === "PARTIALLY_FILLED";
   }
 
   return (
@@ -298,124 +325,197 @@ export function OrdersBoard({
       ) : orders.length === 0 ? (
         <p className="mt-8 text-sm text-muted-foreground">No orders found.</p>
       ) : (
-        <div className="tile mt-6 overflow-x-auto">
-          <table className="w-full min-w-[1100px] text-left text-sm">
-            <thead className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              <tr>
-                <th className="sticky left-0 z-10 bg-card py-3 pr-3">
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={(event) =>
-                      setSelected(event.target.checked ? orders.map((order) => order.id) : [])
-                    }
-                  />
-                </th>
-                <th>Order</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Total</th>
-                <th>Bitcoin Postage</th>
-                <th>Shipment tracking</th>
-                <th>Warehouse</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((order) => {
-                const labels = order.shippingLabels ?? [];
-                return (
-                  <tr key={order.id} className="border-t border-border/40 align-top">
-                    <td className="sticky left-0 z-10 bg-card py-4 pr-3">
-                      <div className="flex flex-col gap-2">
-                        <input
-                          type="checkbox"
-                          checked={selected.includes(order.id)}
-                          onChange={(event) =>
-                            setSelected((current) =>
-                              event.target.checked
-                                ? [...current, order.id]
-                                : current.filter((id) => id !== order.id),
-                            )
-                          }
-                        />
+        <div className="tile mt-6 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1100px] border-separate border-spacing-0 text-left text-sm">
+              <thead className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                <tr className="[&>th]:border-b [&>th]:border-border/50">
+                  <th className="sticky left-0 z-20 min-w-[7.5rem] border-r border-border/50 bg-card px-2 py-2 align-middle">
+                    <label className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border border-border bg-card">
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        onChange={(event) =>
+                          setSelected(event.target.checked ? orders.map((order) => order.id) : [])
+                        }
+                        aria-label="Select all orders"
+                      />
+                    </label>
+                  </th>
+                  <th className="px-3 py-2 align-middle">Order</th>
+                  <th className="px-3 py-2 align-middle">Date</th>
+                  <th className="px-3 py-2 align-middle">Status</th>
+                  <th className="px-3 py-2 align-middle">Total</th>
+                  <th className="px-3 py-2 align-middle">Bitcoin Postage</th>
+                  <th className="px-3 py-2 align-middle">Shipment tracking</th>
+                  <th className="px-3 py-2 align-middle">Warehouse</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((order) => {
+                  const labels = order.shippingLabels ?? [];
+                  const statusIds = selected.length > 0 ? selected : [order.id];
+                  return (
+                    <tr
+                      key={order.id}
+                      className="group [&>td]:border-b [&>td]:border-border/40 hover:bg-muted/30"
+                    >
+                      <td className="sticky left-0 z-10 min-w-[7.5rem] border-r border-border/40 bg-card px-2 py-2 align-middle group-hover:bg-muted/30">
+                        <div className="flex shrink-0 items-center gap-1">
+                          <label className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border border-border bg-card">
+                            <input
+                              type="checkbox"
+                              checked={selected.includes(order.id)}
+                              onChange={(event) =>
+                                setSelected((current) =>
+                                  event.target.checked
+                                    ? [...current, order.id]
+                                    : current.filter((id) => id !== order.id),
+                                )
+                              }
+                              aria-label={`Select order ${order.orderNumber}`}
+                            />
+                          </label>
+                          <div className="grid shrink-0 grid-cols-[2rem_2rem] gap-1">
+                            <Link
+                              href={`/admin/orders/${order.id}`}
+                              className={actionIconBtn}
+                              title="View"
+                            >
+                              <Eye className="size-4" aria-hidden />
+                            </Link>
+                            <Link
+                              href={`/admin/orders/${order.id}?edit=1`}
+                              className={actionIconBtn}
+                              title="Edit order"
+                            >
+                              <Pencil className="size-4" aria-hidden />
+                            </Link>
+                            <button
+                              type="button"
+                              className={actionIconBtn}
+                              title={
+                                statusIds.length > 1
+                                  ? `Move ${statusIds.length} selected to processing`
+                                  : "Move to processing"
+                              }
+                              onClick={() =>
+                                void setStatuses(
+                                  statusIds,
+                                  "PROCESSING",
+                                  statusIds.length > 1
+                                    ? `Move ${statusIds.length} selected orders to processing?`
+                                    : `Move order ${order.orderNumber} to processing?`,
+                                )
+                              }
+                            >
+                              <ArrowRightCircle className="size-4" aria-hidden />
+                            </button>
+                            <button
+                              type="button"
+                              className={actionIconBtn}
+                              title={
+                                statusIds.length > 1
+                                  ? `Mark ${statusIds.length} selected as completed`
+                                  : "Mark as complete"
+                              }
+                              onClick={() =>
+                                void setStatuses(
+                                  statusIds,
+                                  "COMPLETED",
+                                  statusIds.length > 1
+                                    ? `Mark ${statusIds.length} selected orders as completed?`
+                                    : `Mark order ${order.orderNumber} as completed?`,
+                                )
+                              }
+                            >
+                              <Check className="size-4" aria-hidden />
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 align-middle">
                         <Link
                           href={`/admin/orders/${order.id}`}
-                          className="text-[11px] uppercase tracking-[0.12em] text-signal"
-                          title="View"
+                          className="font-mono text-xs font-semibold text-signal hover:underline"
                         >
-                          View
+                          {order.orderNumber}
                         </Link>
-                        <Link
-                          href={`/admin/orders/${order.id}?edit=1`}
-                          className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground hover:text-signal"
-                          title="Edit order"
-                        >
-                          Edit
-                        </Link>
-                        <button
-                          type="button"
-                          className="text-left text-[11px] uppercase tracking-[0.12em] text-muted-foreground hover:text-signal"
-                          onClick={() => openLabelModal([order])}
-                        >
-                          Label
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-4 pr-3">
-                      <Link href={`/admin/orders/${order.id}`} className="font-mono text-xs">
-                        {order.orderNumber}
-                      </Link>
-                      <p className="mt-1 text-xs text-muted-foreground">{order.customerName}</p>
-                      <p className="text-xs text-muted-foreground">{order.customerEmail}</p>
-                    </td>
-                    <td className="py-4 pr-3 text-xs text-muted-foreground">
-                      {formatDate(order.createdAt)}
-                    </td>
-                    <td className="py-4 pr-3">
-                      <OrderStatusSelect id={order.id} status={order.status} onUpdated={() => void load()} />
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {order.paymentStatus ? `pay ${order.paymentStatus.toLowerCase()}` : ""}
-                      </p>
-                    </td>
-                    <td className="py-4 pr-3">{formatMoney(order.grandTotal)}</td>
-                    <td className="py-4 pr-3">
-                      <ShippingLabelActions
-                        orderId={order.id}
-                        labels={labels}
-                        onDeleted={(next) =>
-                          setOrders((current) =>
-                            current.map((row) => (row.id === next.id ? next : row)),
-                          )
-                        }
-                        onError={setError}
-                      />
-                    </td>
-                    <td className="py-4 pr-3">
-                      <div className="flex gap-2">
-                        <input
-                          className="field"
-                          placeholder="Tracking #"
-                          value={trackingDraft[order.id] ?? order.trackingNumber ?? ""}
-                          onChange={(event) =>
-                            setTrackingDraft((current) => ({
-                              ...current,
-                              [order.id]: event.target.value,
-                            }))
-                          }
+                        <p className="mt-1 text-xs text-muted-foreground">{order.customerName}</p>
+                        <p className="text-xs text-muted-foreground">{order.customerEmail}</p>
+                      </td>
+                      <td className="px-3 py-2 align-middle text-xs whitespace-nowrap text-muted-foreground">
+                        {formatDate(order.createdAt)}
+                      </td>
+                      <td className="px-3 py-2 align-middle">
+                        <OrderStatusSelect
+                          id={order.id}
+                          status={order.status}
+                          onUpdated={() => void load()}
                         />
-                        <button type="button" className="ghost-btn" onClick={() => void saveTracking(order)}>
-                          Save
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-4 text-xs text-muted-foreground">
-                      <span title={warehouseLabel(order.warehouse)}>{warehouseShort(order.warehouse)}</span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {order.paymentStatus ? `pay ${order.paymentStatus.toLowerCase()}` : ""}
+                        </p>
+                      </td>
+                      <td className="px-3 py-2 align-middle whitespace-nowrap font-medium">
+                        {formatMoney(order.grandTotal)}
+                      </td>
+                      <td className="px-3 py-2 align-middle">
+                        <div className="flex flex-col items-start gap-1.5">
+                          {canCreateLabel(order) ? (
+                            <button
+                              type="button"
+                              className="inline-flex items-center rounded bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground hover:opacity-90"
+                              onClick={() => openLabelModal([order])}
+                            >
+                              Create Label
+                            </button>
+                          ) : null}
+                          <ShippingLabelActions
+                            orderId={order.id}
+                            labels={labels}
+                            onDeleted={(next) =>
+                              setOrders((current) =>
+                                current.map((row) => (row.id === next.id ? next : row)),
+                              )
+                            }
+                            onError={setError}
+                          />
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 align-middle">
+                        <div className="flex gap-2">
+                          <input
+                            className="field"
+                            placeholder="Tracking #"
+                            value={trackingDraft[order.id] ?? order.trackingNumber ?? ""}
+                            onChange={(event) =>
+                              setTrackingDraft((current) => ({
+                                ...current,
+                                [order.id]: event.target.value,
+                              }))
+                            }
+                          />
+                          <button
+                            type="button"
+                            className="ghost-btn"
+                            onClick={() => void saveTracking(order)}
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 align-middle text-xs text-muted-foreground">
+                        <span title={warehouseLabel(order.warehouse)}>
+                          {warehouseShort(order.warehouse)}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
