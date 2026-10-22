@@ -166,7 +166,7 @@ export default async function AdminLayout({
   return (
     <div className="min-h-screen bg-background">
       <header className="relative z-30 border-b border-border/50">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
+        <div className="mx-auto flex w-full items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-6">
             <Logo href="/admin" />
             <span className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
@@ -187,7 +187,7 @@ export default async function AdminLayout({
         </div>
         <AdminNav items={items} />
       </header>
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">{children}</div>
+      <div className="w-full px-4 py-8 sm:px-6 lg:px-8">{children}</div>
     </div>
   );
 }

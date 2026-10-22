@@ -6,11 +6,13 @@ from orders.bitcoinpostage import (
     BitcoinPostageError,
     charge_credits,
     create_label,
+    ensure_accounts,
     get_credits,
-    get_settings,
+    get_or_create_account,
     normalize_api_base,
     serialize_label,
     serialize_sender,
+    serialize_settings_payload,
 )
 from orders.models import BitcoinPostageSender, Order
 from orders.serializers import OrderSerializer
@@ -20,31 +22,62 @@ def _staff_can_postage(user) -> bool:
     return is_full_admin(user) or managed_warehouse(user) is not None
 
 
+def _warehouse_param(request) -> str:
+    return str(
+        request.GET.get("warehouse")
+        or request.data.get("warehouse")
+        or ""
+    ).strip().upper()
+
+
 @api_view(["GET", "PUT"])
 @permission_classes([IsStoreStaff])
 def postage_settings_view(request):
     if not _staff_can_postage(request.user):
         return Response({"error": "Forbidden."}, status=403)
-    row = get_settings()
+    ensure_accounts()
     if request.method == "PUT":
         if not is_full_admin(request.user):
             return Response({"error": "Only admins can change postage credentials."}, status=403)
-        row.api_url = normalize_api_base(str(request.data.get("apiUrl") or row.api_url))
-        if "apiKey" in request.data:
-            row.api_key = str(request.data.get("apiKey") or "")
-        if "apiSecret" in request.data:
-            secret = str(request.data.get("apiSecret") or "")
-            if secret:
-                row.api_secret = secret
-        row.save()
-    return Response(
-        {
-            "apiUrl": row.api_url,
-            "apiKey": row.api_key,
-            "hasSecret": bool(row.api_secret),
-            "isConfigured": bool(row.api_key and row.api_secret),
-        }
-    )
+        data = request.data if isinstance(request.data, dict) else {}
+        # Prefer explicit per-warehouse account payload.
+        accounts_payload = data.get("accounts")
+        if isinstance(accounts_payload, list) and accounts_payload:
+            for item in accounts_payload:
+                if not isinstance(item, dict):
+                    continue
+                warehouse = str(item.get("warehouse") or "").strip().upper()
+                if warehouse not in (Order.Warehouse.WAREHOUSE_1, Order.Warehouse.WAREHOUSE_2):
+                    continue
+                row = get_or_create_account(warehouse)
+                if "name" in item:
+                    row.name = str(item.get("name") or "")[:120]
+                if "apiUrl" in item or "api_url" in item:
+                    row.api_url = normalize_api_base(
+                        str(item.get("apiUrl") or item.get("api_url") or row.api_url)
+                    )
+                if "apiKey" in item or "api_key" in item:
+                    row.api_key = str(item.get("apiKey") or item.get("api_key") or "")
+                secret = item.get("apiSecret") if "apiSecret" in item else item.get("api_secret")
+                if secret:
+                    row.api_secret = str(secret)
+                row.save()
+        else:
+            warehouse = str(data.get("warehouse") or Order.Warehouse.WAREHOUSE_1).strip().upper()
+            if warehouse not in (Order.Warehouse.WAREHOUSE_1, Order.Warehouse.WAREHOUSE_2):
+                return Response({"error": "warehouse must be WAREHOUSE_1 or WAREHOUSE_2."}, status=400)
+            row = get_or_create_account(warehouse)
+            if "name" in data:
+                row.name = str(data.get("name") or "")[:120]
+            row.api_url = normalize_api_base(str(data.get("apiUrl") or row.api_url))
+            if "apiKey" in data:
+                row.api_key = str(data.get("apiKey") or "")
+            if "apiSecret" in data:
+                secret = str(data.get("apiSecret") or "")
+                if secret:
+                    row.api_secret = secret
+            row.save()
+    return Response(serialize_settings_payload())
 
 
 @api_view(["GET", "POST"])
@@ -52,7 +85,11 @@ def postage_settings_view(request):
 def postage_senders_view(request):
     if request.method == "GET":
         return Response([serialize_sender(row) for row in BitcoinPostageSender.objects.all()])
+    warehouse = str(request.data.get("warehouse") or "").strip().upper()
+    if warehouse and warehouse not in (Order.Warehouse.WAREHOUSE_1, Order.Warehouse.WAREHOUSE_2):
+        return Response({"error": "warehouse must be WAREHOUSE_1, WAREHOUSE_2, or blank."}, status=400)
     row = BitcoinPostageSender.objects.create(
+        warehouse=warehouse,
         from_name=str(request.data.get("fromName") or ""),
         from_street=str(request.data.get("fromStreet") or ""),
         from_apt=str(request.data.get("fromApt") or ""),
@@ -64,7 +101,10 @@ def postage_senders_view(request):
         is_default=bool(request.data.get("isDefault")),
     )
     if row.is_default:
-        BitcoinPostageSender.objects.exclude(pk=row.pk).update(is_default=False)
+        qs = BitcoinPostageSender.objects.exclude(pk=row.pk)
+        if row.warehouse:
+            qs = qs.filter(warehouse=row.warehouse)
+        qs.update(is_default=False)
     return Response(serialize_sender(row), status=201)
 
 
@@ -89,19 +129,28 @@ def postage_sender_detail_view(request, pk):
     ]:
         if key in request.data:
             setattr(row, field, str(request.data.get(key) or ""))
+    if "warehouse" in request.data:
+        warehouse = str(request.data.get("warehouse") or "").strip().upper()
+        if warehouse and warehouse not in (Order.Warehouse.WAREHOUSE_1, Order.Warehouse.WAREHOUSE_2):
+            return Response({"error": "warehouse must be WAREHOUSE_1, WAREHOUSE_2, or blank."}, status=400)
+        row.warehouse = warehouse
     if "isDefault" in request.data:
         row.is_default = bool(request.data.get("isDefault"))
     row.save()
     if row.is_default:
-        BitcoinPostageSender.objects.exclude(pk=row.pk).update(is_default=False)
+        qs = BitcoinPostageSender.objects.exclude(pk=row.pk)
+        if row.warehouse:
+            qs = qs.filter(warehouse=row.warehouse)
+        qs.update(is_default=False)
     return Response(serialize_sender(row))
 
 
 @api_view(["GET"])
 @permission_classes([IsPortalStaff])
 def postage_credits_view(request):
+    warehouse = _warehouse_param(request) or None
     try:
-        return Response(get_credits())
+        return Response(get_credits(warehouse))
     except BitcoinPostageError as exc:
         return Response({"error": str(exc)}, status=400)
 
@@ -111,8 +160,15 @@ def postage_credits_view(request):
 def postage_charge_view(request):
     if not is_full_admin(request.user):
         return Response({"error": "Forbidden."}, status=403)
+    warehouse = _warehouse_param(request) or None
     try:
-        return Response(charge_credits(str(request.data.get("amount") or ""), str(request.data.get("currency") or "btc")))
+        return Response(
+            charge_credits(
+                str(request.data.get("amount") or ""),
+                str(request.data.get("currency") or "btc"),
+                warehouse,
+            )
+        )
     except BitcoinPostageError as exc:
         return Response({"error": str(exc)}, status=400)
 

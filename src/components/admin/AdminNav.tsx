@@ -76,7 +76,7 @@ function DesktopLinks({ items }: { items: AdminNavItem[] }) {
 
 export function AdminNav({ items }: { items: AdminNavItem[] }) {
   return (
-    <nav className="relative z-40 mx-auto hidden max-w-7xl flex-wrap items-center gap-x-5 gap-y-2 px-4 pb-3 xl:flex sm:px-6">
+    <nav className="relative z-40 mx-auto hidden w-full flex-wrap items-center gap-x-5 gap-y-2 px-4 pb-3 xl:flex sm:px-6 lg:px-8">
       <DesktopLinks items={items} />
     </nav>
   );

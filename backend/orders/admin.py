@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from orders.models import (
     AccountingReset,
+    BitcoinPostageAccount,
     BitcoinPostageSender,
     BitcoinPostageSettings,
     BtcInvoice,
@@ -58,9 +59,16 @@ class ShippingLabelAdmin(admin.ModelAdmin):
     list_display = ("order", "tracking_number", "carrier", "source", "created_at")
 
 
+@admin.register(BitcoinPostageAccount)
+class BitcoinPostageAccountAdmin(admin.ModelAdmin):
+    list_display = ("warehouse", "name", "api_url", "api_key", "updated_at")
+    list_filter = ("warehouse",)
+
+
 @admin.register(BitcoinPostageSender)
 class BitcoinPostageSenderAdmin(admin.ModelAdmin):
-    list_display = ("from_name", "from_city", "from_state", "is_default")
+    list_display = ("from_name", "warehouse", "from_city", "from_state", "is_default")
+    list_filter = ("warehouse", "is_default")
 
 
 @admin.register(BitcoinPostageSettings)

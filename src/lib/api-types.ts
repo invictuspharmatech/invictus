@@ -100,7 +100,19 @@ export type ApiOrder = {
   shippingLabels?: ApiShippingLabel[];
 };
 
+export type ApiPostageAccount = {
+  id: string;
+  warehouse: string;
+  warehouseLabel: string;
+  name: string;
+  apiUrl: string;
+  apiKey: string;
+  hasSecret: boolean;
+  isConfigured: boolean;
+};
+
 export type ApiPostageSettings = {
+  accounts: ApiPostageAccount[];
   apiUrl: string;
   apiKey: string;
   hasSecret: boolean;
@@ -109,6 +121,7 @@ export type ApiPostageSettings = {
 
 export type ApiPostageSender = {
   id: string;
+  warehouse: string;
   fromName: string;
   fromStreet: string;
   fromApt: string;

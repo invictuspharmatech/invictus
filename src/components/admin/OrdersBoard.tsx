@@ -1,18 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { ArrowRightCircle, Check, Eye, Pencil, Printer } from "lucide-react";
 import { STAFF_ORDER_STATUSES, formatOrderStatus, orderStatusTab } from "@/lib/enums";
 import { formatMoney } from "@/lib/constants";
 import { isFullAdmin } from "@/lib/roles";
 import { warehouseLabel, warehouseShort } from "@/lib/warehouse";
-import { OrderStatusSelect } from "@/components/admin/OrderStatusSelect";
+import { OrderAddressQuickEdit } from "@/components/admin/OrderAddressQuickEdit";
+import { OrderItemsQuickEdit } from "@/components/admin/OrderItemsQuickEdit";
+import { OrderStatusBadge } from "@/components/admin/OrderStatusBadge";
 import { MAX_BTCPOSTAGE_LABEL_BATCH, PostageLabelModal } from "@/components/admin/PostageLabelModal";
 import { ShippingLabelActions } from "@/components/admin/ShippingLabelActions";
 import type { AdminOrdersResponse, ApiOrder } from "@/lib/api-types";
 
-/** Icon action chip — GreatLife layout, Invictus colors */
+type QuickEditMode = "address" | "items" | null;
+
+/** Compact icon action chip for the orders list */
 const actionIconBtn =
   "inline-flex h-8 w-8 items-center justify-center rounded border border-border bg-card text-signal hover:bg-signal/15";
 
@@ -60,6 +64,20 @@ export function OrdersBoard({
   const [labelOrders, setLabelOrders] = useState<ApiOrder[] | null>(null);
   const [trackingDraft, setTrackingDraft] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
+  const [quickEdit, setQuickEdit] = useState<{ id: string; mode: Exclude<QuickEditMode, null> } | null>(
+    null,
+  );
+
+  function toggleQuickEdit(id: string, mode: Exclude<QuickEditMode, null>) {
+    setQuickEdit((current) =>
+      current?.id === id && current.mode === mode ? null : { id, mode },
+    );
+  }
+
+  function patchOrder(next: ApiOrder) {
+    setOrders((current) => current.map((row) => (row.id === next.id ? next : row)));
+    setQuickEdit(null);
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -175,9 +193,9 @@ export function OrdersBoard({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="display-font text-3xl">Orders</h1>
-          <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-            Filter by status or warehouse, bulk-update, add tracking, and create Bitcoin Postage
-            labels. Open an order to view or edit details (including warehouse fulfill moves).
+          <p className="mt-2 text-sm text-muted-foreground">
+            Eye quick-edits the ship-to address; pencil quick-edits line items. Click the order
+            number for the full order page. Status changes use row actions or bulk menu.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -355,11 +373,11 @@ export function OrdersBoard({
                 {orders.map((order) => {
                   const labels = order.shippingLabels ?? [];
                   const statusIds = selected.length > 0 ? selected : [order.id];
+                  const addressOpen = quickEdit?.id === order.id && quickEdit.mode === "address";
+                  const itemsOpen = quickEdit?.id === order.id && quickEdit.mode === "items";
                   return (
-                    <tr
-                      key={order.id}
-                      className="group [&>td]:border-b [&>td]:border-border/40 hover:bg-muted/30"
-                    >
+                    <Fragment key={order.id}>
+                    <tr className="group [&>td]:border-b [&>td]:border-border/40 hover:bg-muted/30">
                       <td className="sticky left-0 z-10 min-w-[7.5rem] border-r border-border/40 bg-card px-2 py-2 align-middle group-hover:bg-muted/30">
                         <div className="flex shrink-0 items-center gap-1">
                           <label className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border border-border bg-card">
@@ -377,20 +395,22 @@ export function OrdersBoard({
                             />
                           </label>
                           <div className="grid shrink-0 grid-cols-[2rem_2rem] gap-1">
-                            <Link
-                              href={`/admin/orders/${order.id}`}
-                              className={actionIconBtn}
-                              title="View"
+                            <button
+                              type="button"
+                              className={`${actionIconBtn} ${addressOpen ? "bg-signal/20" : ""}`}
+                              title="Quick edit customer address"
+                              onClick={() => toggleQuickEdit(order.id, "address")}
                             >
                               <Eye className="size-4" aria-hidden />
-                            </Link>
-                            <Link
-                              href={`/admin/orders/${order.id}?edit=1`}
-                              className={actionIconBtn}
-                              title="Edit order"
+                            </button>
+                            <button
+                              type="button"
+                              className={`${actionIconBtn} ${itemsOpen ? "bg-signal/20" : ""}`}
+                              title="Quick edit order items"
+                              onClick={() => toggleQuickEdit(order.id, "items")}
                             >
                               <Pencil className="size-4" aria-hidden />
-                            </Link>
+                            </button>
                             <button
                               type="button"
                               className={actionIconBtn}
@@ -438,6 +458,7 @@ export function OrdersBoard({
                         <Link
                           href={`/admin/orders/${order.id}`}
                           className="font-mono text-xs font-semibold text-signal hover:underline"
+                          title="Open full order"
                         >
                           {order.orderNumber}
                         </Link>
@@ -447,15 +468,13 @@ export function OrdersBoard({
                       <td className="px-3 py-2 align-middle text-xs whitespace-nowrap text-muted-foreground">
                         {formatDate(order.createdAt)}
                       </td>
-                      <td className="px-3 py-2 align-middle">
-                        <OrderStatusSelect
-                          id={order.id}
-                          status={order.status}
-                          onUpdated={() => void load()}
-                        />
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {order.paymentStatus ? `pay ${order.paymentStatus.toLowerCase()}` : ""}
-                        </p>
+                      <td className="px-3 py-2 align-middle whitespace-nowrap">
+                        <OrderStatusBadge status={order.status} />
+                        {order.paymentStatus ? (
+                          <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                            pay {order.paymentStatus.toLowerCase()}
+                          </p>
+                        ) : null}
                       </td>
                       <td className="px-3 py-2 align-middle whitespace-nowrap font-medium">
                         {formatMoney(order.grandTotal)}
@@ -511,6 +530,27 @@ export function OrdersBoard({
                         </span>
                       </td>
                     </tr>
+                    {addressOpen || itemsOpen ? (
+                      <tr className="[&>td]:border-b [&>td]:border-border/40">
+                        <td colSpan={8} className="p-0">
+                          {addressOpen ? (
+                            <OrderAddressQuickEdit
+                              order={order}
+                              onCancel={() => setQuickEdit(null)}
+                              onSaved={patchOrder}
+                            />
+                          ) : null}
+                          {itemsOpen ? (
+                            <OrderItemsQuickEdit
+                              order={order}
+                              onCancel={() => setQuickEdit(null)}
+                              onSaved={patchOrder}
+                            />
+                          ) : null}
+                        </td>
+                      </tr>
+                    ) : null}
+                    </Fragment>
                   );
                 })}
               </tbody>

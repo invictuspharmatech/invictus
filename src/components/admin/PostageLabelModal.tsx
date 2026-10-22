@@ -294,6 +294,9 @@ export function PostageLabelModal({
               {bulk
                 ? `${orders.length} order(s) · max ${MAX_BTCPOSTAGE_LABEL_BATCH} per batch · create-purchase once per order`
                 : first.orderNumber}
+              {" · "}
+              Uses the BTC Postage account linked to each order&apos;s warehouse
+              {!bulk && first.warehouse ? ` (${first.warehouse.replace("_", " ").toLowerCase()})` : ""}.
             </p>
           </div>
           <button type="button" className="ghost-btn" onClick={onClose} disabled={busy}>

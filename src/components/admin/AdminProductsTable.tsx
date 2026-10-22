@@ -116,7 +116,7 @@ export function AdminProductsTable({
   products: ApiProduct[];
   categories: ApiCategory[];
   admin: boolean;
-  /** Invictus dual-warehouse; turn off for GreatLife-style single-warehouse catalogs. */
+  /** Dual-warehouse catalog controls (Invictus). */
   enableWarehouseBulk?: boolean;
 }) {
   const router = useRouter();

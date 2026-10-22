@@ -6,11 +6,21 @@ import urllib.request
 
 from django.utils import timezone
 
-from orders.models import BitcoinPostageSender, BitcoinPostageSettings, Order, ShippingLabel
+from orders.models import (
+    BitcoinPostageAccount,
+    BitcoinPostageSender,
+    BitcoinPostageSettings,
+    Order,
+    ShippingLabel,
+)
 
 
 class BitcoinPostageError(Exception):
     pass
+
+
+DEFAULT_API_BASE = "https://bitcoinpostage.info/api"
+WAREHOUSES = (Order.Warehouse.WAREHOUSE_1, Order.Warehouse.WAREHOUSE_2)
 
 
 def get_settings() -> BitcoinPostageSettings:
@@ -18,7 +28,22 @@ def get_settings() -> BitcoinPostageSettings:
     return row
 
 
-DEFAULT_API_BASE = "https://bitcoinpostage.info/api"
+def get_or_create_account(warehouse: str) -> BitcoinPostageAccount:
+    code = (warehouse or "").strip().upper()
+    if code not in WAREHOUSES:
+        raise BitcoinPostageError("Warehouse must be WAREHOUSE_1 or WAREHOUSE_2.")
+    row, _ = BitcoinPostageAccount.objects.get_or_create(
+        warehouse=code,
+        defaults={
+            "name": f"Warehouse {code[-1]}",
+            "api_url": DEFAULT_API_BASE,
+        },
+    )
+    return row
+
+
+def ensure_accounts() -> list[BitcoinPostageAccount]:
+    return [get_or_create_account(code) for code in WAREHOUSES]
 _API_ENDPOINTS = (
     "create-purchase",
     "create-batch-purchase",
@@ -57,18 +82,84 @@ def normalize_api_base(url: str) -> str:
     return url
 
 
-def credentials() -> dict:
+def _legacy_credentials() -> dict:
     row = get_settings()
     return {
         "api_url": normalize_api_base(row.api_url),
         "key": (row.api_key or "").strip(),
         "secret": (row.api_secret or "").strip(),
+        "warehouse": "",
+        "name": "Legacy",
     }
 
 
-def _auth_form() -> dict:
-    creds = credentials()
-    return {"key": creds["key"], "secret": creds["secret"]}
+def credentials(warehouse: str | None = None) -> dict:
+    """Resolve BTC Postage API credentials for a warehouse (from the order)."""
+    code = (warehouse or "").strip().upper()
+    if code in WAREHOUSES:
+        account = get_or_create_account(code)
+        if (account.api_key or "").strip() and (account.api_secret or "").strip():
+            return {
+                "api_url": normalize_api_base(account.api_url),
+                "key": (account.api_key or "").strip(),
+                "secret": (account.api_secret or "").strip(),
+                "warehouse": code,
+                "name": account.name or code,
+            }
+        # Warehouse account exists but empty → try legacy singleton for that warehouse.
+        legacy = _legacy_credentials()
+        if legacy["key"] and legacy["secret"]:
+            return {**legacy, "warehouse": code}
+        return {
+            "api_url": normalize_api_base(account.api_url),
+            "key": "",
+            "secret": "",
+            "warehouse": code,
+            "name": account.name or code,
+        }
+    legacy = _legacy_credentials()
+    if legacy["key"] and legacy["secret"]:
+        return legacy
+    for row in BitcoinPostageAccount.objects.all().order_by("warehouse"):
+        if (row.api_key or "").strip() and (row.api_secret or "").strip():
+            return {
+                "api_url": normalize_api_base(row.api_url),
+                "key": (row.api_key or "").strip(),
+                "secret": (row.api_secret or "").strip(),
+                "warehouse": row.warehouse,
+                "name": row.name or row.warehouse,
+            }
+    return legacy
+
+
+def _auth_form(creds: dict | None = None) -> dict:
+    row = creds or credentials()
+    return {"key": row["key"], "secret": row["secret"]}
+
+
+def serialize_account(row: BitcoinPostageAccount) -> dict:
+    return {
+        "id": str(row.id),
+        "warehouse": row.warehouse,
+        "warehouseLabel": "Warehouse 1" if row.warehouse == Order.Warehouse.WAREHOUSE_1 else "Warehouse 2",
+        "name": row.name or "",
+        "apiUrl": row.api_url,
+        "apiKey": row.api_key,
+        "hasSecret": bool(row.api_secret),
+        "isConfigured": bool((row.api_key or "").strip() and (row.api_secret or "").strip()),
+    }
+
+
+def serialize_settings_payload() -> dict:
+    accounts = [serialize_account(row) for row in ensure_accounts()]
+    return {
+        "accounts": accounts,
+        # Backward-compatible single-account fields (warehouse 1 preferred).
+        "apiUrl": accounts[0]["apiUrl"] if accounts else DEFAULT_API_BASE,
+        "apiKey": accounts[0]["apiKey"] if accounts else "",
+        "hasSecret": accounts[0]["hasSecret"] if accounts else False,
+        "isConfigured": any(row["isConfigured"] for row in accounts),
+    }
 
 
 def _option(options: dict, *keys: str, default: str = "") -> str:
@@ -192,8 +283,20 @@ def _flat_rate_dimensions(package_type: str) -> dict[str, str]:
     return {"width": "9.5", "height": "0.75", "depth": "12.5"}
 
 
-def _default_sender() -> BitcoinPostageSender | None:
-    return BitcoinPostageSender.objects.filter(is_default=True).first() or BitcoinPostageSender.objects.first()
+def _default_sender(warehouse: str | None = None) -> BitcoinPostageSender | None:
+    code = (warehouse or "").strip().upper()
+    if code in WAREHOUSES:
+        match = (
+            BitcoinPostageSender.objects.filter(warehouse=code, is_default=True).first()
+            or BitcoinPostageSender.objects.filter(warehouse=code).first()
+        )
+        if match:
+            return match
+    return (
+        BitcoinPostageSender.objects.filter(warehouse="", is_default=True).first()
+        or BitcoinPostageSender.objects.filter(is_default=True).first()
+        or BitcoinPostageSender.objects.first()
+    )
 
 
 def _post_form(url: str, form: dict) -> dict:
@@ -262,20 +365,22 @@ def tracking_url_for(carrier: str, tracking: str) -> str:
     return ""
 
 
-def get_credits() -> dict:
-    creds = credentials()
+def get_credits(warehouse: str | None = None) -> dict:
+    creds = credentials(warehouse)
     if not creds["key"] or not creds["secret"]:
-        raise BitcoinPostageError("Set the Bitcoin Postage API key and secret first.")
-    result = _post_form(f"{creds['api_url']}/get-credits", _auth_form())
+        raise BitcoinPostageError(
+            f"Set the Bitcoin Postage API key and secret for {warehouse or 'this warehouse'} first."
+        )
+    result = _post_form(f"{creds['api_url']}/get-credits", _auth_form(creds))
     raw = str(result.get("credits") or result.get("Credits") or "")
     try:
         credits = f"{float(raw):.1f}"
     except ValueError:
         credits = raw
-    return {"credits": credits}
+    return {"credits": credits, "warehouse": creds.get("warehouse") or warehouse or ""}
 
 
-def charge_credits(amount: str, currency: str) -> dict:
+def charge_credits(amount: str, currency: str, warehouse: str | None = None) -> dict:
     coin = (currency or "btc").strip().lower()
     if coin not in ("btc", "xmr", "ltc"):
         raise BitcoinPostageError("Currency must be btc, xmr, or ltc.")
@@ -284,12 +389,14 @@ def charge_credits(amount: str, currency: str) -> dict:
             raise ValueError
     except (TypeError, ValueError) as exc:
         raise BitcoinPostageError("Amount must be a positive USD number.") from exc
-    creds = credentials()
+    creds = credentials(warehouse)
     if not creds["key"] or not creds["secret"]:
-        raise BitcoinPostageError("Set the Bitcoin Postage API key and secret first.")
+        raise BitcoinPostageError(
+            f"Set the Bitcoin Postage API key and secret for {warehouse or 'this warehouse'} first."
+        )
     result = _post_form(
         f"{creds['api_url']}/charge-credits",
-        {**_auth_form(), "amount": str(amount).strip(), "currency": coin},
+        {**_auth_form(creds), "amount": str(amount).strip(), "currency": coin},
     )
     raw = str(result.get("credits") or "")
     try:
@@ -304,15 +411,19 @@ def charge_credits(amount: str, currency: str) -> dict:
         "credits": credits,
         "purchaseId": str(result.get("purchase_id") or ""),
         "currency": str(result.get("currency") or coin),
+        "warehouse": creds.get("warehouse") or warehouse or "",
     }
 
 
 def create_label(order: Order, options: dict) -> ShippingLabel:
-    creds = credentials()
+    warehouse = (order.warehouse or "").strip().upper()
+    creds = credentials(warehouse)
     if not creds["key"] or not creds["secret"]:
-        raise BitcoinPostageError("Set the Bitcoin Postage API key and secret first.")
+        raise BitcoinPostageError(
+            f"Set the Bitcoin Postage API key and secret for {warehouse or 'this order warehouse'} first."
+        )
 
-    sender = _default_sender()
+    sender = _default_sender(warehouse)
     carrier = _option(options, "carrier", default="usps").lower()
     package_type = _option(
         options, "packageType", "package_type", "packagetype_usps", default="USPScustom"
@@ -366,7 +477,7 @@ def create_label(order: Order, options: dict) -> ShippingLabel:
         )
 
     form = {
-        **_auth_form(),
+        **_auth_form(creds),
         "order_id": order.order_number or str(order.id),
         "redirect": "",
         "service": service,
@@ -452,6 +563,7 @@ def serialize_label(label: ShippingLabel) -> dict:
 def serialize_sender(row: BitcoinPostageSender) -> dict:
     return {
         "id": str(row.id),
+        "warehouse": row.warehouse or "",
         "fromName": row.from_name,
         "fromStreet": row.from_street,
         "fromApt": row.from_apt,

@@ -293,6 +293,8 @@ class RevenueSplitSettings(models.Model):
 
 
 class BitcoinPostageSettings(models.Model):
+    """Legacy singleton credentials (fallback if a warehouse account is missing)."""
+
     id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
     api_url = models.CharField(max_length=255, default="https://bitcoinpostage.info/api")
     api_key = models.CharField(max_length=255, blank=True)
@@ -300,8 +302,33 @@ class BitcoinPostageSettings(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
+class BitcoinPostageAccount(models.Model):
+    """One Bitcoin Postage API account linked to a warehouse."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    warehouse = models.CharField(max_length=20, choices=Order.Warehouse.choices, unique=True)
+    name = models.CharField(max_length=120, blank=True)
+    api_url = models.CharField(max_length=255, default="https://bitcoinpostage.info/api")
+    api_key = models.CharField(max_length=255, blank=True)
+    api_secret = models.CharField(max_length=255, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["warehouse"]
+
+    def __str__(self):
+        return self.name or f"BTC Postage · {self.warehouse}"
+
+
 class BitcoinPostageSender(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    warehouse = models.CharField(
+        max_length=20,
+        choices=Order.Warehouse.choices,
+        blank=True,
+        default="",
+        help_text="Optional. When set, preferred for orders from this warehouse.",
+    )
     from_name = models.CharField(max_length=160)
     from_street = models.CharField(max_length=255)
     from_apt = models.CharField(max_length=120, blank=True)
