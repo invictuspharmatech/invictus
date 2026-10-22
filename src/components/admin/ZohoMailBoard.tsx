@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 type ZohoStatus = {
   configured: boolean;
@@ -37,7 +37,6 @@ function formatWhen(value: string | null) {
 }
 
 export function ZohoMailBoard() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>("inbox");
   const [status, setStatus] = useState<ZohoStatus | null>(null);
@@ -95,24 +94,35 @@ export function ZohoMailBoard() {
     [appliedSearch, status, unreadOnly],
   );
 
+  const oauthHandled = useRef(false);
   useEffect(() => {
+    if (oauthHandled.current) return;
     const connected = searchParams.get("zoho_connected");
     const oauthError = searchParams.get("zoho_error");
-    if (connected === "1") {
-      setNotice("Zoho Mail connected.");
-      router.replace("/admin/email/zoho");
-    } else if (oauthError) {
-      setError(`Zoho connect failed: ${oauthError}`);
-      router.replace("/admin/email/zoho");
-    }
-  }, [router, searchParams]);
+    if (connected !== "1" && !oauthError) return;
+    oauthHandled.current = true;
+    if (connected === "1") setNotice("Zoho Mail connected.");
+    else setError(`Zoho connect failed: ${oauthError}`);
+    window.history.replaceState(null, "", "/admin/email/zoho");
+  }, [searchParams]);
 
+  const loadedKey = useRef("");
   useEffect(() => {
+    const key = `${tab}|${appliedSearch}|${unreadOnly ? "1" : "0"}`;
+    if (loadedKey.current === key) return;
+    let cancelled = false;
     void (async () => {
       const next = await loadStatus();
+      if (cancelled) return;
       await loadMessages(tab, next);
+      if (!cancelled) loadedKey.current = key;
     })();
-  }, [loadMessages, loadStatus, tab]);
+    return () => {
+      cancelled = true;
+    };
+    // Fetch once per tab/search/unread change. Status updates must not retrigger this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, appliedSearch, unreadOnly]);
 
   async function connect() {
     setBusy(true);
@@ -248,24 +258,34 @@ export function ZohoMailBoard() {
         )}
       </section>
 
-      <div className="mt-6 flex flex-wrap gap-2 border-b border-border/50 pb-px">
-        {(
-          [
-            ["inbox", "Zoho Inbox"],
-            ["outbox", "Zoho Outbox"],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            className={`px-3 py-2 text-[12px] uppercase tracking-[0.16em] ${
-              tab === key ? "border-b-2 border-primary text-foreground" : "text-muted-foreground"
-            }`}
-            onClick={() => setTab(key)}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="mt-6 flex flex-wrap items-end justify-between gap-2 border-b border-border/50 pb-px">
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ["inbox", "Zoho Inbox"],
+              ["outbox", "Zoho Outbox"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              className={`px-3 py-2 text-[12px] uppercase tracking-[0.16em] ${
+                tab === key ? "border-b-2 border-primary text-foreground" : "text-muted-foreground"
+              }`}
+              onClick={() => setTab(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="ghost-btn mb-1"
+          disabled={loading || !status?.connected}
+          onClick={() => void loadMessages(tab)}
+        >
+          {loading ? "Refreshing…" : "Refresh"}
+        </button>
       </div>
 
       <div className="tile mt-4 flex flex-wrap items-center gap-2 p-3">
