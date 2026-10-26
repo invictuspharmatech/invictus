@@ -1,8 +1,8 @@
-import jwt
 from django.conf import settings
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
+from accounts import hs256
 from accounts.models import User
 
 
@@ -12,8 +12,8 @@ class InvictusJWTAuthentication(BaseAuthentication):
         if not token:
             return None
         try:
-            payload = jwt.decode(token, settings.AUTH_SECRET, algorithms=["HS256"])
-        except jwt.PyJWTError as exc:
+            payload = hs256.decode(token, settings.AUTH_SECRET, algorithms=["HS256"])
+        except hs256.TokenError as exc:
             raise AuthenticationFailed("Invalid token.") from exc
         user_id = payload.get("id")
         if not user_id:

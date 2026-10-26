@@ -33,6 +33,7 @@ export type AccountingSummary = {
   cryptoCode?: string | null;
   w1Share: number;
   allocated: number;
+  resetAt?: string | null;
 };
 
 export function tileCopy(key: AccountingTileKey): {

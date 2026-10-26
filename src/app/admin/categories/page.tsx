@@ -25,6 +25,9 @@ export default async function AdminCategoriesPage({
         </div>
         <div className="flex flex-wrap gap-2">
           <CatalogCsvBar kind="categories" openImport={importFlag === "1"} autoExport={exportFlag === "1"} />
+          <Link href="/admin/products/skus" className="ghost-btn">
+            Generate SKUs
+          </Link>
           <Link href="/admin/categories/new" className="gold-btn">
             Add category
           </Link>
@@ -36,6 +39,7 @@ export default async function AdminCategoriesPage({
             <tr>
               <th className="py-2">Name</th>
               <th>Slug</th>
+              <th>SKU abbr</th>
               <th>Sort</th>
               <th></th>
             </tr>
@@ -45,6 +49,7 @@ export default async function AdminCategoriesPage({
               <tr key={category.id} className="border-t border-border/40">
                 <td className="py-3">{category.name}</td>
                 <td>{category.slug}</td>
+                <td className="font-mono text-xs">{category.skuAbbreviation || "—"}</td>
                 <td>{category.sortOrder}</td>
                 <td>
                   <Link href={`/admin/categories/${category.id}`} className="text-sm text-signal">

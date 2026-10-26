@@ -105,6 +105,8 @@ type BulkAction =
   | "sale_flat"
   | "clear_sale"
   | "set_warehouse"
+  | "allow_backorder"
+  | "disallow_backorder"
   | "delete";
 
 export function AdminProductsTable({
@@ -307,6 +309,10 @@ export function AdminProductsTable({
           return null;
         }
         return { ids, action: "set_warehouse", warehouse: bulkWarehouse };
+      case "allow_backorder":
+        return { ids, action: "set_backorder", allowBackorder: true };
+      case "disallow_backorder":
+        return { ids, action: "set_backorder", allowBackorder: false };
       case "delete":
         return { ids, action: "delete" };
       default:
@@ -332,7 +338,11 @@ export function AdminProductsTable({
           ? `${bulkPercent}% off`
           : bulkAction === "sale_flat"
             ? `$${bulkFlat} off`
-            : bulkAction.replace(/_/g, " ");
+            : bulkAction === "allow_backorder"
+              ? "Allow backorder"
+              : bulkAction === "disallow_backorder"
+                ? "Disallow backorder"
+                : bulkAction.replace(/_/g, " ");
       if (!window.confirm(`Apply “${label}” to ${selectedIds.length} product(s)?`)) return;
     }
 
@@ -461,6 +471,8 @@ export function AdminProductsTable({
                 {enableWarehouseBulk ? (
                   <option value="set_warehouse">Move to warehouse</option>
                 ) : null}
+                <option value="allow_backorder">Allow backorder</option>
+                <option value="disallow_backorder">Disallow backorder</option>
                 <option value="delete">Delete</option>
               </select>
               {bulkAction === "set_categories" ? (

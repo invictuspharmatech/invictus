@@ -21,6 +21,9 @@ export function CategoryForm({ category }: { category?: ApiCategory }) {
           description: String(form.get("description") || ""),
           image: String(form.get("image") || ""),
           sortOrder: Number(form.get("sortOrder") || 0),
+          skuAbbreviation: String(form.get("skuAbbreviation") || "")
+            .trim()
+            .toUpperCase(),
         };
         const res = await fetch(
           category ? `/api/admin/categories/${category.id}` : "/api/admin/categories",
@@ -68,6 +71,20 @@ export function CategoryForm({ category }: { category?: ApiCategory }) {
           type="number"
           defaultValue={category?.sortOrder ?? 0}
         />
+      </label>
+      <label className="grid gap-1 text-sm">
+        SKU abbreviation
+        <input
+          className="field"
+          name="skuAbbreviation"
+          defaultValue={category?.skuAbbreviation ?? ""}
+          placeholder="e.g. OILS, PEP, AMNO, ORAL, PCTM"
+          maxLength={16}
+        />
+        <span className="text-xs text-muted-foreground">
+          Products use <span className="font-mono">IP-{"{ABBR}"}-001</span>. Leave blank to
+          skip auto SKUs for this category.
+        </span>
       </label>
       <button className="gold-btn w-fit" type="submit">
         {category ? "Save category" : "Create category"}

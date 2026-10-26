@@ -27,6 +27,11 @@ export default async function AdminProductsPage({
         <div className="flex flex-wrap gap-2">
           {admin ? <CatalogCsvBar kind="products" openImport={importFlag === "1"} autoExport={exportFlag === "1"} /> : null}
           {admin ? (
+            <Link href="/admin/products/skus" className="ghost-btn">
+              Generate SKUs
+            </Link>
+          ) : null}
+          {admin ? (
             <Link href="/admin/cms/products/new" className="gold-btn">
               Add New Product
             </Link>

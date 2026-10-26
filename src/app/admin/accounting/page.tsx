@@ -59,8 +59,9 @@ export default async function AccountingPage({
       <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
         Percentage split of proceeds received (USD, and BTC when the invoice has a crypto
         amount). Shares are configurable below; mixed checkouts are one sale: X comes from
-        merchandise, then those percentages apply to the full proceeds. Reset a tile after you
-        pay that party. Restoring default shares puts the original rates back.
+        merchandise, then those percentages apply to the full proceeds. After a payout, use
+        Reset all to 0 so every tile starts clean for the next pay period. Restoring default
+        shares puts the original rates back.
       </p>
       <div className="mt-6 flex flex-wrap gap-2">
         {([AccountingPeriod.DAY, AccountingPeriod.WEEK, AccountingPeriod.MONTH] as const).map(

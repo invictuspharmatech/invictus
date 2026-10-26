@@ -5,6 +5,8 @@ export type ApiCategory = {
   description: string;
   image: string | null;
   sortOrder: number;
+  /** Used for SKUs: IP-{skuAbbreviation}-001 */
+  skuAbbreviation?: string;
 };
 
 export type ApiProduct = {

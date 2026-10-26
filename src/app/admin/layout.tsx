@@ -22,6 +22,7 @@ const ADMIN_NAV: AdminNavItem[] = [
     children: [
       { href: "/admin/products", label: "Product list" },
       { href: "/admin/cms/products/new", label: "Create product" },
+      { href: "/admin/products/skus", label: "Generate SKUs" },
       { href: "/admin/stock-alerts", label: "Stock alerts" },
       { href: "/admin/products?import=1", label: "Import from CSV" },
       { href: "/admin/products?export=1", label: "Export to CSV" },

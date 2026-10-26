@@ -2,6 +2,7 @@
 
 import { AccountingPeriod, AccountingWarehouse } from "@/lib/enums";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { formatMoney } from "@/lib/constants";
 import {
   formatCrypto,
@@ -46,9 +47,51 @@ export function AccountingBoard({
   sales: AccountingSaleRow[];
 }) {
   const router = useRouter();
+  const [resetting, setResetting] = useState(false);
+  const countingSinceReset = Boolean(summary.resetAt || tiles.some((tile) => tile.resetAt));
+
+  async function resetAll() {
+    if (
+      !window.confirm(
+        "Reset all accounting tiles to 0 for this period and warehouse? Use this after a payout so the next pay period starts clean.",
+      )
+    ) {
+      return;
+    }
+    setResetting(true);
+    try {
+      await fetch("/api/admin/accounting/reset", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ resetAll: true, period, warehouse }),
+      });
+      router.refresh();
+    } finally {
+      setResetting(false);
+    }
+  }
 
   return (
     <div className="mt-8 space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm text-muted-foreground">
+            {period.toLowerCase()} · {warehouseFilterLabel(warehouse)}
+          </p>
+          {countingSinceReset ? (
+            <p className="mt-1 text-xs text-muted-foreground">Counting since last reset.</p>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          className="ghost-btn"
+          disabled={resetting}
+          onClick={() => void resetAll()}
+        >
+          {resetting ? "Resetting…" : "Reset all to 0"}
+        </button>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-3">
         <article className="tile">
           <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
@@ -100,23 +143,6 @@ export function AccountingBoard({
               />
             </div>
             <p className="mt-3 text-sm text-muted-foreground">{tile.description}</p>
-            {tile.resetAt ? (
-              <p className="mt-2 text-xs text-muted-foreground">Counting since last reset.</p>
-            ) : null}
-            <button
-              type="button"
-              className="ghost-btn mt-5"
-              onClick={async () => {
-                await fetch("/api/admin/accounting/reset", {
-                  method: "POST",
-                  headers: { "content-type": "application/json" },
-                  body: JSON.stringify({ tileKey: tile.key, period, warehouse }),
-                });
-                router.refresh();
-              }}
-            >
-              Reset to 0
-            </button>
           </article>
         ))}
       </div>
@@ -125,7 +151,7 @@ export function AccountingBoard({
         <div className="overflow-x-auto tile">
           <h2 className="text-lg">Sales in this window</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Full period. Party tiles can be reset separately after you pay that share.
+            Orders counted since the last Reset all (or the start of this period).
           </p>
           <table className="mt-4 w-full text-left text-sm">
             <thead className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">

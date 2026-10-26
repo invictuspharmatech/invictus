@@ -26,6 +26,7 @@ KEY_REFRESH = "zoho_mail.refresh_token"
 KEY_ACCOUNT = "zoho_mail.account_id"
 KEY_INBOX = "zoho_mail.inbox_folder_id"
 KEY_SENT = "zoho_mail.sent_folder_id"
+KEY_RESOLVED = "zoho_mail.resolved_folder_id"
 KEY_MAILBOX = "zoho_mail.mailbox_address"
 CACHE_ACCESS = "zoho_mail.access_token"
 
@@ -54,7 +55,8 @@ def _cfg() -> dict[str, str]:
         "from_address": (getattr(settings, "ZOHO_MAIL_FROM_ADDRESS", "") or "").strip(),
         "resolved_folder_id": (
             getattr(settings, "ZOHO_MAIL_RESOLVED_FOLDER_ID", "") or ""
-        ).strip(),
+        ).strip()
+        or _get_setting(KEY_RESOLVED),
         "scopes": (
             getattr(settings, "ZOHO_MAIL_SCOPES", "")
             or "ZohoMail.accounts.READ,ZohoMail.folders.READ,ZohoMail.messages.READ,"
@@ -298,6 +300,9 @@ def warm_account_and_folders(force: bool = False) -> None:
         _set_setting(KEY_INBOX, inbox_id, "Zoho Mail inbox folder id")
     if sent_id:
         _set_setting(KEY_SENT, sent_id, "Zoho Mail sent folder id")
+    resolved_env = (getattr(settings, "ZOHO_MAIL_RESOLVED_FOLDER_ID", "") or "").strip()
+    if resolved_env:
+        _set_setting(KEY_RESOLVED, resolved_env, "Zoho Mail resolved folder id")
     if not inbox_id or not sent_id:
         raise ZohoMailError("Could not resolve Zoho Inbox/Sent folders.", status=422)
 
@@ -510,7 +515,7 @@ def reply_message(
 
 def resolve_message(message_id: str, folder_id: str | None = None) -> dict[str, Any]:
     cfg = _cfg()
-    dest = cfg["resolved_folder_id"]
+    dest = (cfg["resolved_folder_id"] or _get_setting(KEY_RESOLVED) or "").strip()
     if not dest:
         raise ZohoMailError(
             "Set ZOHO_MAIL_RESOLVED_FOLDER_ID to move messages into your Resolved folder.",

@@ -1,8 +1,8 @@
 import time
 
-import jwt
 from django.conf import settings
 
+from accounts import hs256
 from accounts.models import User
 
 
@@ -18,7 +18,7 @@ def issue_token(user: User) -> str:
         "iat": now,
         "exp": now + settings.JWT_TTL_SECONDS,
     }
-    return jwt.encode(payload, settings.AUTH_SECRET, algorithm="HS256")
+    return hs256.encode(payload, settings.AUTH_SECRET, algorithm="HS256")
 
 
 def session_payload(user: User) -> dict:

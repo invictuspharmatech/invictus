@@ -843,18 +843,25 @@ def admin_accounting_view(request):
 @api_view(["POST"])
 @permission_classes([IsStoreStaff])
 def admin_accounting_reset_view(request):
-    tile_key = request.data.get("tileKey")
     period = request.data.get("period")
     warehouse = resolve_warehouse(request.user, request.data.get("warehouse"))
-    if tile_key not in TILE_KEYS or period not in ("DAY", "WEEK", "MONTH"):
+    if period not in ("DAY", "WEEK", "MONTH"):
+        return Response({"error": "Invalid period."}, status=400)
+    reset_all = bool(request.data.get("resetAll"))
+    tile_key = request.data.get("tileKey")
+    keys = list(TILE_KEYS) if reset_all else [tile_key]
+    if not reset_all and tile_key not in TILE_KEYS:
         return Response({"error": "Invalid tile or period."}, status=400)
-    AccountingReset.objects.update_or_create(
-        tile_key=tile_key,
-        period=period,
-        warehouse=warehouse,
-        defaults={"reset_at": timezone.now(), "reset_by_id": str(request.user.id)},
-    )
-    return Response({"ok": True})
+    now = timezone.now()
+    user_id = str(request.user.id)
+    for key in keys:
+        AccountingReset.objects.update_or_create(
+            tile_key=key,
+            period=period,
+            warehouse=warehouse,
+            defaults={"reset_at": now, "reset_by_id": user_id},
+        )
+    return Response({"ok": True, "resetKeys": keys})
 
 
 @api_view(["POST"])

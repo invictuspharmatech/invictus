@@ -253,6 +253,33 @@ def admin_products_bulk(request):
             product.save(update_fields=["warehouse"])
             updated += 1
 
+    elif action == "set_backorder":
+        if "allowBackorder" in request.data:
+            raw = request.data.get("allowBackorder")
+        elif "allow_backorder" in request.data:
+            raw = request.data.get("allow_backorder")
+        else:
+            return Response(
+                {"error": "allowBackorder true/false is required."},
+                status=400,
+            )
+        if isinstance(raw, str):
+            normalized = raw.strip().lower()
+            if normalized in ("1", "true", "yes", "on"):
+                allow = True
+            elif normalized in ("0", "false", "no", "off"):
+                allow = False
+            else:
+                return Response({"error": "allowBackorder must be true or false."}, status=400)
+        elif raw is True or raw is False:
+            allow = raw
+        else:
+            return Response({"error": "allowBackorder must be true or false."}, status=400)
+        for product in products:
+            product.allow_backorder = allow
+            product.save(update_fields=["allow_backorder"])
+            updated += 1
+
     else:
         return Response({"error": "Unknown bulk action."}, status=400)
 
@@ -306,9 +333,12 @@ def admin_test_result_detail(request, pk):
 
 
 def _save_product(product: Product, data: dict) -> Product:
+    from catalog.sku import next_sku_for_category
+
     if data.get("name"):
         product.name = data["name"]
-    product.sku = data.get("sku", product.sku or "")
+    if "sku" in data:
+        product.sku = (data.get("sku") or "").strip()
     product.description = data.get("description", product.description or "")
     product.short_description = data.get("shortDescription", product.short_description or "")
     if "regularPrice" in data:
@@ -349,6 +379,15 @@ def _save_product(product: Product, data: dict) -> Product:
             category = Category.objects.filter(pk=category_id).first()
             if category:
                 ProductCategory.objects.get_or_create(product=product, category=category)
+    # Auto-assign SKU when blank: first linked category that has an abbreviation.
+    product = Product.objects.prefetch_related("category_links__category").get(pk=product.pk)
+    if not (product.sku or "").strip():
+        for link in product.category_links.all():
+            suggested = next_sku_for_category(link.category, exclude_ids=[product.pk])
+            if suggested:
+                product.sku = suggested
+                product.save(update_fields=["sku"])
+                break
     return Product.objects.prefetch_related("category_links__category").get(pk=product.pk)
 
 
@@ -407,6 +446,8 @@ def admin_stock_transfer_review(request, pk):
 
 
 def _save_category(category: Category, data: dict) -> Category:
+    from catalog.sku import normalize_abbr
+
     name = data.get("name") or category.name
     slug = (data.get("slug") or "").strip() or slugify(name)
     category.name = name
@@ -417,6 +458,8 @@ def _save_category(category: Category, data: dict) -> Category:
         category.image = data.get("image") or ""
     if "sortOrder" in data and data.get("sortOrder") is not None:
         category.sort_order = int(data.get("sortOrder") or 0)
+    if "skuAbbreviation" in data:
+        category.sku_abbreviation = normalize_abbr(data.get("skuAbbreviation") or "")
     category.save()
     return category
 
@@ -447,6 +490,58 @@ def admin_category_detail(request, pk):
     serializer.is_valid(raise_exception=True)
     category = _save_category(category, serializer.validated_data)
     return Response(CategorySerializer(category).data)
+
+
+@api_view(["GET"])
+@permission_classes([IsStoreStaff])
+def admin_products_next_sku(request):
+    from catalog.sku import next_sku_for_category
+
+    category_id = request.GET.get("categoryId") or request.GET.get("category_id")
+    category = Category.objects.filter(pk=category_id).first() if category_id else None
+    if not category:
+        return Response({"error": "Category is required."}, status=400)
+    sku = next_sku_for_category(category)
+    if not sku:
+        return Response(
+            {
+                "error": "Set a SKU abbreviation on this category first (e.g. OILS).",
+                "skuAbbreviation": category.sku_abbreviation or "",
+            },
+            status=422,
+        )
+    return Response(
+        {
+            "sku": sku,
+            "skuAbbreviation": category.sku_abbreviation,
+            "categoryId": str(category.id),
+            "categoryName": category.name,
+        }
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsStoreStaff])
+def admin_products_generate_skus(request):
+    from catalog.sku import generate_skus_for_category
+
+    if not is_full_admin(request.user):
+        return Response({"error": "Not allowed."}, status=403)
+    category_id = request.data.get("categoryId") or request.data.get("category_id")
+    category = Category.objects.filter(pk=category_id).first() if category_id else None
+    if not category:
+        return Response({"error": "Choose a category."}, status=400)
+    rewrite = bool(request.data.get("rewriteExisting") or request.data.get("rewrite_existing"))
+    dry_run = bool(request.data.get("dryRun") or request.data.get("dry_run"))
+    try:
+        result = generate_skus_for_category(
+            category,
+            rewrite_existing=rewrite,
+            dry_run=dry_run,
+        )
+    except ValueError as exc:
+        return Response({"error": str(exc)}, status=422)
+    return Response(result)
 
 
 @api_view(["POST"])

@@ -481,7 +481,14 @@ def accounting_response(user, period: str, warehouse_param: str | None) -> dict:
         reset = resets.get(key)
         tile_starts[key] = later(window_start, reset.reset_at) if reset else window_start
         reset_at[key] = reset.reset_at.isoformat() if reset else None
-    payload = build_accounting_payload(period, warehouse, tile_starts, window_start)
+    # Top summary tiles (proceeds / allocation / W1 share) must use the same
+    # counting window as party tiles after a pay-period Reset All.
+    summary_start = max(tile_starts.values()) if tile_starts else window_start
+    payload = build_accounting_payload(period, warehouse, tile_starts, summary_start)
     for tile in payload["tiles"]:
         tile["resetAt"] = reset_at[tile["key"]]
+    payload["summary"]["resetAt"] = max(
+        (value for value in reset_at.values() if value),
+        default=None,
+    )
     return payload

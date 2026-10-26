@@ -10,6 +10,12 @@ class Category(models.Model):
     description = models.TextField(blank=True)
     image = models.CharField(max_length=500, blank=True)
     sort_order = models.IntegerField(default=0)
+    sku_abbreviation = models.CharField(
+        max_length=16,
+        blank=True,
+        default="",
+        help_text="Used in SKUs as IP-{ABBR}-001 (e.g. OILS, PEP).",
+    )
 
     class Meta:
         ordering = ["sort_order", "name"]

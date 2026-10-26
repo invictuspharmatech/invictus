@@ -5,6 +5,12 @@ import { useState } from "react";
 import { ProductMediaPicker } from "@/components/admin/ProductMediaPicker";
 import type { ApiCategory, ApiProduct } from "@/lib/api-types";
 
+/** Same values as product list bulk actions / GreatLife-style publish flags. */
+function normalizeProductStatus(status?: string | null): "publish" | "draft" {
+  if (!status || status === "publish" || status === "active") return "publish";
+  return "draft";
+}
+
 export function ProductForm({
   product,
   categories,
@@ -15,7 +21,40 @@ export function ProductForm({
   const router = useRouter();
   const [error, setError] = useState("");
   const [image, setImage] = useState(product?.image ?? "");
+  const [sku, setSku] = useState(product?.sku ?? "");
+  const [skuBusy, setSkuBusy] = useState(false);
   const selected = new Set(product?.categoryIds ?? []);
+  const statusDefault = normalizeProductStatus(product?.status);
+
+  async function suggestSku(form: HTMLFormElement) {
+    const categoryIds = Array.from(form.querySelectorAll<HTMLInputElement>('input[name="categoryIds"]:checked')).map(
+      (input) => input.value,
+    );
+    const firstWithAbbr = categories.find(
+      (category) => categoryIds.includes(category.id) && (category.skuAbbreviation || "").trim(),
+    );
+    if (!firstWithAbbr) {
+      setError("Select a category that has a SKU abbreviation (edit the category first).");
+      return;
+    }
+    setSkuBusy(true);
+    setError("");
+    try {
+      const res = await fetch(
+        `/api/admin/products/next-sku?categoryId=${encodeURIComponent(firstWithAbbr.id)}`,
+      );
+      const data = (await res.json().catch(() => ({}))) as { sku?: string; error?: string };
+      if (!res.ok || !data.sku) {
+        setError(data.error || "Could not suggest SKU.");
+        return;
+      }
+      setSku(data.sku);
+    } catch {
+      setError("Could not suggest SKU.");
+    } finally {
+      setSkuBusy(false);
+    }
+  }
 
   return (
     <form
@@ -27,7 +66,7 @@ export function ProductForm({
         const payload = {
           name: String(form.get("name") || ""),
           slug: String(form.get("slug") || ""),
-          sku: String(form.get("sku") || ""),
+          sku: sku.trim(),
           shortDescription: String(form.get("shortDescription") || ""),
           description: String(form.get("description") || ""),
           image,
@@ -36,7 +75,7 @@ export function ProductForm({
           warehouse: String(form.get("warehouse") || "WAREHOUSE_2"),
           stockQuantityW1: Number(form.get("stockQuantityW1") || 0),
           stockQuantityW2: Number(form.get("stockQuantityW2") || 0),
-          status: String(form.get("status") || "publish"),
+          status: normalizeProductStatus(String(form.get("status") || "publish")),
           isFeatured: form.get("isFeatured") === "on",
           isNewArrival: form.get("isNewArrival") === "on",
           allowBackorder: form.get("allowBackorder") === "on",
@@ -69,7 +108,32 @@ export function ProductForm({
       </label>
       <label className="grid gap-1 text-sm">
         SKU
-        <input className="field" name="sku" defaultValue={product?.sku} />
+        <div className="flex flex-wrap gap-2">
+          <input
+            className="field min-w-0 flex-1"
+            name="sku"
+            value={sku}
+            onChange={(event) => setSku(event.target.value)}
+            placeholder="IP-OILS-001 (auto if left blank on create)"
+          />
+          {!product ? (
+            <button
+              type="button"
+              className="ghost-btn shrink-0"
+              disabled={skuBusy}
+              onClick={(event) => {
+                const form = event.currentTarget.form;
+                if (form) void suggestSku(form);
+              }}
+            >
+              {skuBusy ? "…" : "Suggest SKU"}
+            </button>
+          ) : null}
+        </div>
+        <span className="text-xs text-muted-foreground">
+          Leave blank on create to auto-assign from the first selected category with an
+          abbreviation.
+        </span>
       </label>
       <label className="grid gap-1 text-sm">
         Short description
@@ -140,7 +204,10 @@ export function ProductForm({
       </div>
       <label className="grid gap-1 text-sm">
         Status
-        <input className="field" name="status" defaultValue={product?.status ?? "publish"} />
+        <select className="field" name="status" defaultValue={statusDefault}>
+          <option value="publish">Active</option>
+          <option value="draft">Inactive</option>
+        </select>
       </label>
       <fieldset className="grid gap-2 text-sm">
         <legend>Categories</legend>
