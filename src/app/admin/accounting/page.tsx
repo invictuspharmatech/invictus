@@ -57,11 +57,10 @@ export default async function AccountingPage({
     <div>
       <h1 className="display-font text-3xl">Accounting</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-        Percentage split of proceeds received (USD, and BTC when the invoice has a crypto
-        amount). Shares are configurable below; mixed checkouts are one sale: X comes from
-        merchandise, then those percentages apply to the full proceeds. After a payout, use
-        Reset all to 0 so every tile starts clean for the next pay period. Restoring default
-        shares puts the original rates back.
+        Party splits use merchandise only — shipping is excluded and shown on its own
+        tile. Shares are configurable below. When BTC rate drift makes invoice totals
+        unreliable, use the payout calculator for merchandise BTC. Reset all to 0 clears
+        Admin, Party 1, Party 2, and Shipping for the next pay period.
       </p>
       <div className="mt-6 flex flex-wrap gap-2">
         {([AccountingPeriod.DAY, AccountingPeriod.WEEK, AccountingPeriod.MONTH] as const).map(
@@ -100,6 +99,7 @@ export default async function AccountingPage({
         warehouse={warehouse}
         summary={data.summary ?? { proceeds: 0, w1Share: 0, allocated: 0 }}
         sales={data.sales ?? []}
+        split={split}
       />
     </div>
   );

@@ -12,7 +12,10 @@ from orders.models import AccountingReset, BtcInvoice, Order, OrderItem, Revenue
 TILE_ADMIN = "ADMIN_25"
 TILE_PARTY_1 = "PARTY_1"
 TILE_PARTY_2 = "PARTY_2"
-TILE_KEYS = (TILE_ADMIN, TILE_PARTY_1, TILE_PARTY_2)
+TILE_SHIPPING = "SHIPPING"
+# Party split tiles (merchandise only). Shipping is tracked separately.
+SPLIT_TILE_KEYS = (TILE_ADMIN, TILE_PARTY_1, TILE_PARTY_2)
+TILE_KEYS = (*SPLIT_TILE_KEYS, TILE_SHIPPING)
 
 DEFAULT_SPLIT = {
     "w1_admin": Decimal("25"),
@@ -112,15 +115,19 @@ def tile_copy(split: dict[str, Decimal]) -> dict[str, tuple[str, str]]:
     return {
         TILE_ADMIN: (
             "Admin",
-            f"W1 {float(split['w1_admin']):g}% · W2 {float(split['w2_admin']):g}% of proceeds received.",
+            f"W1 {float(split['w1_admin']):g}% · W2 {float(split['w2_admin']):g}% of merchandise proceeds (shipping excluded).",
         ),
         TILE_PARTY_1: (
             "Party 1",
-            f"W1 {float(split['w1_party1']):g}% · W2 {float(split['w2_party1']):g}%, weighted by merchandise mix.",
+            f"W1 {float(split['w1_party1']):g}% · W2 {float(split['w2_party1']):g}% of merchandise, weighted by mix.",
         ),
         TILE_PARTY_2: (
             "Party 2",
-            "Remainder of each sale so Admin + Party 1 + Party 2 always equals 100%.",
+            "Remainder of merchandise so Admin + Party 1 + Party 2 always equals 100%.",
+        ),
+        TILE_SHIPPING: (
+            "Shipping fees",
+            "Shipping collected on counted orders. Kept out of Admin / Party splits; resets with Reset all.",
         ),
     }
 
@@ -279,10 +286,26 @@ def _invoice_crypto(order: Order) -> tuple[Decimal, str | None]:
     return amount, code
 
 
+def _shipping_for_orders(orders: list[Order]) -> tuple[Decimal, Decimal]:
+    w1 = Decimal("0")
+    w2 = Decimal("0")
+    for order in orders:
+        amount = as_decimal(order.shipping_total)
+        if order.warehouse == Order.Warehouse.WAREHOUSE_1:
+            w1 += amount
+        else:
+            w2 += amount
+    return w1, w2
+
+
 def _sale_from_orders(orders: list[Order]) -> dict:
     merch_w1, merch_w2 = _merchandise_split(orders)
     x = w1_merchandise_share(merch_w1, merch_w2)
-    proceeds = sum((as_decimal(order.grand_total) for order in orders), Decimal("0"))
+    # Party splits use merchandise only — shipping is tracked on its own tile.
+    proceeds = sum((as_decimal(order.merchandise_total) for order in orders), Decimal("0"))
+    shipping_w1, shipping_w2 = _shipping_for_orders(orders)
+    shipping = shipping_w1 + shipping_w2
+    grand = proceeds + shipping
     crypto_total = Decimal("0")
     codes: set[str] = set()
     for order in orders:
@@ -294,6 +317,12 @@ def _sale_from_orders(orders: list[Order]) -> dict:
     if len(codes) > 1:
         crypto_total = Decimal("0")
         crypto_code = None
+    if grand > 0 and crypto_total > 0:
+        crypto_proceeds = quantize_crypto(crypto_total * (proceeds / grand))
+        crypto_shipping = quantize_crypto(crypto_total - crypto_proceeds)
+    else:
+        crypto_proceeds = crypto_total
+        crypto_shipping = Decimal("0")
     return {
         "group_id": orders[0].group_id,
         "order_numbers": [order.order_number for order in orders],
@@ -301,9 +330,30 @@ def _sale_from_orders(orders: list[Order]) -> dict:
         "merch_w1": merch_w1,
         "merch_w2": merch_w2,
         "proceeds": proceeds,
-        "crypto_proceeds": crypto_total,
+        "shipping": shipping,
+        "shipping_w1": shipping_w1,
+        "shipping_w2": shipping_w2,
+        "crypto_proceeds": crypto_proceeds,
+        "crypto_shipping": crypto_shipping,
         "crypto_code": crypto_code,
     }
+
+
+def _shipping_amount(sale: dict, warehouse: str) -> Decimal:
+    if warehouse == Order.Warehouse.WAREHOUSE_1:
+        return as_decimal(sale.get("shipping_w1"))
+    if warehouse == Order.Warehouse.WAREHOUSE_2:
+        return as_decimal(sale.get("shipping_w2"))
+    return as_decimal(sale.get("shipping"))
+
+
+def _crypto_shipping_amount(sale: dict, warehouse: str) -> Decimal:
+    shipping = as_decimal(sale.get("shipping"))
+    crypto_shipping = as_decimal(sale.get("crypto_shipping"))
+    if shipping <= 0 or crypto_shipping <= 0:
+        return Decimal("0")
+    portion = _shipping_amount(sale, warehouse)
+    return quantize_crypto(crypto_shipping * (portion / shipping))
 
 
 def counted_orders_qs(start):
@@ -332,6 +382,8 @@ def sales_in_window(start) -> list[dict]:
 def summarize_sales(sales: list[dict], warehouse: str, split: dict[str, Decimal] | None = None) -> dict:
     proceeds = Decimal("0")
     crypto_proceeds = Decimal("0")
+    shipping = Decimal("0")
+    crypto_shipping = Decimal("0")
     merch_w1 = Decimal("0")
     merch_w2 = Decimal("0")
     admin = Decimal("0")
@@ -346,6 +398,8 @@ def summarize_sales(sales: list[dict], warehouse: str, split: dict[str, Decimal]
     for sale in sales:
         merch_w1 += sale["merch_w1"]
         merch_w2 += sale["merch_w2"]
+        ship = _shipping_amount(sale, warehouse)
+        shipping += ship
         a, p1, p2 = allocate_for_warehouse(sale["proceeds"], sale["w1_share"], warehouse, split)
         proceeds += a + p1 + p2
         admin += a
@@ -362,12 +416,18 @@ def summarize_sales(sales: list[dict], warehouse: str, split: dict[str, Decimal]
             crypto_party2 += cp2
             if sale["crypto_code"]:
                 crypto_codes.add(sale["crypto_code"])
+        c_ship = _crypto_shipping_amount(sale, warehouse)
+        if c_ship > 0:
+            crypto_shipping += c_ship
+            if sale["crypto_code"]:
+                crypto_codes.add(sale["crypto_code"])
         rows.append(
             {
                 "groupId": sale["group_id"],
                 "orderNumbers": sale["order_numbers"],
                 "w1Share": float(sale["w1_share"]),
                 "proceeds": money_float(a + p1 + p2),
+                "shipping": money_float(ship),
                 "admin": money_float(a),
                 "party1": money_float(p1),
                 "party2": money_float(p2),
@@ -394,21 +454,26 @@ def summarize_sales(sales: list[dict], warehouse: str, split: dict[str, Decimal]
         TILE_ADMIN: admin,
         TILE_PARTY_1: party1,
         TILE_PARTY_2: party2,
+        TILE_SHIPPING: shipping,
     }
     crypto_amounts = {
         TILE_ADMIN: crypto_admin,
         TILE_PARTY_1: crypto_party1,
         TILE_PARTY_2: crypto_party2,
+        TILE_SHIPPING: crypto_shipping,
     }
     percents = {
         TILE_ADMIN: admin_pct,
         TILE_PARTY_1: party1_pct,
         TILE_PARTY_2: party2_pct,
+        TILE_SHIPPING: None,
     }
     return {
         "proceeds": proceeds,
         "crypto_proceeds": crypto_proceeds,
         "crypto_code": crypto_code,
+        "shipping": shipping,
+        "crypto_shipping": crypto_shipping,
         "w1_share": w1_share,
         "merch_w1_share": w1_share,
         "amounts": amounts,
@@ -435,15 +500,21 @@ def build_accounting_payload(
         start = tile_starts[key]
         data = unique_starts[start]
         crypto_amount = data["crypto_amounts"][key]
+        has_crypto = (
+            data["crypto_shipping"] > 0 if key == TILE_SHIPPING else data["crypto_proceeds"] > 0
+        )
+        percent = data["percents"][key]
         tiles.append(
             {
                 "key": key,
                 "title": title,
                 "description": description,
                 "amount": money_float(data["amounts"][key]),
-                "cryptoAmount": crypto_float(crypto_amount) if data["crypto_proceeds"] else None,
-                "cryptoCode": data["crypto_code"],
-                "percentOfSale": float((data["percents"][key] * 100).quantize(Decimal("0.01"))),
+                "cryptoAmount": crypto_float(crypto_amount) if has_crypto and crypto_amount else None,
+                "cryptoCode": data["crypto_code"] if has_crypto else None,
+                "percentOfSale": (
+                    float((percent * 100).quantize(Decimal("0.01"))) if percent is not None else None
+                ),
                 "resetAt": None,
             }
         )
@@ -457,6 +528,10 @@ def build_accounting_payload(
             if summary["crypto_proceeds"]
             else None,
             "cryptoCode": summary["crypto_code"],
+            "shipping": money_float(summary["shipping"]),
+            "cryptoShipping": crypto_float(summary["crypto_shipping"])
+            if summary["crypto_shipping"]
+            else None,
             "w1Share": float(summary["merch_w1_share"]),
             "allocated": money_float(summary["check"]),
         },

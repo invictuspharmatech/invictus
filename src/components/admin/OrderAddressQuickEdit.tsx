@@ -27,11 +27,6 @@ function draftFrom(order: ApiOrder): Draft {
   };
 }
 
-function orderBlocked(status: string): boolean {
-  const key = status.toUpperCase();
-  return key === "CANCELLED" || key === "REFUNDED" || key === "FAILED";
-}
-
 export function OrderAddressQuickEdit({
   order,
   onCancel,
@@ -44,7 +39,6 @@ export function OrderAddressQuickEdit({
   const [draft, setDraft] = useState(() => draftFrom(order));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const blocked = orderBlocked(order.status);
 
   useEffect(() => {
     setDraft(draftFrom(order));
@@ -52,7 +46,6 @@ export function OrderAddressQuickEdit({
   }, [order]);
 
   async function save() {
-    if (blocked) return;
     if (
       !draft.shippingLine1.trim() ||
       !draft.shippingCity.trim() ||
@@ -94,16 +87,13 @@ export function OrderAddressQuickEdit({
           <button
             type="button"
             className="gold-btn"
-            disabled={saving || blocked}
+            disabled={saving}
             onClick={() => void save()}
           >
             {saving ? "Saving…" : "Save address"}
           </button>
         </div>
       </div>
-      {blocked ? (
-        <p className="mt-2 text-sm text-brand-red">This order status cannot be edited.</p>
-      ) : null}
       {error ? <p className="mt-2 text-sm text-brand-red">{error}</p> : null}
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {(
@@ -123,7 +113,6 @@ export function OrderAddressQuickEdit({
             <input
               className="field"
               value={draft[key]}
-              disabled={blocked}
               onChange={(event) => setDraft((prev) => ({ ...prev, [key]: event.target.value }))}
             />
           </label>

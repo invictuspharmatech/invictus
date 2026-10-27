@@ -3,7 +3,13 @@ from django.utils import timezone
 
 from cms.dashboard_tiles import default_layout, normalize_layout
 from cms.models import SiteSetting
-from orders.order_numbers import allocate_group_id, save_order_numbering
+from orders.models import Order
+from orders.order_numbers import (
+    SEQUENCE_MAX,
+    allocate_order_number,
+    format_order_number,
+    preview_order_number,
+)
 from orders.shop_config import (
     checkout_limit_error,
     save_affiliate_defaults,
@@ -58,16 +64,54 @@ class CheckoutSettingsTests(TestCase):
 
 
 class SequentialOrderNumberTests(TestCase):
-    def test_disabled_keeps_inv_prefix(self):
-        save_order_numbering({"enabled": False, "prefix": "INV", "numDigits": 5})
-        group_id = allocate_group_id()
-        self.assertTrue(group_id.startswith("INV-"))
-
-    def test_enabled_uses_prefix_year_and_padding(self):
-        save_order_numbering({"enabled": True, "prefix": "INV", "numDigits": 5})
-        first = allocate_group_id()
-        second = allocate_group_id()
+    def test_preview_matches_format(self):
         year = timezone.now().year
-        self.assertEqual(first, f"INV{year}00001")
-        self.assertEqual(second, f"INV{year}00002")
+        self.assertEqual(preview_order_number(), f"{year}W10001")
+
+    def test_allocates_year_warehouse_sequence(self):
+        year = timezone.now().year
+        first = allocate_order_number("WAREHOUSE_1")
+        second = allocate_order_number("WAREHOUSE_1")
+        w2 = allocate_order_number("WAREHOUSE_2")
+        self.assertEqual(first, f"{year}W10001")
+        self.assertEqual(second, f"{year}W10002")
+        self.assertEqual(w2, f"{year}W20001")
         self.assertTrue(SiteSetting.objects.filter(key__startswith="order_numbering.seq.").exists())
+
+    def test_sequence_wraps_at_1000(self):
+        year = timezone.now().year
+        SiteSetting.objects.create(
+            key=f"order_numbering.seq.{year}|W1",
+            value=str(SEQUENCE_MAX),
+            label="seq",
+            group="order_numbering",
+        )
+        next_num = allocate_order_number("WAREHOUSE_1")
+        self.assertEqual(next_num, format_order_number(year, "WAREHOUSE_1", 1))
+
+    def test_skips_existing_order_number_after_wrap(self):
+        year = timezone.now().year
+        Order.objects.create(
+            order_number=format_order_number(year, "WAREHOUSE_1", 1),
+            group_id="g1",
+            warehouse="WAREHOUSE_1",
+            status=Order.Status.PENDING,
+            payment_status=Order.PaymentStatus.PENDING,
+            merchandise_total=0,
+            shipping_total=0,
+            grand_total=0,
+            customer_name="x",
+            customer_email="x@example.com",
+            shipping_line1="1",
+            shipping_city="c",
+            shipping_state="s",
+            shipping_postal="1",
+        )
+        SiteSetting.objects.create(
+            key=f"order_numbering.seq.{year}|W1",
+            value=str(SEQUENCE_MAX),
+            label="seq",
+            group="order_numbering",
+        )
+        next_num = allocate_order_number("WAREHOUSE_1")
+        self.assertEqual(next_num, format_order_number(year, "WAREHOUSE_1", 2))

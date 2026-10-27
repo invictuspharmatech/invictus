@@ -6,11 +6,6 @@ import { formatMoney } from "@/lib/constants";
 import { warehouseLabel } from "@/lib/warehouse";
 import type { ApiOrder, ApiProduct } from "@/lib/api-types";
 
-function orderBlocked(status: string): boolean {
-  const key = status.toUpperCase();
-  return key === "CANCELLED" || key === "REFUNDED" || key === "FAILED";
-}
-
 export function OrderItemsQuickEdit({
   order,
   onCancel,
@@ -29,7 +24,6 @@ export function OrderItemsQuickEdit({
   const [error, setError] = useState("");
   const [productQuery, setProductQuery] = useState("");
   const [productHits, setProductHits] = useState<ApiProduct[]>([]);
-  const blocked = orderBlocked(liveOrder.status);
 
   useEffect(() => {
     setLiveOrder(order);
@@ -61,7 +55,7 @@ export function OrderItemsQuickEdit({
   }
 
   async function addProduct(product: ApiProduct) {
-    if (blocked || adding) return;
+    if (adding) return;
     setAdding(true);
     setError("");
     try {
@@ -88,7 +82,7 @@ export function OrderItemsQuickEdit({
   }
 
   async function save() {
-    if (blocked || !dirty) return;
+    if (!dirty) return;
     const nextItems = liveOrder.items.map((item) => ({
       id: item.id,
       quantity: Math.max(0, Number(qty[item.id] ?? item.quantity) || 0),
@@ -129,7 +123,7 @@ export function OrderItemsQuickEdit({
           <button
             type="button"
             className="gold-btn"
-            disabled={saving || blocked || (!dirty && liveOrder.items.length === order.items.length && liveOrder.items.every((item, i) => item.id === order.items[i]?.id && item.quantity === order.items[i]?.quantity))}
+            disabled={saving || (!dirty && liveOrder.items.length === order.items.length && liveOrder.items.every((item, i) => item.id === order.items[i]?.id && item.quantity === order.items[i]?.quantity))}
             onClick={() => {
               if (dirty) {
                 void save();
@@ -146,9 +140,6 @@ export function OrderItemsQuickEdit({
         Change quantities, remove lines, or add a product from the catalog. Stock updates when you
         save or add.
       </p>
-      {blocked ? (
-        <p className="mt-2 text-sm text-brand-red">This order status cannot be edited.</p>
-      ) : null}
       {error ? <p className="mt-2 text-sm text-brand-red">{error}</p> : null}
 
       <ul className="mt-3 space-y-2">
@@ -181,7 +172,7 @@ export function OrderItemsQuickEdit({
                     className="field w-20"
                     type="number"
                     min={0}
-                    disabled={blocked || saving}
+                    disabled={saving}
                     value={draftQty}
                     onChange={(event) =>
                       setQty((prev) => ({
@@ -198,7 +189,7 @@ export function OrderItemsQuickEdit({
                   type="button"
                   className="inline-flex h-8 w-8 items-center justify-center rounded border border-border text-brand-red hover:bg-brand-red/15 disabled:opacity-40"
                   title="Remove item"
-                  disabled={blocked || saving}
+                  disabled={saving}
                   onClick={() => removeItem(item.id)}
                 >
                   <Trash2 className="size-4" aria-hidden />
@@ -209,45 +200,43 @@ export function OrderItemsQuickEdit({
         })}
       </ul>
 
-      {!blocked ? (
-        <div className="mt-4 border-t border-border/40 pt-4">
-          <label className="grid gap-1 text-xs">
-            Add product
-            <input
-              className="field max-w-md"
-              value={productQuery}
-              disabled={adding}
-              onChange={(event) => void searchProducts(event.target.value)}
-              placeholder="Search catalog by name or SKU…"
-            />
-          </label>
-          {productHits.length > 0 ? (
-            <ul className="mt-2 max-w-xl divide-y divide-border/40 rounded border border-border/50">
-              {productHits.map((product) => (
-                <li
-                  key={product.id}
-                  className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
-                >
-                  <span>
-                    {product.name}
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {formatMoney(product.salePrice ?? product.regularPrice)}
-                    </span>
+      <div className="mt-4 border-t border-border/40 pt-4">
+        <label className="grid gap-1 text-xs">
+          Add product
+          <input
+            className="field max-w-md"
+            value={productQuery}
+            disabled={adding}
+            onChange={(event) => void searchProducts(event.target.value)}
+            placeholder="Search catalog by name or SKU…"
+          />
+        </label>
+        {productHits.length > 0 ? (
+          <ul className="mt-2 max-w-xl divide-y divide-border/40 rounded border border-border/50">
+            {productHits.map((product) => (
+              <li
+                key={product.id}
+                className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
+              >
+                <span>
+                  {product.name}
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {formatMoney(product.salePrice ?? product.regularPrice)}
                   </span>
-                  <button
-                    type="button"
-                    className="ghost-btn"
-                    disabled={adding}
-                    onClick={() => void addProduct(product)}
-                  >
-                    {adding ? "Adding…" : "Add"}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-      ) : null}
+                </span>
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  disabled={adding}
+                  onClick={() => void addProduct(product)}
+                >
+                  {adding ? "Adding…" : "Add"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
     </div>
   );
 }

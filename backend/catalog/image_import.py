@@ -1,0 +1,126 @@
+from __future__ import annotations
+
+import re
+from pathlib import PurePosixPath
+
+from django.utils.text import slugify
+
+from catalog.models import Category, Product, ProductCategory
+from catalog.sku import next_sku_for_category
+
+# Categories that ship from warehouse 1 (peptides / aminos).
+WAREHOUSE_1_SLUGS = {"peptides", "peptides-glps", "aminos"}
+
+
+def normalize_product_name(value: str) -> str:
+    return " ".join(str(value or "").split())
+
+
+def product_name_from_filename(filename: str) -> str:
+    stem = PurePosixPath(str(filename or "")).stem
+    # Underscores → spaces; keep hyphens (BPC-157, IGF1-LR3).
+    stem = stem.replace("_", " ")
+    stem = re.sub(r"\s+", " ", stem).strip()
+    return normalize_product_name(stem)
+
+
+def find_product_by_name(name: str) -> Product | None:
+    target = normalize_product_name(name)
+    if not target:
+        return None
+    hit = Product.objects.filter(name__iexact=target).first()
+    if hit:
+        return hit
+    key = target.casefold()
+    for product in Product.objects.only("id", "name").iterator():
+        if normalize_product_name(product.name).casefold() == key:
+            return product
+    return None
+
+
+def unique_slug_for(name: str, exclude_id=None) -> str:
+    base = slugify(name)[:200] or "product"
+    slug = base
+    n = 2
+    while True:
+        qs = Product.objects.filter(slug=slug)
+        if exclude_id:
+            qs = qs.exclude(pk=exclude_id)
+        if not qs.exists():
+            return slug
+        slug = f"{base}-{n}"[:220]
+        n += 1
+
+
+def import_image_item(
+    *,
+    name: str,
+    image_path: str,
+    category: Category,
+) -> dict:
+    """
+    Attach image to an existing product with the same name, or create a draft
+    product in the given category with an auto SKU.
+    """
+    name = normalize_product_name(name)
+    image_path = str(image_path or "").strip()
+    if not name:
+        return {"action": "error", "name": name, "error": "Empty product name."}
+    if not image_path:
+        return {"action": "error", "name": name, "error": "Missing image path."}
+
+    existing = find_product_by_name(name)
+    if existing:
+        existing.image = image_path
+        existing.save(update_fields=["image"])
+        # Ensure category link exists without removing other categories.
+        ProductCategory.objects.get_or_create(product=existing, category=category)
+        if not (existing.sku or "").strip():
+            suggested = next_sku_for_category(category, exclude_ids=[existing.pk])
+            if suggested:
+                existing.sku = suggested
+                existing.save(update_fields=["sku"])
+        refreshed = Product.objects.prefetch_related("category_links__category").get(pk=existing.pk)
+        return {
+            "action": "updated",
+            "id": str(refreshed.id),
+            "name": refreshed.name,
+            "sku": refreshed.sku,
+            "image": refreshed.image,
+        }
+
+    warehouse = (
+        Product.Warehouse.WAREHOUSE_1
+        if category.slug in WAREHOUSE_1_SLUGS
+        else Product.Warehouse.WAREHOUSE_2
+    )
+    product = Product(
+        name=name,
+        slug=unique_slug_for(name),
+        sku="",
+        description="",
+        short_description="",
+        regular_price=0,
+        sale_price=None,
+        image=image_path,
+        warehouse=warehouse,
+        status="draft",
+        stock_quantity_w1=0,
+        stock_quantity_w2=0,
+        allow_backorder=False,
+    )
+    product.sync_total(save=False)
+    product.save()
+    ProductCategory.objects.create(product=product, category=category)
+    suggested = next_sku_for_category(category, exclude_ids=[product.pk])
+    if suggested:
+        product.sku = suggested
+        product.save(update_fields=["sku"])
+    refreshed = Product.objects.prefetch_related("category_links__category").get(pk=product.pk)
+    return {
+        "action": "created",
+        "id": str(refreshed.id),
+        "name": refreshed.name,
+        "sku": refreshed.sku,
+        "image": refreshed.image,
+    }

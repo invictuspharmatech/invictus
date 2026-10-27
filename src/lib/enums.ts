@@ -82,6 +82,7 @@ export const AccountingTileKey = {
   ADMIN_25: "ADMIN_25",
   PARTY_1: "PARTY_1",
   PARTY_2: "PARTY_2",
+  SHIPPING: "SHIPPING",
 } as const;
 export type AccountingTileKey =
   (typeof AccountingTileKey)[keyof typeof AccountingTileKey];

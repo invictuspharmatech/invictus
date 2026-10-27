@@ -77,7 +77,10 @@ def recalc_merchandise(order: Order) -> None:
     order.save(update_fields=["merchandise_total"])
 
 
-def assert_order_editable(order: Order) -> None:
+def assert_order_editable(order: Order, user=None) -> None:
+    """Block edits on terminal statuses unless the actor is a full admin/superuser."""
+    if is_full_admin(user):
+        return
     if order.status in (
         Order.Status.CANCELLED,
         Order.Status.REFUNDED,
@@ -87,10 +90,10 @@ def assert_order_editable(order: Order) -> None:
 
 
 @transaction.atomic
-def set_order_item_quantity(item: OrderItem, new_qty: int) -> None:
+def set_order_item_quantity(item: OrderItem, new_qty: int, user=None) -> None:
     """Adjust qty on a line (0 removes). Restocks or deducts against the order warehouse."""
     order = Order.objects.select_for_update().get(pk=item.order_id)
-    assert_order_editable(order)
+    assert_order_editable(order, user=user)
     item = OrderItem.objects.select_for_update().select_related("product").get(pk=item.pk)
     if item.order_id != order.id:
         raise FulfillmentError("Item not found on this order.")
@@ -126,9 +129,9 @@ def set_order_item_quantity(item: OrderItem, new_qty: int) -> None:
 
 
 @transaction.atomic
-def add_product_to_order(order: Order, product: Product, quantity: int = 1) -> OrderItem:
+def add_product_to_order(order: Order, product: Product, quantity: int = 1, user=None) -> OrderItem:
     order = Order.objects.select_for_update().get(pk=order.pk)
-    assert_order_editable(order)
+    assert_order_editable(order, user=user)
     quantity = max(1, int(quantity))
     product = Product.objects.select_for_update().get(pk=product.pk)
     if product.status != "publish":
@@ -222,6 +225,14 @@ def apply_group_shipping(group_id: str, shipping_usd: float | None = None) -> No
 
 
 def sibling_order(source: Order, warehouse: str) -> Order:
+    """
+    Ensure a warehouse split row exists for this checkout group.
+
+    Never allocates a new yearly sequence number. BTCPay invoices key off
+    group_id; the creation-time number on the original row stays unchanged.
+    A late sibling only needs a unique DB order_number, so it reuses group_id
+    with a warehouse suffix (e.g. 2026W10001-2).
+    """
     existing = (
         Order.objects.filter(group_id=source.group_id, warehouse=warehouse)
         .exclude(status__in=[Order.Status.CANCELLED, Order.Status.FAILED])

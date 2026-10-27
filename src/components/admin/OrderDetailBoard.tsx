@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { formatMoney } from "@/lib/constants";
+import { isFullAdmin } from "@/lib/roles";
 import { warehouseLabel } from "@/lib/warehouse";
 import { OrderStatusSelect } from "@/components/admin/OrderStatusSelect";
 import { OrderFulfillmentControls } from "@/components/admin/OrderFulfillmentControls";
@@ -34,11 +35,6 @@ function shippingFromOrder(order: ApiOrder): ShippingDraft {
   };
 }
 
-function orderBlocked(status: string): boolean {
-  const key = status.toUpperCase();
-  return key === "CANCELLED" || key === "REFUNDED" || key === "FAILED";
-}
-
 export function OrderDetailBoard({
   initial,
   policy,
@@ -64,7 +60,10 @@ export function OrderDetailBoard({
   const [productQuery, setProductQuery] = useState("");
   const [productHits, setProductHits] = useState<ApiProduct[]>([]);
   const [addingProduct, setAddingProduct] = useState(false);
-  const blocked = orderBlocked(order.status);
+  // Admin / superuser may edit regardless of order status; warehouse staff still blocked on terminal statuses.
+  const blocked =
+    !isFullAdmin(role) &&
+    ["CANCELLED", "REFUNDED", "FAILED"].includes(order.status.toUpperCase());
 
   async function reload() {
     const response = await fetch(`/api/admin/orders/${order.id}`);

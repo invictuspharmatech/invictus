@@ -59,7 +59,7 @@ from orders.fulfillment import (
 )
 from orders.coupons import bump_usage, discount_for, is_free_shipping, resolve_coupon
 from orders.models import AccountingReset, ContactMessage, Coupon, FulfillmentRequest, Order, OrderItem
-from orders.order_numbers import allocate_group_id, warehouse_order_suffix
+from orders.order_numbers import allocate_order_number
 from orders.serializers import (
     FulfillmentRequestSerializer,
     OrderSerializer,
@@ -177,11 +177,6 @@ def checkout_view(request):
         if limit_error:
             return Response({"error": limit_error}, status=400)
 
-        try:
-            group_id = allocate_group_id()
-        except ValueError as exc:
-            return Response({"error": str(exc)}, status=400)
-
         decrement_allocations(stock_ops)
 
         grouped = defaultdict(list)
@@ -207,13 +202,19 @@ def checkout_view(request):
             else [group_commission if index == 0 else 0.0 for index in range(len(warehouse_groups))]
         )
         waived = bool(totals["shipping_waived"])
+        group_id = ""
 
         for index, (warehouse, group_lines) in enumerate(warehouse_groups):
             merch_after = merch_shares[index]
             share_disc = discount_shares[index]
-            suffix = warehouse_order_suffix(warehouse)
+            try:
+                order_number = allocate_order_number(warehouse)
+            except ValueError as exc:
+                return Response({"error": str(exc)}, status=400)
+            if not group_id:
+                group_id = order_number
             order = Order.objects.create(
-                order_number=f"{group_id}-{suffix}",
+                order_number=order_number,
                 group_id=group_id,
                 split_index=index + 1,
                 warehouse=warehouse,
@@ -456,7 +457,7 @@ def admin_order_shipping_view(request, pk):
     if not is_full_admin(request.user):
         return Response({"error": "Not allowed."}, status=403)
     try:
-        assert_order_editable(order)
+        assert_order_editable(order, user=request.user)
     except FulfillmentError as exc:
         return Response({"error": str(exc)}, status=400)
     data = request.data
@@ -518,7 +519,7 @@ def admin_order_line_items_view(request, pk):
             return Response({"error": "The order must keep at least one line item."}, status=400)
         with transaction.atomic():
             for item, qty in updates:
-                set_order_item_quantity(item, qty)
+                set_order_item_quantity(item, qty, user=request.user)
     except (TypeError, ValueError):
         return Response({"error": "Invalid quantity."}, status=400)
     except FulfillmentError as exc:
@@ -541,7 +542,7 @@ def admin_order_add_item_view(request, pk):
         return Response({"error": "Product not found."}, status=404)
     try:
         qty = int(request.data.get("quantity") or 1)
-        add_product_to_order(order, product, qty)
+        add_product_to_order(order, product, qty, user=request.user)
     except (TypeError, ValueError):
         return Response({"error": "Invalid quantity."}, status=400)
     except FulfillmentError as exc:

@@ -12,6 +12,7 @@ urlpatterns = [
     path("admin/products/bulk/", views.admin_products_bulk),
     path("admin/products/export/", views.admin_products_export),
     path("admin/products/import/", views.admin_products_import),
+    path("admin/products/import-images/", views.admin_products_import_images),
     path("admin/products/next-sku/", views.admin_products_next_sku),
     path("admin/products/generate-skus/", views.admin_products_generate_skus),
     path("admin/products/<uuid:pk>/", views.admin_product_detail),

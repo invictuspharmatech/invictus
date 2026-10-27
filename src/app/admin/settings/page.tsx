@@ -12,6 +12,15 @@ export default async function AdminSettingsPage() {
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
         Checkout limits, named shipping fees, sequential order numbers, and affiliate defaults.
       </p>
+      <p className="mt-4 text-sm">
+        <Link href="/admin/products/import-images" className="underline underline-offset-4">
+          Import products from image folder
+        </Link>
+        <span className="text-muted-foreground">
+          {" "}
+          — create drafts or attach images by filename match (uses this site&apos;s catalog).
+        </span>
+      </p>
       {isSuperuser(staff.role) ? (
         <p className="mt-4 text-sm">
           <Link href="/admin/settings/btcpay" className="underline underline-offset-4">

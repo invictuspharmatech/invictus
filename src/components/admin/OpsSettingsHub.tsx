@@ -35,7 +35,7 @@ type OpsSettings = {
 const TABS: { key: TabKey; label: string }[] = [
   { key: "checkout", label: "Checkout" },
   { key: "shipping", label: "Shipping" },
-  { key: "orderNumbering", label: "Sequential order number" },
+  { key: "orderNumbering", label: "Order numbers" },
   { key: "accounts", label: "Accounts" },
 ];
 
@@ -56,10 +56,10 @@ export function OpsSettingsHub() {
   });
   const [fees, setFees] = useState<ShippingFeeRow[]>([]);
   const [orderNumbering, setOrderNumbering] = useState({
-    enabled: false,
-    prefix: "INV",
-    numDigits: 5,
-    preview: "INV-XXXXXXXX-1",
+    enabled: true,
+    prefix: "",
+    numDigits: 4,
+    preview: "2026W10001",
   });
   const [affiliate, setAffiliate] = useState({
     payoutType: "STORE_CREDIT" as "STORE_CREDIT" | "COMMISSION",
@@ -144,11 +144,6 @@ export function OpsSettingsHub() {
   function onShipping(event: FormEvent) {
     event.preventDefault();
     void save("shipping", { fees });
-  }
-
-  function onNumbering(event: FormEvent) {
-    event.preventDefault();
-    void save("orderNumbering", orderNumbering);
   }
 
   if (loading) {
@@ -328,58 +323,20 @@ export function OpsSettingsHub() {
       ) : null}
 
       {tab === "orderNumbering" ? (
-        <form onSubmit={onNumbering} className="tile mt-6 max-w-xl space-y-4">
-          <h2 className="text-lg">Sequential order number</h2>
+        <div className="tile mt-6 max-w-xl space-y-4">
+          <h2 className="text-lg">Order numbers</h2>
           <p className="text-sm text-muted-foreground">
-            When enabled, new checkouts use prefix + calendar year + a zero-padded counter (resets
-            each year). Warehouse splits still append -1 / -2. Off keeps random INV-XXXXXXXX IDs.
+            New orders use calendar year + warehouse + a 4-digit counter:{" "}
+            <code>YYYYW1NNNN</code> / <code>YYYYW2NNNN</code>. Each warehouse counts 0001–1000,
+            then resets. Counters also start over each calendar year.
           </p>
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={orderNumbering.enabled}
-              onChange={(event) =>
-                setOrderNumbering((prev) => ({ ...prev, enabled: event.target.checked }))
-              }
-            />
-            Enable sequential order numbers
-          </label>
-          <label className="text-sm">
-            Prefix
-            <input
-              className="field mt-1"
-              maxLength={32}
-              disabled={!orderNumbering.enabled}
-              value={orderNumbering.prefix}
-              onChange={(event) =>
-                setOrderNumbering((prev) => ({ ...prev, prefix: event.target.value }))
-              }
-            />
-          </label>
-          <label className="text-sm">
-            Counter width (digits)
-            <input
-              className="field mt-1 max-w-xs"
-              type="number"
-              min={1}
-              max={12}
-              disabled={!orderNumbering.enabled}
-              value={orderNumbering.numDigits}
-              onChange={(event) =>
-                setOrderNumbering((prev) => ({
-                  ...prev,
-                  numDigits: Math.min(12, Math.max(1, parseInt(event.target.value, 10) || 5)),
-                }))
-              }
-            />
-          </label>
           <p className="text-sm text-muted-foreground">
-            Preview: <code>{orderNumbering.preview}</code>
+            Examples: <code>2026W10001</code>, <code>2026W20042</code>
           </p>
-          <button className="gold-btn" type="submit" disabled={saving}>
-            {saving ? "Saving…" : "Save order numbering"}
-          </button>
-        </form>
+          <p className="text-sm text-muted-foreground">
+            Next preview: <code>{orderNumbering.preview}</code>
+          </p>
+        </div>
       ) : null}
 
       {tab === "accounts" ? (

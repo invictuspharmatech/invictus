@@ -167,7 +167,8 @@ def group_customer_order_payloads(payloads) -> list[dict]:
             grouped.append(primary)
             continue
         invoice = next((row.get("btcInvoice") for row in siblings if row.get("btcInvoice")), None)
-        primary["orderNumber"] = primary.get("groupId") or primary.get("orderNumber")
+        numbers = [str(row.get("orderNumber") or "") for row in siblings if row.get("orderNumber")]
+        primary["orderNumber"] = " / ".join(numbers) if numbers else (primary.get("orderNumber") or "")
         primary["merchandiseTotal"] = round(sum(float(row.get("merchandiseTotal") or 0) for row in siblings), 2)
         primary["shippingTotal"] = round(sum(float(row.get("shippingTotal") or 0) for row in siblings), 2)
         primary["grandTotal"] = round(sum(float(row.get("grandTotal") or 0) for row in siblings), 2)

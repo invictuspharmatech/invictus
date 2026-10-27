@@ -11,7 +11,7 @@ from orders.btcpay import BtcPayError, create_invoice, is_configured, serialize_
 from orders.coupons import bump_usage, discount_for, is_free_shipping, resolve_coupon
 from orders.fulfillment import FulfillmentError, allocate_quantity, apply_group_shipping, decrement_allocations, get_warehouse_settings
 from orders.models import Order, OrderItem
-from orders.order_numbers import allocate_group_id, warehouse_order_suffix
+from orders.order_numbers import allocate_order_number
 from orders.pay_token import checkout_url
 from orders.serializers import OrderSerializer
 from orders.shop_config import get_default_shipping_usd
@@ -231,19 +231,21 @@ def create(data: dict, actor: User | None = None) -> dict:
         weights = [sum(line["line_total"] for line in group_lines) for _, group_lines in warehouse_groups]
         merch_shares = allocate_weighted(float(totals["merchandise"]), weights)
         discount_shares = allocate_weighted(float(totals["discount_total"]), weights)
-        try:
-            group_id = allocate_group_id()
-        except ValueError as exc:
-            raise AdminCreateError(str(exc)) from exc
         created = []
+        group_id = ""
         email = _text(shipping, "email").lower()
         name = _text(shipping, "name")
         for index, (warehouse, group_lines) in enumerate(warehouse_groups):
             merch_after = merch_shares[index]
-            suffix = warehouse_order_suffix(warehouse)
+            try:
+                order_number = allocate_order_number(warehouse)
+            except ValueError as exc:
+                raise AdminCreateError(str(exc)) from exc
+            if not group_id:
+                group_id = order_number
             paid_at = timezone.now() if payment_status == Order.PaymentStatus.PAID else None
             order = Order.objects.create(
-                order_number=f"{group_id}-{suffix}",
+                order_number=order_number,
                 group_id=group_id,
                 split_index=index + 1,
                 warehouse=warehouse,

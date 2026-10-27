@@ -521,6 +521,57 @@ def admin_products_next_sku(request):
 
 
 @api_view(["POST"])
+@permission_classes([IsPortalStaff])
+def admin_products_import_images(request):
+    """
+    Attach uploaded image paths to products by name, or create draft products.
+    Body: { categoryId, items: [{ name, image }] }
+    """
+    if not is_full_admin(request.user):
+        return Response({"error": "Not allowed."}, status=403)
+    from catalog.image_import import import_image_item, product_name_from_filename
+
+    category_id = request.data.get("categoryId") or request.data.get("category_id")
+    category = Category.objects.filter(pk=category_id).first()
+    if not category:
+        return Response({"error": "Category not found."}, status=404)
+    items = request.data.get("items") or []
+    if not isinstance(items, list) or not items:
+        return Response({"error": "No image items provided."}, status=400)
+
+    results = []
+    created = updated = errors = 0
+    for raw in items:
+        if not isinstance(raw, dict):
+            errors += 1
+            results.append({"action": "error", "error": "Invalid item."})
+            continue
+        name = (raw.get("name") or "").strip() or product_name_from_filename(
+            raw.get("filename") or raw.get("image") or ""
+        )
+        image = (raw.get("image") or raw.get("imagePath") or "").strip()
+        row = import_image_item(name=name, image_path=image, category=category)
+        results.append(row)
+        action = row.get("action")
+        if action == "created":
+            created += 1
+        elif action == "updated":
+            updated += 1
+        else:
+            errors += 1
+    return Response(
+        {
+            "categoryId": str(category.id),
+            "categoryName": category.name,
+            "created": created,
+            "updated": updated,
+            "errors": errors,
+            "results": results,
+        }
+    )
+
+
+@api_view(["POST"])
 @permission_classes([IsStoreStaff])
 def admin_products_generate_skus(request):
     from catalog.sku import generate_skus_for_category

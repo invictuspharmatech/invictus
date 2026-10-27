@@ -102,8 +102,8 @@ class CustomerOrderGroupTests(SimpleTestCase):
             [
                 {
                     "id": "a",
-                    "groupId": "INV-1",
-                    "orderNumber": "INV-1-W1",
+                    "groupId": "2026W10001",
+                    "orderNumber": "2026W10001",
                     "splitIndex": 1,
                     "merchandiseTotal": 50,
                     "shippingTotal": 20,
@@ -114,8 +114,8 @@ class CustomerOrderGroupTests(SimpleTestCase):
                 },
                 {
                     "id": "b",
-                    "groupId": "INV-1",
-                    "orderNumber": "INV-1-W2",
+                    "groupId": "2026W10001",
+                    "orderNumber": "2026W20001",
                     "splitIndex": 2,
                     "merchandiseTotal": 30,
                     "shippingTotal": 0,
@@ -127,7 +127,7 @@ class CustomerOrderGroupTests(SimpleTestCase):
             ]
         )
         self.assertEqual(len(grouped), 1)
-        self.assertEqual(grouped[0]["orderNumber"], "INV-1")
+        self.assertEqual(grouped[0]["orderNumber"], "2026W10001 / 2026W20001")
         self.assertEqual(grouped[0]["grandTotal"], 100)
         self.assertEqual(grouped[0]["shippingTotal"], 20)
         self.assertEqual(len(grouped[0]["items"]), 2)
