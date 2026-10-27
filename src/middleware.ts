@@ -4,6 +4,7 @@ import { jwtVerify } from "jose";
 
 const SESSION_COOKIE = "invictus_session";
 const STAFF_ROLES = new Set(["SUPERUSER", "ADMIN", "WAREHOUSE_1", "WAREHOUSE_2"]);
+const WAREHOUSE_ROLES = new Set(["WAREHOUSE_1", "WAREHOUSE_2"]);
 
 function withPathname(request: NextRequest) {
   const headers = new Headers(request.headers);
@@ -23,6 +24,17 @@ async function sessionRole(token: string | undefined): Promise<string | null> {
   }
 }
 
+/** Warehouse staff: own-warehouse orders (+ profile) only — no settings/catalog/etc. */
+function warehouseStaffAllowed(pathname: string): boolean {
+  if (pathname === "/admin" || pathname === "/admin/") return false;
+  if (pathname === "/admin/profile" || pathname.startsWith("/admin/profile/")) return true;
+  if (pathname === "/admin/orders") return true;
+  if (!pathname.startsWith("/admin/orders/")) return false;
+  if (pathname.startsWith("/admin/orders/create")) return false;
+  if (pathname.startsWith("/admin/orders/summary")) return false;
+  return true;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const requestHeaders = withPathname(request);
@@ -31,6 +43,9 @@ export async function middleware(request: NextRequest) {
     const token = request.cookies.get(SESSION_COOKIE)?.value;
     const role = await sessionRole(token);
     if (role && STAFF_ROLES.has(role)) {
+      if (WAREHOUSE_ROLES.has(role) && !warehouseStaffAllowed(pathname)) {
+        return NextResponse.redirect(new URL("/admin/orders", request.url));
+      }
       return NextResponse.next({
         request: { headers: requestHeaders },
       });

@@ -139,18 +139,7 @@ function navForStaff(admin: boolean, superuser: boolean): AdminNavItem[] {
 }
 
 const WAREHOUSE_NAV: AdminNavItem[] = [
-  { href: "/admin", label: "Dashboard" },
-  {
-    href: "/admin/orders",
-    label: "Orders",
-    children: [
-      { href: "/admin/orders", label: "Order list" },
-      { href: "/admin/orders/summary", label: "Order summary" },
-    ],
-  },
-  { href: "/admin/inventory", label: "Inventory" },
-  { href: "/admin/warehouses", label: "Warehouses" },
-  { href: "/admin/transfers", label: "Transfers" },
+  { href: "/admin/orders", label: "Orders" },
 ];
 
 export default async function AdminLayout({
