@@ -32,7 +32,8 @@ type DjangoInit = RequestInit & { token?: string | null };
 export async function djangoFetch(path: string, init: DjangoInit = {}): Promise<Response> {
   const { token, headers: initHeaders, ...rest } = init;
   const headers = new Headers(initHeaders);
-  if (rest.body && !headers.has("content-type")) {
+  // Let the runtime set multipart boundaries for FormData; only default JSON otherwise.
+  if (rest.body && !headers.has("content-type") && !(rest.body instanceof FormData)) {
     headers.set("content-type", "application/json");
   }
   if (token) {

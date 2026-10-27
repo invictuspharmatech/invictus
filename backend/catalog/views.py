@@ -524,28 +524,54 @@ def admin_products_next_sku(request):
 @permission_classes([IsPortalStaff])
 def admin_products_import_images(request):
     """
-    Attach uploaded image paths to products by name, or create draft products.
-    Body: { categoryId, items: [{ name, image }] }
+    Create/update products from images.
+
+    Prefer multipart: categoryId + files[] (saved under MEDIA_ROOT/products/).
+    JSON fallback: { categoryId, items: [{ name, image }] } when paths already exist.
     """
     if not is_full_admin(request.user):
         return Response({"error": "Not allowed."}, status=403)
-    from catalog.image_import import import_image_item, product_name_from_filename
+    from catalog.image_import import (
+        import_image_item,
+        product_name_from_filename,
+        save_uploaded_product_image,
+    )
 
     category_id = request.data.get("categoryId") or request.data.get("category_id")
     category = Category.objects.filter(pk=category_id).first()
     if not category:
         return Response({"error": "Category not found."}, status=404)
-    items = request.data.get("items") or []
-    if not isinstance(items, list) or not items:
-        return Response({"error": "No image items provided."}, status=400)
+
+    items = []
+    upload_errors = []
+    files = request.FILES.getlist("files") or request.FILES.getlist("files[]")
+    if files:
+        for uploaded in files:
+            try:
+                image_path = save_uploaded_product_image(uploaded)
+                items.append(
+                    {
+                        "name": product_name_from_filename(uploaded.name),
+                        "image": image_path,
+                        "filename": uploaded.name,
+                    }
+                )
+            except Exception as exc:
+                upload_errors.append({"filename": uploaded.name, "error": str(exc)})
+    else:
+        raw_items = request.data.get("items") or []
+        if isinstance(raw_items, list):
+            items = [row for row in raw_items if isinstance(row, dict)]
+
+    if not items:
+        return Response(
+            {"error": "No image items provided.", "uploadErrors": upload_errors},
+            status=400,
+        )
 
     results = []
     created = updated = errors = 0
     for raw in items:
-        if not isinstance(raw, dict):
-            errors += 1
-            results.append({"action": "error", "error": "Invalid item."})
-            continue
         name = (raw.get("name") or "").strip() or product_name_from_filename(
             raw.get("filename") or raw.get("image") or ""
         )
@@ -566,6 +592,7 @@ def admin_products_import_images(request):
             "created": created,
             "updated": updated,
             "errors": errors,
+            "uploadErrors": upload_errors,
             "results": results,
         }
     )

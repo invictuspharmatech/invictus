@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import PurePosixPath
 
+from django.core.files.storage import default_storage
 from django.utils.text import slugify
 
 from catalog.models import Category, Product, ProductCategory
@@ -10,6 +11,7 @@ from catalog.sku import next_sku_for_category
 
 # Categories that ship from warehouse 1 (peptides / aminos).
 WAREHOUSE_1_SLUGS = {"peptides", "peptides-glps", "aminos"}
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"}
 
 
 def normalize_product_name(value: str) -> str:
@@ -22,6 +24,34 @@ def product_name_from_filename(filename: str) -> str:
     stem = stem.replace("_", " ")
     stem = re.sub(r"\s+", " ", stem).strip()
     return normalize_product_name(stem)
+
+
+def sanitize_upload_filename(filename: str) -> str:
+    base = PurePosixPath(str(filename or "image.png")).name
+    path = PurePosixPath(base)
+    ext = path.suffix.lower() or ".png"
+    if ext not in IMAGE_EXTENSIONS:
+        ext = ".png"
+    stem = re.sub(r"[^a-zA-Z0-9._-]+", "-", path.stem).strip("-._")[:120] or "image"
+    return f"{stem}{ext}"
+
+
+def save_uploaded_product_image(uploaded_file) -> str:
+    """
+    Persist to Django MEDIA_ROOT/products/ (live: ./data/media via Docker).
+    Returns a public URL path nginx serves at /media/...
+    """
+    name = sanitize_upload_filename(getattr(uploaded_file, "name", "") or "image.png")
+    relative = f"products/{name}"
+    if default_storage.exists(relative):
+        stem = PurePosixPath(name).stem
+        ext = PurePosixPath(name).suffix
+        n = 2
+        while default_storage.exists(f"products/{stem}-{n}{ext}"):
+            n += 1
+        relative = f"products/{stem}-{n}{ext}"
+    saved = default_storage.save(relative, uploaded_file)
+    return f"/media/{saved.lstrip('/')}"
 
 
 def find_product_by_name(name: str) -> Product | None:

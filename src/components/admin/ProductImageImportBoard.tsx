@@ -104,10 +104,11 @@ export function ProductImageImportBoard({ categories }: { categories: ApiCategor
         <h2 className="text-lg">Import products from image folder</h2>
         <p className="text-sm text-muted-foreground">
           Select a folder of product images. Each filename becomes the product name (e.g.{" "}
-          <code>retatrutide 10mg.png</code> → Retatrutide 10mg). If that name already exists in
-          this site&apos;s catalog, only the image is attached. Otherwise a <strong>draft</strong>{" "}
-          product is created in the category below with an auto SKU — price and other details can
-          be filled in later.
+          <code>retatrutide 10mg.png</code> → Retatrutide 10mg). Matching is case-insensitive. If
+          that name already exists, only the image is updated. Otherwise a <strong>draft</strong>{" "}
+          product is created with an auto SKU. Images are stored in site media (
+          <code>/media/products/</code>), so they work on live after deploy. Re-run this import to
+          fix products that were created earlier without visible images.
         </p>
 
         <label className="grid gap-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">

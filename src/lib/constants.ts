@@ -72,7 +72,10 @@ export function mediaUrl(path: string | null | undefined): string | null {
   if (!path) return null;
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
   const normalized = path.startsWith("/") ? path : `/${path}`;
-  if (normalized.startsWith("/images/")) return normalized;
+  // Same-origin: local public assets and Django MEDIA (nginx → ./data/media).
+  if (normalized.startsWith("/images/") || normalized.startsWith("/media/")) {
+    return normalized;
+  }
   const filename = normalized.split("/").pop() ?? "";
   const localName = LOCAL_PRODUCT_IMAGE_ALIASES[filename] ?? filename;
   if (LOCAL_PRODUCT_IMAGES.has(localName)) {
