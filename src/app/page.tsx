@@ -113,20 +113,28 @@ export default async function HomePage() {
             src={heroImage}
             alt="Invictus product display"
             fill
-            className="object-cover opacity-90 mix-blend-screen"
+            className="object-cover object-center opacity-90 mix-blend-screen"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-ink via-brand-red-deep/30 to-signal/25" />
-          <div className="absolute left-6 top-6 flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.2em] text-paper/60">
-            <FlaskConical className="size-4 text-signal" />
-            {heroKicker}
+          <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/55 to-brand-red-deep/20" />
+          <div className="absolute left-6 top-6 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-paper/70">
+            <FlaskConical className="size-3.5 shrink-0 text-signal" />
+            <span className="whitespace-nowrap">{heroKicker}</span>
           </div>
-          <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between border-t border-paper/20 pt-4">
-            <div>
-              <p className="font-serif text-3xl text-paper">{heroTitle}</p>
-              <p className="mt-1 text-sm text-paper/60">{heroLede}</p>
+          <div className="absolute inset-x-0 bottom-0 px-6 pb-6 pt-20">
+            <div className="flex items-start justify-between gap-6 border-t border-paper/25 pt-4">
+              <div className="min-w-0 flex-1">
+                <p className="font-serif text-2xl leading-snug tracking-[-0.02em] text-paper sm:text-3xl">
+                  {heroTitle}
+                </p>
+                <p className="mt-2 max-w-md text-sm leading-relaxed text-paper/70">
+                  {heroLede}
+                </p>
+              </div>
+              <span className="mt-1 shrink-0 whitespace-nowrap font-mono text-[11px] tracking-[0.14em] text-signal">
+                2026—01
+              </span>
             </div>
-            <span className="font-mono text-xs text-signal">2026—01</span>
           </div>
         </div>
       </section>
