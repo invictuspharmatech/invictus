@@ -1,10 +1,13 @@
+from pathlib import PurePosixPath
+
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from accounts.permissions import IsStoreStaff
+from accounts.permissions import IsStoreStaff, is_full_admin
 from cms.mailer import ensure_default_templates, get_email_settings, send_test_email
+from cms.media_library import ALLOWED_FOLDERS, list_media_items, save_uploaded_media
 from cms.models import Banner, EmailTemplate, FAQItem, NavigationLink, Page, SiteSetting
 from cms.serializers import (
     BannerSerializer,
@@ -103,6 +106,7 @@ def public_nav(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def public_settings(request):
+    ensure_homepage_settings()
     return Response(SettingSerializer(SiteSetting.objects.all(), many=True).data)
 
 
@@ -227,9 +231,77 @@ def admin_nav_detail(request, pk):
     return _crud(NavigationLink, NavigationSerializer, request, pk)
 
 
+HOME_SETTING_DEFAULTS = (
+    ("homepage_kicker", "Homepage kicker", "home", "Specimen / 001"),
+    ("homepage_headline", "Homepage headline", "home", "A higher standard."),
+    ("homepage_lede", "Homepage lede", "home", "Precision performance and wellness essentials, selected with purpose."),
+    (
+        "homepage_logo_image",
+        "Homepage logo image",
+        "home",
+        "/images/invictus-logo.png",
+    ),
+    (
+        "homepage_hero_image",
+        "Homepage hero image (right panel)",
+        "home",
+        "/images/featured-display.jpg",
+    ),
+)
+
+
+def ensure_homepage_settings() -> None:
+    for key, label, group, value in HOME_SETTING_DEFAULTS:
+        SiteSetting.objects.get_or_create(
+            key=key,
+            defaults={"label": label, "group": group, "value": value},
+        )
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsStoreStaff])
+def admin_media_library(request):
+    """List / upload images under MEDIA_ROOT (live-safe ./data/media)."""
+    if not is_full_admin(request.user):
+        return Response({"error": "Not allowed."}, status=403)
+
+    if request.method == "POST":
+        folder = (request.data.get("folder") or "products").strip().lower()
+        if folder not in ALLOWED_FOLDERS:
+            return Response({"error": "Unsupported media folder."}, status=400)
+        files = request.FILES.getlist("files") or request.FILES.getlist("files[]")
+        if not files:
+            return Response({"error": "No image files uploaded."}, status=400)
+        saved = []
+        errors = []
+        for uploaded in files:
+            try:
+                path = save_uploaded_media(uploaded, folder=folder)
+                saved.append(
+                    {
+                        "path": path,
+                        "name": PurePosixPath(path).name,
+                        "folder": folder,
+                    }
+                )
+            except Exception as exc:
+                errors.append({"filename": uploaded.name, "error": str(exc)})
+        return Response(
+            {
+                "saved": saved,
+                "errors": errors,
+                "items": list_media_items(),
+            }
+        )
+
+    folder = (request.GET.get("folder") or "").strip().lower() or None
+    return Response({"items": list_media_items(folder)})
+
+
 @api_view(["GET", "PUT"])
 @permission_classes([IsStoreStaff])
 def admin_settings(request):
+    ensure_homepage_settings()
     if request.method == "PUT":
         items = request.data if isinstance(request.data, list) else [request.data]
         saved = []

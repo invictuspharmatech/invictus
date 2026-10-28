@@ -317,6 +317,22 @@ class Command(BaseCommand):
                     "group": "home",
                 },
             )
+            SiteSetting.objects.update_or_create(
+                key="homepage_logo_image",
+                defaults={
+                    "value": "/images/invictus-logo.png",
+                    "label": "Homepage logo image",
+                    "group": "home",
+                },
+            )
+            SiteSetting.objects.update_or_create(
+                key="homepage_hero_image",
+                defaults={
+                    "value": "/images/featured-display.jpg",
+                    "label": "Homepage hero image (right panel)",
+                    "group": "home",
+                },
+            )
 
         w1 = Product.objects.filter(warehouse=Product.Warehouse.WAREHOUSE_1).count()
         w2 = Product.objects.filter(warehouse=Product.Warehouse.WAREHOUSE_2).count()

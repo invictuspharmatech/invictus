@@ -10,13 +10,20 @@ import {
   HOME_PROTOCOL_SLUGS,
   mediaUrl,
 } from "@/lib/constants";
-import type { ApiCategory, ApiProduct } from "@/lib/api-types";
+import type { ApiCategory, ApiProduct, ApiSetting } from "@/lib/api-types";
 
 const MARQUEE = [
   "Precision / Purpose / Progress",
   "Evidence over excess",
   "Built for the long game",
 ];
+
+const DEFAULT_HERO_IMAGE = "/images/featured-display.jpg";
+const DEFAULT_LOGO_IMAGE = "/images/invictus-logo.png";
+
+function settingMap(items: ApiSetting[]): Record<string, string> {
+  return Object.fromEntries(items.map((item) => [item.key, item.value]));
+}
 
 function toSlides(categories: ApiCategory[]): CategorySlide[] {
   const bySlug = new Map(categories.map((item) => [item.slug, item]));
@@ -35,7 +42,7 @@ function toSlides(categories: ApiCategory[]): CategorySlide[] {
         image:
           mediaUrl(item.image) ??
           CATEGORY_IMAGES[item.slug] ??
-          "/images/featured-display.jpg",
+          DEFAULT_HERO_IMAGE,
         blurb: CATEGORY_BLURBS[item.slug] ?? "Browse the collection.",
       },
     ];
@@ -43,15 +50,24 @@ function toSlides(categories: ApiCategory[]): CategorySlide[] {
 }
 
 export default async function HomePage() {
-  const [categories, featured, arrivals] = await Promise.all([
+  const [categories, featured, arrivals, settings] = await Promise.all([
     djangoJsonSafe<ApiCategory[]>("/api/categories/", []),
     djangoJsonSafe<ApiProduct[]>("/api/products/?featured=1&limit=4", []),
     djangoJsonSafe<ApiProduct[]>("/api/products/?newArrival=1&limit=4", []),
+    djangoJsonSafe<ApiSetting[]>("/api/cms/settings/", []),
   ]);
 
   const slides = toSlides(categories);
   const featuredSlots = featured.slice(0, 4);
   const arrivalSlots = arrivals.slice(0, 4);
+  const site = settingMap(settings);
+  const logoImage =
+    mediaUrl(site.homepage_logo_image) || DEFAULT_LOGO_IMAGE;
+  const heroImage =
+    mediaUrl(site.homepage_hero_image) || DEFAULT_HERO_IMAGE;
+  const heroKicker = site.homepage_kicker?.trim() || "Specimen / 001";
+  const heroTitle = site.homepage_headline?.trim() || "Precision, not noise.";
+  const heroLede = site.homepage_lede?.trim() || "A stronger standard is coming.";
 
   return (
     <div>
@@ -60,7 +76,7 @@ export default async function HomePage() {
         <div className="relative flex flex-col justify-center">
           <div className="mb-8 flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:gap-8">
             <Image
-              src="/images/invictus-logo.png"
+              src={logoImage}
               alt="Invictus Pharma"
               width={220}
               height={220}
@@ -94,7 +110,7 @@ export default async function HomePage() {
         </div>
         <div className="relative min-h-[480px] overflow-hidden bg-ink sm:min-h-[620px]">
           <Image
-            src="/images/featured-display.jpg"
+            src={heroImage}
             alt="Invictus product display"
             fill
             className="object-cover opacity-90 mix-blend-screen"
@@ -103,12 +119,12 @@ export default async function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-t from-ink via-brand-red-deep/30 to-signal/25" />
           <div className="absolute left-6 top-6 flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.2em] text-paper/60">
             <FlaskConical className="size-4 text-signal" />
-            Specimen / 001
+            {heroKicker}
           </div>
           <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between border-t border-paper/20 pt-4">
             <div>
-              <p className="font-serif text-3xl text-paper">Precision, not noise.</p>
-              <p className="mt-1 text-sm text-paper/60">A stronger standard is coming.</p>
+              <p className="font-serif text-3xl text-paper">{heroTitle}</p>
+              <p className="mt-1 text-sm text-paper/60">{heroLede}</p>
             </div>
             <span className="font-mono text-xs text-signal">2026—01</span>
           </div>

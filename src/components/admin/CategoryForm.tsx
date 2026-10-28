@@ -3,10 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { ApiCategory } from "@/lib/api-types";
+import { ProductMediaPicker } from "@/components/admin/ProductMediaPicker";
 
 export function CategoryForm({ category }: { category?: ApiCategory }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [image, setImage] = useState(category?.image ?? "");
 
   return (
     <form
@@ -19,7 +21,7 @@ export function CategoryForm({ category }: { category?: ApiCategory }) {
           name: String(form.get("name") || ""),
           slug: String(form.get("slug") || ""),
           description: String(form.get("description") || ""),
-          image: String(form.get("image") || ""),
+          image: image.trim(),
           sortOrder: Number(form.get("sortOrder") || 0),
           skuAbbreviation: String(form.get("skuAbbreviation") || "")
             .trim()
@@ -59,10 +61,12 @@ export function CategoryForm({ category }: { category?: ApiCategory }) {
         Description
         <textarea className="field min-h-24" name="description" defaultValue={category?.description} />
       </label>
-      <label className="grid gap-1 text-sm">
-        Image path
-        <input className="field" name="image" defaultValue={category?.image ?? ""} />
-      </label>
+      <ProductMediaPicker
+        label="Category image (home carousel)"
+        value={image}
+        onChange={setImage}
+        uploadFolder="site"
+      />
       <label className="grid gap-1 text-sm">
         Sort order
         <input

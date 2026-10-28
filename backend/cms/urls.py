@@ -21,6 +21,7 @@ urlpatterns = [
     path("admin/cms/nav/", views.admin_nav),
     path("admin/cms/nav/<uuid:pk>/", views.admin_nav_detail),
     path("admin/cms/settings/", views.admin_settings),
+    path("admin/cms/media/", views.admin_media_library),
     path("admin/cms/email-settings/", views.admin_email_settings),
     path("admin/cms/email-templates/", views.admin_email_templates),
     path("admin/cms/email-templates/<uuid:pk>/", views.admin_email_template_detail),

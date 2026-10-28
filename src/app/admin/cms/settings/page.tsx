@@ -11,7 +11,8 @@ export default async function CmsSettingsPage() {
     <div>
       <h1 className="display-font text-3xl">Site settings</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Homepage kicker, headline, and lede are stored here.
+        Homepage logo, hero panel image, kicker, headline, and lede. Images upload to
+        persistent media storage (same as products) so they work on live.
       </p>
       <SettingsForm items={items} />
     </div>
