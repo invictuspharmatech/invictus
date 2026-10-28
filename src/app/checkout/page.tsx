@@ -14,6 +14,12 @@ import {
   saveShippingOptionId,
   type CheckoutSettings,
 } from "@/lib/checkout-settings";
+import {
+  readSavedCoupon,
+  saveCoupon,
+  validateCouponCode,
+  type AppliedCoupon,
+} from "@/lib/coupon-session";
 
 type CheckoutOrder = {
   id: string;
@@ -22,13 +28,6 @@ type CheckoutOrder = {
   grandTotal: number;
   checkoutLink?: string | null;
   payUrl?: string | null;
-};
-
-type AppliedCoupon = {
-  code: string;
-  name: string;
-  discount: number;
-  freeShipping: boolean;
 };
 
 export default function CheckoutPage() {
@@ -52,7 +51,26 @@ export default function CheckoutPage() {
       setOptionId(resolved.id);
       saveShippingOptionId(resolved.id);
     });
+    const savedCoupon = readSavedCoupon();
+    if (savedCoupon) {
+      setAppliedCoupon(savedCoupon);
+      setCouponInput(savedCoupon.code);
+    }
   }, []);
+
+  useEffect(() => {
+    if (!appliedCoupon?.code) return;
+    void validateCouponCode(appliedCoupon.code, merchandiseTotal).then((result) => {
+      if (!result.ok) {
+        setAppliedCoupon(null);
+        saveCoupon(null);
+        setCouponError(result.error);
+        return;
+      }
+      setAppliedCoupon(result.coupon);
+      saveCoupon(result.coupon);
+    });
+  }, [merchandiseTotal, appliedCoupon?.code]);
 
   const shippingOption = resolveShippingFee(settings, optionId);
   const shippingTotal = items.length > 0 ? shippingOption.fee : 0;
@@ -64,26 +82,15 @@ export default function CheckoutPage() {
 
   async function applyCoupon() {
     setCouponError(null);
-    const response = await fetch("/api/coupons/validate", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        code: couponInput,
-        merchandiseTotal,
-      }),
-    });
-    const data = (await response.json()) as AppliedCoupon & { error?: string };
-    if (!response.ok) {
+    const result = await validateCouponCode(couponInput, merchandiseTotal);
+    if (!result.ok) {
       setAppliedCoupon(null);
-      setCouponError(data.error || "This coupon is not valid.");
+      saveCoupon(null);
+      setCouponError(result.error);
       return;
     }
-    setAppliedCoupon({
-      code: data.code,
-      name: data.name,
-      discount: data.discount,
-      freeShipping: data.freeShipping,
-    });
+    setAppliedCoupon(result.coupon);
+    saveCoupon(result.coupon);
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {

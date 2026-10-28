@@ -5,6 +5,7 @@ from catalog import views
 urlpatterns = [
     path("categories/", views.category_list),
     path("products/", views.product_list),
+    path("cart/stock-check/", views.cart_stock_check),
     path("products/<uuid:pk>/stock-notify/", views.product_stock_notify),
     path("products/<slug:slug>/", views.product_detail),
     path("test-results/", views.test_result_list),

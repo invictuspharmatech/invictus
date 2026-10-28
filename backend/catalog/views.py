@@ -85,6 +85,66 @@ def product_detail(request, slug):
     return Response(ProductSerializer(product, context={"request": request}).data)
 
 
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def cart_stock_check(request):
+    """Validate cart lines against live stock (no backorder → must cover qty)."""
+    from orders.fulfillment import can_cover, get_warehouse_settings
+
+    raw_items = request.data.get("items") or []
+    if not isinstance(raw_items, list):
+        return Response({"error": "Invalid items."}, status=400)
+    policy = get_warehouse_settings()
+    lines = []
+    all_ok = True
+    for raw in raw_items:
+        if not isinstance(raw, dict):
+            continue
+        product_id = raw.get("productId") or raw.get("product_id")
+        try:
+            quantity = max(1, int(raw.get("quantity") or 1))
+        except (TypeError, ValueError):
+            quantity = 1
+        product = Product.objects.filter(pk=product_id, status="publish").first()
+        if not product:
+            all_ok = False
+            lines.append(
+                {
+                    "productId": str(product_id or ""),
+                    "ok": False,
+                    "available": False,
+                    "allowBackorder": False,
+                    "stockStatus": "missing",
+                    "stockQuantity": 0,
+                    "maxPurchasable": 0,
+                    "error": "Product is no longer available.",
+                }
+            )
+            continue
+        stock = int(product.stock_quantity_w1 or 0) + int(product.stock_quantity_w2 or 0)
+        if policy.split_enabled and policy.auto_split_enabled:
+            cover_stock = stock
+        else:
+            cover_stock = product.stock_for(product.warehouse)
+        ok = can_cover(cover_stock, quantity, product.allow_backorder)
+        if not ok:
+            all_ok = False
+        max_purchasable = cover_stock if not product.allow_backorder else None
+        lines.append(
+            {
+                "productId": str(product.id),
+                "ok": ok,
+                "available": ok,
+                "allowBackorder": bool(product.allow_backorder),
+                "stockStatus": product.stock_status,
+                "stockQuantity": stock,
+                "maxPurchasable": max_purchasable,
+                "error": None if ok else f"Not enough stock for {product.name}.",
+            }
+        )
+    return Response({"ok": all_ok, "lines": lines})
+
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def test_result_list(request):

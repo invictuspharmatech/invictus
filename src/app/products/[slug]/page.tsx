@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import NextImage from "next/image";
+import { readSession } from "@/lib/auth";
 import { djangoJsonOptional } from "@/lib/django";
 import { formatMoney, mediaUrl, productPrice } from "@/lib/constants";
+import { isOutOfStockNoBackorder } from "@/lib/stock";
 import { AddToCartButton } from "@/components/shop/AddToCartButton";
 import { StockNotifyButton } from "@/components/shop/StockNotifyButton";
 import type { ApiProduct } from "@/lib/api-types";
@@ -12,11 +14,19 @@ export default async function ProductDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = await djangoJsonOptional<ApiProduct>(`/api/products/${slug}/`);
+  const [product, session] = await Promise.all([
+    djangoJsonOptional<ApiProduct>(`/api/products/${slug}/`),
+    readSession(),
+  ]);
   if (!product) notFound();
 
   const src = mediaUrl(product.image);
   const price = productPrice(product);
+  const outOfStock = isOutOfStockNoBackorder({
+    stockStatus: product.stockStatus,
+    allowBackorder: product.allowBackorder,
+    stockQuantity: product.stockQuantity,
+  });
 
   return (
     <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2">
@@ -47,12 +57,16 @@ export default async function ProductDetailPage({
             {product.shortDescription}
           </p>
         ) : null}
+        {outOfStock ? (
+          <p className="mt-6 text-sm text-brand-red">Out of stock</p>
+        ) : null}
         <div className="mt-8 max-w-sm">
-          <AddToCartButton product={product} />
+          {outOfStock ? null : <AddToCartButton product={product} />}
         </div>
         <StockNotifyButton
           productId={product.id}
-          outOfStock={product.stockStatus === "outofstock"}
+          outOfStock={outOfStock}
+          initialEmail={session?.email || ""}
         />
         {product.maxQuantityPerOrder ? (
           <p className="mt-3 text-xs text-muted-foreground">

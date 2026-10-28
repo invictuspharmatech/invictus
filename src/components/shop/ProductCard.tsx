@@ -1,6 +1,7 @@
 import NextImage from "next/image";
 import Link from "next/link";
 import { formatMoney, mediaUrl, productPrice } from "@/lib/constants";
+import { isOutOfStockNoBackorder } from "@/lib/stock";
 import { AddToCartButton } from "@/components/shop/AddToCartButton";
 
 export type StoreProductCardProduct = {
@@ -15,6 +16,7 @@ export type StoreProductCardProduct = {
   maxQuantityPerOrder: number | null;
   stockStatus?: string;
   allowBackorder?: boolean;
+  stockQuantity?: number | null;
   categories?: { category: { name: string } }[];
 };
 
@@ -23,9 +25,14 @@ export function ProductCard({ product }: { product: StoreProductCardProduct }) {
   const price = productPrice(product);
   const category = product.categories?.[0]?.category.name;
   const onSale = product.salePrice != null && product.salePrice < product.regularPrice;
-  const outOfStock = product.stockStatus === "outofstock";
-  const onBackorder = product.stockStatus === "onbackorder" || product.stockStatus === "on_backorder";
-  const canAdd = !outOfStock || Boolean(product.allowBackorder);
+  const outOfStock = isOutOfStockNoBackorder({
+    stockStatus: product.stockStatus,
+    allowBackorder: product.allowBackorder,
+    stockQuantity: product.stockQuantity,
+  });
+  const onBackorder =
+    product.stockStatus === "onbackorder" || product.stockStatus === "on_backorder";
+  const canAdd = !outOfStock;
 
   return (
     <article className="store-card-product group">
@@ -78,14 +85,23 @@ export function ProductCard({ product }: { product: StoreProductCardProduct }) {
           </span>
         ) : null}
         {outOfStock && !product.allowBackorder ? (
-          <span className="mt-1 text-xs text-red-300/90">Out of stock</span>
+          <span className="mt-1 text-xs text-red-300/90">Out of stock · Notify on product page</span>
         ) : null}
       </Link>
       {canAdd ? (
         <div className="mt-auto pt-4">
           <AddToCartButton product={product} variant="card" />
         </div>
-      ) : null}
+      ) : (
+        <div className="mt-auto pt-4">
+          <Link
+            href={`/products/${product.slug}`}
+            className="inline-flex w-full items-center justify-center rounded-[0.75rem] border border-border px-4 py-2.5 text-sm font-semibold text-foreground transition hover:border-signal hover:text-signal"
+          >
+            Notify me
+          </Link>
+        </div>
+      )}
     </article>
   );
 }

@@ -3,6 +3,7 @@
 import { ShoppingCart } from "lucide-react";
 import { productPrice } from "@/lib/constants";
 import { useCart } from "@/components/shop/CartProvider";
+import { canPurchaseStock } from "@/lib/stock";
 import { asWarehouse } from "@/lib/warehouse";
 
 type Addable = {
@@ -14,6 +15,9 @@ type Addable = {
   salePrice: number | null;
   warehouse: string;
   maxQuantityPerOrder: number | null;
+  stockStatus?: string | null;
+  allowBackorder?: boolean | null;
+  stockQuantity?: number | null;
 };
 
 export function AddToCartButton({
@@ -25,8 +29,16 @@ export function AddToCartButton({
 }) {
   const { addItem, items } = useCart();
   const inCartQty = items.find((row) => row.productId === product.id)?.quantity ?? 0;
+  const nextQty = inCartQty + 1;
+  const canAdd = canPurchaseStock({
+    stockStatus: product.stockStatus,
+    allowBackorder: product.allowBackorder,
+    stockQuantity: product.stockQuantity,
+    quantity: nextQty,
+  });
 
   function add() {
+    if (!canAdd) return;
     addItem({
       productId: product.id,
       slug: product.slug,
@@ -36,6 +48,11 @@ export function AddToCartButton({
       warehouse: asWarehouse(product.warehouse),
       maxQuantityPerOrder: product.maxQuantityPerOrder,
     });
+  }
+
+  // Out of stock / not enough qty and no backorder — never show an add control.
+  if (!canAdd) {
+    return null;
   }
 
   switch (variant) {
