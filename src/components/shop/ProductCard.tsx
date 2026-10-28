@@ -1,8 +1,9 @@
 import NextImage from "next/image";
 import Link from "next/link";
 import { formatMoney, mediaUrl, productPrice } from "@/lib/constants";
-import { isOutOfStockNoBackorder } from "@/lib/stock";
+import { productShowsAddToCart, productShowsStockNotify } from "@/lib/stock";
 import { AddToCartButton } from "@/components/shop/AddToCartButton";
+import { StockNotifyButton } from "@/components/shop/StockNotifyButton";
 
 export type StoreProductCardProduct = {
   id: string;
@@ -25,14 +26,12 @@ export function ProductCard({ product }: { product: StoreProductCardProduct }) {
   const price = productPrice(product);
   const category = product.categories?.[0]?.category.name;
   const onSale = product.salePrice != null && product.salePrice < product.regularPrice;
-  const outOfStock = isOutOfStockNoBackorder({
-    stockStatus: product.stockStatus,
-    allowBackorder: product.allowBackorder,
-    stockQuantity: product.stockQuantity,
-  });
+  const showNotify = productShowsStockNotify(product);
+  const canAdd = productShowsAddToCart(product);
   const onBackorder =
-    product.stockStatus === "onbackorder" || product.stockStatus === "on_backorder";
-  const canAdd = !outOfStock;
+    Boolean(product.allowBackorder) ||
+    product.stockStatus === "onbackorder" ||
+    product.stockStatus === "on_backorder";
 
   return (
     <article className="store-card-product group">
@@ -79,29 +78,23 @@ export function ProductCard({ product }: { product: StoreProductCardProduct }) {
             Limit {product.maxQuantityPerOrder} per order
           </p>
         ) : null}
-        {onBackorder ? (
+        {showNotify ? (
+          <span className="mt-1 text-sm text-red-300/90">Out of stock</span>
+        ) : null}
+        {onBackorder && canAdd ? (
           <span className="mt-2 inline-flex w-fit items-center rounded-full border border-amber-400/45 bg-amber-950/55 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-100">
             On backorder
           </span>
         ) : null}
-        {outOfStock && !product.allowBackorder ? (
-          <span className="mt-1 text-xs text-red-300/90">Out of stock · Notify on product page</span>
-        ) : null}
       </Link>
+      {showNotify ? (
+        <StockNotifyButton productId={product.id} variant="compact" className="mt-4" />
+      ) : null}
       {canAdd ? (
         <div className="mt-auto pt-4">
           <AddToCartButton product={product} variant="card" />
         </div>
-      ) : (
-        <div className="mt-auto pt-4">
-          <Link
-            href={`/products/${product.slug}`}
-            className="inline-flex w-full items-center justify-center rounded-[0.75rem] border border-border px-4 py-2.5 text-sm font-semibold text-foreground transition hover:border-signal hover:text-signal"
-          >
-            Notify me
-          </Link>
-        </div>
-      )}
+      ) : null}
     </article>
   );
 }

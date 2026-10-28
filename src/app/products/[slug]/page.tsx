@@ -3,7 +3,7 @@ import NextImage from "next/image";
 import { readSession } from "@/lib/auth";
 import { djangoJsonOptional } from "@/lib/django";
 import { formatMoney, mediaUrl, productPrice } from "@/lib/constants";
-import { isOutOfStockNoBackorder } from "@/lib/stock";
+import { productShowsAddToCart, productShowsStockNotify } from "@/lib/stock";
 import { AddToCartButton } from "@/components/shop/AddToCartButton";
 import { StockNotifyButton } from "@/components/shop/StockNotifyButton";
 import type { ApiProduct } from "@/lib/api-types";
@@ -22,11 +22,12 @@ export default async function ProductDetailPage({
 
   const src = mediaUrl(product.image);
   const price = productPrice(product);
-  const outOfStock = isOutOfStockNoBackorder({
-    stockStatus: product.stockStatus,
-    allowBackorder: product.allowBackorder,
-    stockQuantity: product.stockQuantity,
-  });
+  const canBuy = productShowsAddToCart(product);
+  const showNotify = productShowsStockNotify(product);
+  const onBackorder =
+    Boolean(product.allowBackorder) ||
+    product.stockStatus === "onbackorder" ||
+    product.stockStatus === "on_backorder";
 
   return (
     <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2">
@@ -57,17 +58,42 @@ export default async function ProductDetailPage({
             {product.shortDescription}
           </p>
         ) : null}
-        {outOfStock ? (
-          <p className="mt-6 text-sm text-brand-red">Out of stock</p>
-        ) : null}
-        <div className="mt-8 max-w-sm">
-          {outOfStock ? null : <AddToCartButton product={product} />}
+
+        <div className="mt-6">
+          {canBuy ? (
+            <span
+              className={`inline-block rounded-full border px-3 py-1 text-sm ${
+                onBackorder
+                  ? "border-amber-400/50 bg-amber-950/40 text-amber-100"
+                  : "border-signal/50 bg-signal/15 text-signal"
+              }`}
+            >
+              {onBackorder ? "On backorder — you can still order" : "In stock"}
+            </span>
+          ) : (
+            <span className="inline-block rounded-full border border-red-400/40 bg-red-950/40 px-3 py-1 text-sm text-red-200">
+              Out of Stock
+            </span>
+          )}
         </div>
-        <StockNotifyButton
-          productId={product.id}
-          outOfStock={outOfStock}
-          initialEmail={session?.email || ""}
-        />
+
+        {showNotify ? (
+          <div className="mt-6 max-w-sm">
+            <StockNotifyButton
+              productId={product.id}
+              variant="full"
+              outOfStock
+              initialEmail={session?.email || ""}
+            />
+          </div>
+        ) : null}
+
+        {canBuy ? (
+          <div className="mt-8 max-w-sm">
+            <AddToCartButton product={product} />
+          </div>
+        ) : null}
+
         {product.maxQuantityPerOrder ? (
           <p className="mt-3 text-xs text-muted-foreground">
             Limit {product.maxQuantityPerOrder} per order

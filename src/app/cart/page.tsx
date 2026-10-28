@@ -200,7 +200,12 @@ export default function CartPage() {
                       </div>
                     </div>
                     {unavailable && !stock.allowBackorder ? (
-                      <StockNotifyButton productId={item.productId} outOfStock />
+                      <StockNotifyButton
+                        productId={item.productId}
+                        variant="compact"
+                        className="mt-3"
+                        outOfStock
+                      />
                     ) : null}
                   </li>
                 );
