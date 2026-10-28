@@ -15,14 +15,23 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"}
 
 
 def normalize_product_name(value: str) -> str:
-    return " ".join(str(value or "").split())
+    """
+    Canonical product title for matching.
+    Windows filenames cannot contain "/", so oils images use "mg-ml";
+    always treat that as the live site spelling "mg/ml" so import updates
+    existing products instead of creating duplicates.
+    """
+    text = str(value or "")
+    text = text.replace("_", " ")
+    # "300mg-ml" has no word-break before mg; replace the unit token directly.
+    text = re.sub(r"(?i)mg-ml", "mg/ml", text)
+    return " ".join(text.split())
 
 
 def product_name_from_filename(filename: str) -> str:
     stem = PurePosixPath(str(filename or "")).stem
     # Underscores → spaces; keep hyphens (BPC-157, IGF1-LR3).
-    stem = stem.replace("_", " ")
-    stem = re.sub(r"\s+", " ", stem).strip()
+    # mg-ml → mg/ml happens inside normalize_product_name.
     return normalize_product_name(stem)
 
 
@@ -119,6 +128,8 @@ def import_image_item(
             "image": refreshed.image,
         }
 
+    # Do not create when the only mismatch is a slash variant we already tried.
+    # Name is already canonical (mg/ml); create only when truly missing.
     warehouse = (
         Product.Warehouse.WAREHOUSE_1
         if category.slug in WAREHOUSE_1_SLUGS

@@ -68,7 +68,12 @@ function statSyncSafe(filePath: string): boolean {
 
 export function productNameFromFilename(filename: string): string {
   const stem = path.basename(filename, path.extname(filename));
-  return stem.replace(/_/g, " ").replace(/\s+/g, " ").trim();
+  // Windows filenames cannot contain "/"; oils use "mg-ml" for "mg/ml".
+  return stem
+    .replace(/_/g, " ")
+    .replace(/mg-ml/gi, "mg/ml")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function listProductMedia(): ProductMediaItem[] {
