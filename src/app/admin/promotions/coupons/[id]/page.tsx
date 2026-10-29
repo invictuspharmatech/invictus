@@ -12,12 +12,15 @@ export default async function EditCouponPage({
   const staff = await requireFullAdmin();
   if (!staff) return null;
   const { id } = await params;
-  const coupon = await djangoAuthed<ApiCoupon>(`/api/admin/coupons/${id}/`).catch(() => null);
+  const [coupon, allCoupons] = await Promise.all([
+    djangoAuthed<ApiCoupon>(`/api/admin/coupons/${id}/`).catch(() => null),
+    djangoAuthed<ApiCoupon[]>("/api/admin/coupons/").catch(() => []),
+  ]);
   if (!coupon) notFound();
   return (
     <div>
       <h1 className="display-font text-3xl">Edit coupon</h1>
-      <CouponForm coupon={coupon} />
+      <CouponForm coupon={coupon} allCoupons={allCoupons} />
     </div>
   );
 }

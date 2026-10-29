@@ -8,7 +8,13 @@ from django.db.models import Q
 from accounts.models import User
 from catalog.models import Product
 from orders.btcpay import BtcPayError, create_invoice, is_configured, serialize_invoice
-from orders.coupons import bump_usage, discount_for, is_free_shipping, resolve_coupon
+from orders.coupons import (
+    bump_usage_many,
+    codes_joined,
+    is_free_shipping,
+    normalize_codes,
+    resolve_coupon_stack,
+)
 from orders.fulfillment import FulfillmentError, allocate_quantity, apply_group_shipping, decrement_allocations, get_warehouse_settings
 from orders.models import Order, OrderItem
 from orders.order_numbers import allocate_order_number
@@ -151,19 +157,30 @@ def _plan(data: dict) -> dict:
         raise AdminCreateError(str(exc)) from exc
 
     merchandise_total = money(sum(line["line_total"] for line in lines))
-    coupon = None
-    coupon_code = _text(data, "couponCode", "coupon_code")
-    if coupon_code:
-        coupon, coupon_error = resolve_coupon(coupon_code, merchandise_total)
-        if coupon_error:
-            raise AdminCreateError(coupon_error)
+    user_id = data.get("userId") or data.get("user_id")
+    user = User.objects.filter(pk=user_id).first() if user_id else None
+    email = _text(data, "email", "customerEmail", "customer_email")
+    coupon_codes = normalize_codes(
+        data.get("couponCodes")
+        or data.get("coupon_codes")
+        or _text(data, "couponCode", "coupon_code")
+        or []
+    )
+    coupons, coupon_discount, coupon_free_shipping, coupon_error = resolve_coupon_stack(
+        coupon_codes,
+        merchandise_total,
+        user=user,
+        email=email or None,
+    )
+    if coupon_error:
+        raise AdminCreateError(coupon_error)
+    coupon = coupons[0] if coupons else None
 
     waive = bool(data.get("waiveShipping") or data.get("waive_shipping"))
     shipping_override = data.get("shippingAmount")
     if shipping_override in (None, ""):
         shipping_override = data.get("shipping_amount")
-    coupon_discount = discount_for(coupon, merchandise_total) if coupon else 0.0
-    if waive or is_free_shipping(coupon):
+    if waive or coupon_free_shipping or is_free_shipping(coupon):
         shipping_usd = 0.0
         free_shipping = True
     elif shipping_override not in (None, ""):
@@ -178,10 +195,9 @@ def _plan(data: dict) -> dict:
         free_shipping=free_shipping,
         shipping_usd=shipping_usd,
     )
-    user_id = data.get("userId") or data.get("user_id")
-    user = User.objects.filter(pk=user_id).first() if user_id else None
     return {
         "lines": lines,
+        "coupons": coupons,
         "stock_ops": stock_ops,
         "coupon": coupon,
         "totals": totals,
@@ -199,7 +215,9 @@ def preview(data: dict) -> dict:
         "shippingTotal": totals["shipping"],
         "discountTotal": totals["discount_total"],
         "grandTotal": totals["grand_total"],
-        "couponCode": plan["coupon"].code if plan["coupon"] else "",
+        "couponCode": codes_joined(plan.get("coupons") or []) if plan.get("coupons") else (
+            plan["coupon"].code if plan.get("coupon") else ""
+        ),
         "itemCount": sum(line["quantity"] for line in plan["lines"]),
         "warehouses": sorted({line["warehouse"] for line in plan["lines"]}),
     }
@@ -266,7 +284,9 @@ def create(data: dict, actor: User | None = None) -> dict:
                 shipping_country=_text(shipping, "country") or "US",
                 notes=notes,
                 coupon=coupon,
-                coupon_code=coupon.code if coupon else "",
+                coupon_code=codes_joined(plan.get("coupons") or []) if plan.get("coupons") else (
+                    coupon.code if coupon else ""
+                ),
                 discount_total=discount_shares[index],
                 shipping_waived=plan["waive"],
                 paid_at=paid_at,
@@ -284,7 +304,7 @@ def create(data: dict, actor: User | None = None) -> dict:
                 )
             created.append(order)
         if coupon:
-            bump_usage(coupon)
+            bump_usage_many(plan.get("coupons") or ([coupon] if coupon else []))
         apply_group_shipping(group_id, shipping_usd=float(totals["shipping"]))
 
     created.sort(key=lambda row: (row.split_index, str(row.id)))

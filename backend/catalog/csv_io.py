@@ -182,11 +182,14 @@ def import_categories(raw: str) -> dict[str, Any]:
             sort_order = int(float(_row_get(row, "sort_order", "sortorder") or 0))
         except ValueError:
             sort_order = 0
+        featured_raw = _norm(_row_get(row, "is_featured", "isfeatured", "featured"))
+        is_featured = featured_raw in ("1", "true", "yes", "y")
         Category.objects.create(
             name=name,
             slug=_unique_slug(name, Category),
             description=_row_get(row, "description"),
             sort_order=sort_order,
+            is_featured=is_featured,
         )
         imported += 1
     return {"imported": imported, "skipped": skipped, "errors": errors[:50]}
@@ -195,9 +198,16 @@ def import_categories(raw: str) -> dict[str, Any]:
 def export_categories() -> str:
     buffer = io.StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(["ID", "Name", "Slug", "Description", "Sort Order"])
+    writer.writerow(["ID", "Name", "Slug", "Description", "Sort Order", "Featured"])
     for category in Category.objects.all():
         writer.writerow(
-            [str(category.id), category.name, category.slug, category.description, category.sort_order]
+            [
+                str(category.id),
+                category.name,
+                category.slug,
+                category.description,
+                category.sort_order,
+                "1" if category.is_featured else "0",
+            ]
         )
     return buffer.getvalue()

@@ -47,6 +47,8 @@ def category_list(request):
     slugs = request.GET.get("slugs")
     if slugs:
         qs = qs.filter(slug__in=[item.strip() for item in slugs.split(",") if item.strip()])
+    if request.GET.get("featured") == "1":
+        qs = qs.filter(is_featured=True)
     return Response(CategorySerializer(qs, many=True).data)
 
 
@@ -520,6 +522,8 @@ def _save_category(category: Category, data: dict) -> Category:
         category.sort_order = int(data.get("sortOrder") or 0)
     if "skuAbbreviation" in data:
         category.sku_abbreviation = normalize_abbr(data.get("skuAbbreviation") or "")
+    if "isFeatured" in data:
+        category.is_featured = bool(data.get("isFeatured"))
     category.save()
     return category
 

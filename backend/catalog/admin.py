@@ -10,7 +10,9 @@ class ProductCategoryInline(admin.TabularInline):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ("name", "slug", "sort_order")
+    list_display = ("name", "slug", "sort_order", "is_featured")
+    list_filter = ("is_featured",)
+    list_editable = ("sort_order", "is_featured")
     prepopulated_fields = {"slug": ("name",)}
     search_fields = ("name", "slug")
 

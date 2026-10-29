@@ -33,7 +33,8 @@ export default async function AdminCouponsPage() {
         <div>
           <h1 className="display-font text-3xl">Coupons</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Codes shoppers can enter at checkout. Percent, fixed amount, or free shipping.
+            Codes shoppers can enter at checkout. Supports per-customer limits and stacking
+            partners (GreatLife-style).
           </p>
         </div>
         <Link href="/admin/promotions/coupons/new" className="gold-btn">
@@ -49,6 +50,8 @@ export default async function AdminCouponsPage() {
               <th>Type</th>
               <th>Value</th>
               <th>Uses</th>
+              <th>Per cust.</th>
+              <th>Stack</th>
               <th>Status</th>
               <th></th>
             </tr>
@@ -56,7 +59,7 @@ export default async function AdminCouponsPage() {
           <tbody>
             {coupons.length === 0 ? (
               <tr>
-                <td className="py-6 text-muted-foreground" colSpan={7}>
+                <td className="py-6 text-muted-foreground" colSpan={9}>
                   No coupons yet.
                 </td>
               </tr>
@@ -70,6 +73,14 @@ export default async function AdminCouponsPage() {
                   <td>
                     {coupon.usedCount}
                     {coupon.usageLimit != null ? ` / ${coupon.usageLimit}` : ""}
+                  </td>
+                  <td>{coupon.usageLimitPerUser != null ? coupon.usageLimitPerUser : "—"}</td>
+                  <td>
+                    {coupon.stackableWithOtherCoupons
+                      ? coupon.stackableCouponIds?.length
+                        ? `${coupon.stackableCouponIds.length} partner(s)`
+                        : "Any stackable"
+                      : "No"}
                   </td>
                   <td>{coupon.isActive ? "Active" : "Off"}</td>
                   <td>

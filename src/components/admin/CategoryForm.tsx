@@ -26,6 +26,7 @@ export function CategoryForm({ category }: { category?: ApiCategory }) {
           skuAbbreviation: String(form.get("skuAbbreviation") || "")
             .trim()
             .toUpperCase(),
+          isFeatured: form.get("isFeatured") === "on",
         };
         const res = await fetch(
           category ? `/api/admin/categories/${category.id}` : "/api/admin/categories",
@@ -75,6 +76,17 @@ export function CategoryForm({ category }: { category?: ApiCategory }) {
           type="number"
           defaultValue={category?.sortOrder ?? 0}
         />
+        <span className="text-xs text-muted-foreground">
+          Lower numbers appear first on the homepage carousel.
+        </span>
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          name="isFeatured"
+          type="checkbox"
+          defaultChecked={Boolean(category?.isFeatured)}
+        />
+        Featured on homepage
       </label>
       <label className="grid gap-1 text-sm">
         SKU abbreviation

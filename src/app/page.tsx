@@ -1,13 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight, FlaskConical } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { djangoJsonSafe } from "@/lib/django";
 import { FeaturedProductCard } from "@/components/shop/FeaturedProductCard";
 import { CategoryCarousel, type CategorySlide } from "@/components/shop/CategoryCarousel";
 import {
   CATEGORY_BLURBS,
   CATEGORY_IMAGES,
-  HOME_PROTOCOL_SLUGS,
   mediaUrl,
 } from "@/lib/constants";
 import type { ApiCategory, ApiProduct, ApiSetting } from "@/lib/api-types";
@@ -26,32 +25,24 @@ function settingMap(items: ApiSetting[]): Record<string, string> {
 }
 
 function toSlides(categories: ApiCategory[]): CategorySlide[] {
-  const bySlug = new Map(categories.map((item) => [item.slug, item]));
-  const peptides = bySlug.get("peptides");
-  if (peptides && !bySlug.has("peptides-glps")) {
-    bySlug.set("peptides-glps", peptides);
-  }
-  return HOME_PROTOCOL_SLUGS.flatMap((slug) => {
-    const item = bySlug.get(slug);
-    if (!item) return [];
-    return [
-      {
-        id: item.id,
-        slug: item.slug,
-        name: item.name,
-        image:
-          mediaUrl(item.image) ??
-          CATEGORY_IMAGES[item.slug] ??
-          DEFAULT_HERO_IMAGE,
-        blurb: CATEGORY_BLURBS[item.slug] ?? "Browse the collection.",
-      },
-    ];
-  });
+  return categories.map((item) => ({
+    id: item.id,
+    slug: item.slug,
+    name: item.name,
+    image:
+      mediaUrl(item.image) ??
+      CATEGORY_IMAGES[item.slug] ??
+      DEFAULT_HERO_IMAGE,
+    blurb:
+      item.description?.trim() ||
+      CATEGORY_BLURBS[item.slug] ||
+      "Browse the collection.",
+  }));
 }
 
 export default async function HomePage() {
   const [categories, featured, arrivals, settings] = await Promise.all([
-    djangoJsonSafe<ApiCategory[]>("/api/categories/", []),
+    djangoJsonSafe<ApiCategory[]>("/api/categories/?featured=1", []),
     djangoJsonSafe<ApiProduct[]>("/api/products/?featured=1&limit=4", []),
     djangoJsonSafe<ApiProduct[]>("/api/products/?newArrival=1&limit=4", []),
     djangoJsonSafe<ApiSetting[]>("/api/cms/settings/", []),
@@ -65,9 +56,7 @@ export default async function HomePage() {
     mediaUrl(site.homepage_logo_image) || DEFAULT_LOGO_IMAGE;
   const heroImage =
     mediaUrl(site.homepage_hero_image) || DEFAULT_HERO_IMAGE;
-  const heroKicker = site.homepage_kicker?.trim() || "Specimen / 001";
-  const heroTitle = site.homepage_headline?.trim() || "Precision, not noise.";
-  const heroLede = site.homepage_lede?.trim() || "A stronger standard is coming.";
+  const heroTitle = site.homepage_headline?.trim() || "A HIGHER STANDARD.";
 
   return (
     <div>
@@ -116,25 +105,11 @@ export default async function HomePage() {
             className="object-cover object-center opacity-90 mix-blend-screen"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/55 to-brand-red-deep/20" />
-          <div className="absolute left-6 top-6 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-paper/70">
-            <FlaskConical className="size-3.5 shrink-0 text-signal" />
-            <span className="whitespace-nowrap">{heroKicker}</span>
-          </div>
-          <div className="absolute inset-x-0 bottom-0 px-6 pb-6 pt-20">
-            <div className="flex items-start justify-between gap-6 border-t border-paper/25 pt-4">
-              <div className="min-w-0 flex-1">
-                <p className="font-serif text-2xl leading-snug tracking-[-0.02em] text-paper sm:text-3xl">
-                  {heroTitle}
-                </p>
-                <p className="mt-2 max-w-md text-sm leading-relaxed text-paper/70">
-                  {heroLede}
-                </p>
-              </div>
-              <span className="mt-1 shrink-0 whitespace-nowrap font-mono text-[11px] tracking-[0.14em] text-signal">
-                2026—01
-              </span>
-            </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/40 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 px-6 pb-6 pt-16">
+            <p className="font-serif text-2xl leading-snug tracking-[-0.02em] text-paper sm:text-3xl">
+              {heroTitle}
+            </p>
           </div>
         </div>
       </section>

@@ -23,7 +23,21 @@ class Coupon(models.Model):
     amount = models.FloatField(default=0)
     minimum_amount = models.FloatField(default=0)
     usage_limit = models.IntegerField(null=True, blank=True)
+    usage_limit_per_user = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Max redemptions per customer (user account or email). Blank = unlimited.",
+    )
     used_count = models.IntegerField(default=0)
+    stackable_with_other_coupons = models.BooleanField(
+        default=False,
+        help_text="Allow combining with other stackable coupons.",
+    )
+    stackable_coupon_ids = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Partner coupon IDs this code may stack with. Empty = any other stackable coupon.",
+    )
     starts_at = models.DateTimeField(null=True, blank=True)
     expires_at = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
@@ -107,7 +121,11 @@ class Order(models.Model):
         on_delete=models.SET_NULL,
         related_name="orders",
     )
-    coupon_code = models.CharField(max_length=64, blank=True)
+    coupon_code = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Applied code(s), comma-separated when stacked.",
+    )
     discount_total = models.FloatField(default=0)
     shipping_waived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

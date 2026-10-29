@@ -5,9 +5,9 @@ from rest_framework.response import Response
 from accounts.permissions import IsStoreStaff
 from orders.coupons import (
     apply_coupon_fields,
-    discount_for,
-    is_free_shipping,
+    normalize_codes,
     resolve_coupon,
+    resolve_coupon_stack,
     serialize_coupon,
 )
 from orders.models import Coupon
@@ -16,14 +16,59 @@ from orders.models import Coupon
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def validate_coupon_view(request):
+    """
+    Validate one code, optionally against already-applied codes (stacking).
+    Body: { code | couponCode, merchandiseTotal, email?, existingCodes? | couponCodes? }
+    """
     code = request.data.get("code") or request.data.get("couponCode") or ""
     try:
         merch = float(request.data.get("merchandiseTotal") or 0)
     except (TypeError, ValueError):
         merch = 0
-    coupon, error = resolve_coupon(code, merch)
+    email = (request.data.get("email") or "").strip() or None
+    existing = normalize_codes(
+        request.data.get("existingCodes")
+        or request.data.get("couponCodes")
+        or request.data.get("codes")
+        or []
+    )
+    # When validating a new code, existingCodes are already applied; exclude the new code itself.
+    other_codes = [c for c in existing if c.upper() != str(code).strip().upper()]
+    other_coupons = []
+    for other_code in other_codes:
+        other, other_error = resolve_coupon(
+            other_code,
+            merch,
+            user=request.user if request.user.is_authenticated else None,
+            email=email,
+        )
+        if other_error or not other:
+            return Response(
+                {"error": other_error or f"Applied coupon {other_code} is no longer valid."},
+                status=400,
+            )
+        other_coupons.append(other)
+
+    coupon, error = resolve_coupon(
+        code,
+        merch,
+        user=request.user if request.user.is_authenticated else None,
+        email=email,
+        other_coupons=other_coupons,
+    )
     if error or not coupon:
         return Response({"error": error or "This coupon is not valid."}, status=400)
+
+    stacked = other_coupons + [coupon]
+    _, total_discount, free_shipping, stack_error = resolve_coupon_stack(
+        [c.code for c in stacked],
+        merch,
+        user=request.user if request.user.is_authenticated else None,
+        email=email,
+    )
+    if stack_error:
+        return Response({"error": stack_error}, status=400)
+
     return Response(
         {
             "ok": True,
@@ -31,8 +76,12 @@ def validate_coupon_view(request):
             "name": coupon.name,
             "discountType": coupon.discount_type,
             "amount": coupon.amount,
-            "discount": discount_for(coupon, merch),
-            "freeShipping": is_free_shipping(coupon),
+            "discount": total_discount,
+            "lineDiscount": None,
+            "freeShipping": free_shipping,
+            "stackableWithOtherCoupons": bool(coupon.stackable_with_other_coupons),
+            "appliedCodes": [c.code for c in stacked],
+            "totalDiscount": total_discount,
         }
     )
 

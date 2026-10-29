@@ -15,8 +15,10 @@ import {
   type CheckoutSettings,
 } from "@/lib/checkout-settings";
 import {
-  readSavedCoupon,
-  saveCoupon,
+  couponsFreeShipping,
+  couponsTotalDiscount,
+  readSavedCoupons,
+  saveCoupons,
   validateCouponCode,
   type AppliedCoupon,
 } from "@/lib/coupon-session";
@@ -37,7 +39,10 @@ export default function CheckoutPage() {
   const [pending, setPending] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [couponError, setCouponError] = useState<string | null>(null);
-  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  const [appliedCoupons, setAppliedCoupons] = useState<AppliedCoupon[]>([]);
+  const [stackDiscount, setStackDiscount] = useState(0);
+  const [stackFreeShipping, setStackFreeShipping] = useState(false);
+  const appliedCodesKey = appliedCoupons.map((row) => row.code).join(",");
   const [settings, setSettings] = useState<CheckoutSettings | null>(null);
   const [optionId, setOptionId] = useState<string | null>(null);
   const [invoiceLink, setInvoiceLink] = useState<string | null>(null);
@@ -51,46 +56,88 @@ export default function CheckoutPage() {
       setOptionId(resolved.id);
       saveShippingOptionId(resolved.id);
     });
-    const savedCoupon = readSavedCoupon();
-    if (savedCoupon) {
-      setAppliedCoupon(savedCoupon);
-      setCouponInput(savedCoupon.code);
-    }
+    setAppliedCoupons(readSavedCoupons());
   }, []);
 
   useEffect(() => {
-    if (!appliedCoupon?.code) return;
-    void validateCouponCode(appliedCoupon.code, merchandiseTotal).then((result) => {
-      if (!result.ok) {
-        setAppliedCoupon(null);
-        saveCoupon(null);
-        setCouponError(result.error);
-        return;
+    if (!appliedCodesKey) {
+      setStackDiscount(0);
+      setStackFreeShipping(false);
+      return;
+    }
+    let cancelled = false;
+    const codes = appliedCodesKey.split(",").filter(Boolean);
+    (async () => {
+      const kept: AppliedCoupon[] = [];
+      let totalDiscount = 0;
+      let freeShip = false;
+      for (const code of codes) {
+        const result = await validateCouponCode(code, merchandiseTotal, {
+          existingCodes: kept.map((item) => item.code),
+        });
+        if (!result.ok) {
+          if (!cancelled) {
+            setCouponError(result.error);
+            setAppliedCoupons(kept);
+            saveCoupons(kept);
+            setStackDiscount(totalDiscount);
+            setStackFreeShipping(freeShip);
+          }
+          return;
+        }
+        kept.push(result.coupon);
+        totalDiscount = result.totalDiscount;
+        freeShip = result.freeShipping;
       }
-      setAppliedCoupon(result.coupon);
-      saveCoupon(result.coupon);
-    });
-  }, [merchandiseTotal, appliedCoupon?.code]);
+      if (cancelled) return;
+      setStackDiscount(totalDiscount);
+      setStackFreeShipping(freeShip);
+      setAppliedCoupons(kept);
+      saveCoupons(kept);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [merchandiseTotal, appliedCodesKey]);
 
   const shippingOption = resolveShippingFee(settings, optionId);
   const shippingTotal = items.length > 0 ? shippingOption.fee : 0;
   const minOrder = settings?.minOrderAmount ?? 100;
   const fees = settings?.shippingFees ?? [];
 
-  const chargedShipping = appliedCoupon?.freeShipping ? 0 : shippingTotal;
-  const chargedTotal = Math.max(0, merchandiseTotal - (appliedCoupon?.discount || 0)) + chargedShipping;
+  const discount = stackDiscount || couponsTotalDiscount(appliedCoupons);
+  const chargedShipping =
+    stackFreeShipping || couponsFreeShipping(appliedCoupons) ? 0 : shippingTotal;
+  const chargedTotal = Math.max(0, merchandiseTotal - discount) + chargedShipping;
 
   async function applyCoupon() {
     setCouponError(null);
-    const result = await validateCouponCode(couponInput, merchandiseTotal);
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    if (appliedCoupons.some((row) => row.code === code)) {
+      setCouponError("That coupon is already applied.");
+      return;
+    }
+    const result = await validateCouponCode(code, merchandiseTotal, {
+      existingCodes: appliedCoupons.map((row) => row.code),
+    });
     if (!result.ok) {
-      setAppliedCoupon(null);
-      saveCoupon(null);
       setCouponError(result.error);
       return;
     }
-    setAppliedCoupon(result.coupon);
-    saveCoupon(result.coupon);
+    const next = [...appliedCoupons, result.coupon];
+    setAppliedCoupons(next);
+    saveCoupons(next);
+    setStackDiscount(result.totalDiscount);
+    setStackFreeShipping(result.freeShipping);
+    setCouponInput("");
+  }
+
+  function removeCoupon(code: string) {
+    const next = appliedCoupons.filter((row) => row.code !== code);
+    setAppliedCoupons(next);
+    saveCoupons(next);
+    setCouponError(null);
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -108,7 +155,8 @@ export default function CheckoutPage() {
       postal: String(form.get("postal") || ""),
       notes: String(form.get("notes") || ""),
       referralCode: readReferralCode(),
-      couponCode: appliedCoupon?.code || couponInput.trim(),
+      couponCodes: appliedCoupons.map((row) => row.code),
+      couponCode: appliedCoupons.map((row) => row.code).join(",") || couponInput.trim(),
       shippingOptionId: shippingOption.id,
       items: items.map((item) => ({
         productId: item.productId,
@@ -139,6 +187,7 @@ export default function CheckoutPage() {
     const checkoutLink = data.checkoutLink || orders.find((order) => order.checkoutLink)?.checkoutLink || null;
     setPlacedGroup(data.groupId || "");
     clear();
+    saveCoupons([]);
     if (checkoutLink) {
       setInvoiceLink(checkoutLink);
       return;
@@ -245,17 +294,25 @@ export default function CheckoutPage() {
             </button>
           </div>
           {couponError ? <p className="mt-2 text-sm text-brand-red">{couponError}</p> : null}
-          {appliedCoupon ? (
-            <p className="mt-2 text-sm text-muted-foreground">
-              {appliedCoupon.code} · {appliedCoupon.name}
-              {appliedCoupon.discount > 0 ? ` · −${formatMoney(appliedCoupon.discount)}` : ""}
-              {appliedCoupon.freeShipping ? " · free shipping" : ""}
-            </p>
+          {appliedCoupons.length ? (
+            <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+              {appliedCoupons.map((row) => (
+                <li key={row.code} className="flex flex-wrap items-center gap-2">
+                  <span>
+                    {row.code} · {row.name}
+                    {row.freeShipping ? " · free shipping" : ""}
+                  </span>
+                  <button type="button" className="underline" onClick={() => removeCoupon(row.code)}>
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
           ) : null}
-          {appliedCoupon && appliedCoupon.discount > 0 ? (
+          {discount > 0 ? (
             <p className="mt-4 flex justify-between text-sm text-muted-foreground">
               <span>Discount</span>
-              <span>−{formatMoney(appliedCoupon.discount)}</span>
+              <span>−{formatMoney(discount)}</span>
             </p>
           ) : null}
           <p className="mt-4 flex justify-between text-sm text-muted-foreground">

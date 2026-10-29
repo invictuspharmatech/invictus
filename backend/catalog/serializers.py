@@ -6,10 +6,20 @@ from catalog.models import Category, Product, StockTransferRequest, TestResult
 class CategorySerializer(serializers.ModelSerializer):
     sortOrder = serializers.IntegerField(source="sort_order")
     skuAbbreviation = serializers.CharField(source="sku_abbreviation")
+    isFeatured = serializers.BooleanField(source="is_featured")
 
     class Meta:
         model = Category
-        fields = ["id", "slug", "name", "description", "image", "sortOrder", "skuAbbreviation"]
+        fields = [
+            "id",
+            "slug",
+            "name",
+            "description",
+            "image",
+            "sortOrder",
+            "skuAbbreviation",
+            "isFeatured",
+        ]
 
 
 class CategoryWriteSerializer(serializers.Serializer):
@@ -19,6 +29,7 @@ class CategoryWriteSerializer(serializers.Serializer):
     image = serializers.CharField(required=False, allow_blank=True)
     sortOrder = serializers.IntegerField(required=False)
     skuAbbreviation = serializers.CharField(required=False, allow_blank=True)
+    isFeatured = serializers.BooleanField(required=False)
 
 
 class NestedCategorySerializer(serializers.ModelSerializer):

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CouponType } from "@/lib/enums";
 import { asCouponType, toDatetimeLocal } from "@/lib/coupons";
 import type { ApiCoupon } from "@/lib/api-types";
@@ -21,11 +21,24 @@ function amountLabel(type: CouponType): string {
   }
 }
 
-export function CouponForm({ coupon }: { coupon?: ApiCoupon }) {
+export function CouponForm({
+  coupon,
+  allCoupons = [],
+}: {
+  coupon?: ApiCoupon;
+  allCoupons?: ApiCoupon[];
+}) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [discountType, setDiscountType] = useState<CouponType>(
     asCouponType(coupon?.discountType || CouponType.PERCENT),
+  );
+  const [stackable, setStackable] = useState(Boolean(coupon?.stackableWithOtherCoupons));
+  const [partnerIds, setPartnerIds] = useState<string[]>(coupon?.stackableCouponIds ?? []);
+
+  const partnerOptions = useMemo(
+    () => allCoupons.filter((row) => row.id !== coupon?.id),
+    [allCoupons, coupon?.id],
   );
 
   return (
@@ -42,6 +55,9 @@ export function CouponForm({ coupon }: { coupon?: ApiCoupon }) {
           amount: Number(form.get("amount") || 0),
           minimumAmount: Number(form.get("minimumAmount") || 0),
           usageLimit: String(form.get("usageLimit") || "").trim() || null,
+          usageLimitPerUser: String(form.get("usageLimitPerUser") || "").trim() || null,
+          stackableWithOtherCoupons: stackable,
+          stackableCouponIds: stackable ? partnerIds : [],
           startsAt: String(form.get("startsAt") || "").trim() || null,
           expiresAt: String(form.get("expiresAt") || "").trim() || null,
           isActive: form.get("isActive") === "on",
@@ -122,7 +138,7 @@ export function CouponForm({ coupon }: { coupon?: ApiCoupon }) {
         />
       </label>
       <label className="grid gap-1 text-sm">
-        Usage limit
+        Total usage limit
         <input
           className="field"
           name="usageLimit"
@@ -131,7 +147,54 @@ export function CouponForm({ coupon }: { coupon?: ApiCoupon }) {
           defaultValue={coupon?.usageLimit ?? ""}
           placeholder="Unlimited"
         />
+        <span className="text-xs text-muted-foreground">Across all customers. Leave blank for unlimited.</span>
       </label>
+      <label className="grid gap-1 text-sm">
+        Usage limit per customer
+        <input
+          className="field"
+          name="usageLimitPerUser"
+          type="number"
+          min={1}
+          defaultValue={coupon?.usageLimitPerUser ?? ""}
+          placeholder="Unlimited"
+        />
+        <span className="text-xs text-muted-foreground">
+          e.g. 1 = one-time use per customer (account or email). Leave blank to allow reuse.
+        </span>
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={stackable}
+          onChange={(event) => setStackable(event.target.checked)}
+        />
+        Stackable with other coupons
+      </label>
+      {stackable ? (
+        <label className="grid gap-1 text-sm">
+          Stack only with these coupons
+          <select
+            className="field min-h-28"
+            multiple
+            value={partnerIds}
+            onChange={(event) =>
+              setPartnerIds(Array.from(event.target.selectedOptions).map((opt) => opt.value))
+            }
+          >
+            {partnerOptions.map((row) => (
+              <option key={row.id} value={row.id}>
+                {row.code} — {row.name}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-muted-foreground">
+            Hold Ctrl/Cmd to select multiple. Leave empty to allow stacking with any other
+            stackable coupon. For “only with INVICTUS10”, pick that code here on the partner
+            coupons, and list those partners on INVICTUS10 (or leave INVICTUS10 empty).
+          </span>
+        </label>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-1 text-sm">
           Starts

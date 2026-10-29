@@ -10,6 +10,10 @@ class Category(models.Model):
     description = models.TextField(blank=True)
     image = models.CharField(max_length=500, blank=True)
     sort_order = models.IntegerField(default=0)
+    is_featured = models.BooleanField(
+        default=False,
+        help_text="Show this category on the homepage carousel.",
+    )
     sku_abbreviation = models.CharField(
         max_length=16,
         blank=True,

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { djangoAuthed } from "@/lib/django";
 import { requireFullAdmin } from "@/lib/auth";
 import { CatalogCsvBar } from "@/components/admin/CatalogCsvBar";
+import { AdminCategoriesTable } from "@/components/admin/AdminCategoriesTable";
 import type { ApiCategory } from "@/lib/api-types";
 
 export default async function AdminCategoriesPage({
@@ -20,7 +21,8 @@ export default async function AdminCategoriesPage({
         <div>
           <h1 className="display-font text-3xl">Categories</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            These power the shop menu and the landing-page category section.
+            Star (★) a category to show it on the homepage. More than 4 starred
+            categories become a moving carousel. Sort order controls display order.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -33,34 +35,7 @@ export default async function AdminCategoriesPage({
           </Link>
         </div>
       </div>
-      <div className="tile mt-6 overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-            <tr>
-              <th className="py-2">Name</th>
-              <th>Slug</th>
-              <th>SKU abbr</th>
-              <th>Sort</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {categories.map((category) => (
-              <tr key={category.id} className="border-t border-border/40">
-                <td className="py-3">{category.name}</td>
-                <td>{category.slug}</td>
-                <td className="font-mono text-xs">{category.skuAbbreviation || "—"}</td>
-                <td>{category.sortOrder}</td>
-                <td>
-                  <Link href={`/admin/categories/${category.id}`} className="text-sm text-signal">
-                    Edit
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <AdminCategoriesTable categories={categories} />
     </div>
   );
 }

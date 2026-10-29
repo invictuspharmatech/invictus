@@ -57,7 +57,12 @@ from orders.fulfillment import (
     restock_order,
     set_order_item_quantity,
 )
-from orders.coupons import bump_usage, discount_for, is_free_shipping, resolve_coupon
+from orders.coupons import (
+    bump_usage_many,
+    codes_joined,
+    normalize_codes,
+    resolve_coupon_stack,
+)
 from orders.models import AccountingReset, ContactMessage, Coupon, FulfillmentRequest, Order, OrderItem
 from orders.order_numbers import allocate_order_number
 from orders.serializers import (
@@ -130,12 +135,24 @@ def checkout_view(request):
 
         merchandise_total = sum(line["line_total"] for line in lines)
 
-        coupon = None
-        coupon_code = (data.get("couponCode") or "").strip()
-        if coupon_code:
-            coupon, coupon_error = resolve_coupon(coupon_code, merchandise_total)
-            if coupon_error:
-                return Response({"error": coupon_error}, status=400)
+        email = data["email"].strip().lower()
+        session_user = request.user if request.user.is_authenticated else None
+        coupon_codes = normalize_codes(
+            data.get("couponCodes")
+            or data.get("coupon_codes")
+            or data.get("couponCode")
+            or data.get("coupon_code")
+            or []
+        )
+        coupons, coupon_discount, coupon_free_shipping, coupon_error = resolve_coupon_stack(
+            coupon_codes,
+            merchandise_total,
+            user=session_user if session_user and not getattr(session_user, "is_anonymous", False) else None,
+            email=email,
+        )
+        if coupon_error:
+            return Response({"error": coupon_error}, status=400)
+        coupon = coupons[0] if coupons else None
 
         shipping_choice = resolve_shipping_option(
             data.get("shippingOptionId") or data.get("shipping_option_id")
@@ -151,7 +168,6 @@ def checkout_view(request):
                 affiliate_code=referral_code, is_affiliate=True
             ).first()
 
-        email = data["email"].strip().lower()
         first_order_discount = False
         if affiliate:
             prior = Order.objects.filter(affiliate=affiliate, customer_email=email).count()
@@ -162,12 +178,21 @@ def checkout_view(request):
             after_affiliate = money(
                 merchandise_total * (1 - settings.FIRST_ORDER_AFFILIATE_DISCOUNT)
             )
-        coupon_discount = discount_for(coupon, after_affiliate) if coupon else 0.0
+            # Recompute coupon discount on post-affiliate subtotal when affiliate applies.
+            if coupons:
+                _, coupon_discount, coupon_free_shipping, coupon_error = resolve_coupon_stack(
+                    [c.code for c in coupons],
+                    after_affiliate,
+                    user=session_user if session_user and not getattr(session_user, "is_anonymous", False) else None,
+                    email=email,
+                )
+                if coupon_error:
+                    return Response({"error": coupon_error}, status=400)
         totals = customer_checkout_totals(
             merchandise_total,
             affiliate_discount_rate=settings.FIRST_ORDER_AFFILIATE_DISCOUNT if first_order_discount else 0.0,
             coupon_discount=coupon_discount,
-            free_shipping=is_free_shipping(coupon),
+            free_shipping=coupon_free_shipping,
             shipping_usd=shipping_usd,
         )
         limit_error = checkout_limit_error(
@@ -184,7 +209,6 @@ def checkout_view(request):
             grouped[line["warehouse"]].append(line)
 
         created = []
-        session_user = request.user if request.user.is_authenticated else None
         warehouse_groups = [(warehouse, group_lines) for warehouse, group_lines in grouped.items()]
         weights = [sum(line["line_total"] for line in group_lines) for _, group_lines in warehouse_groups]
         merch_shares = allocate_weighted(float(totals["merchandise"]), weights)
@@ -236,7 +260,7 @@ def checkout_view(request):
                 affiliate=affiliate,
                 commission_amount=commission_shares[index],
                 coupon=coupon,
-                coupon_code=coupon.code if coupon else "",
+                coupon_code=codes_joined(coupons) if coupons else "",
                 discount_total=share_disc,
                 shipping_waived=waived,
             )
@@ -253,8 +277,8 @@ def checkout_view(request):
                 )
             created.append(order)
 
-        if coupon:
-            bump_usage(coupon)
+        if coupons:
+            bump_usage_many(coupons)
         apply_group_shipping(group_id, shipping_usd=float(totals["shipping"]))
 
     payload = []

@@ -7,6 +7,8 @@ export type ApiCategory = {
   sortOrder: number;
   /** Used for SKUs: IP-{skuAbbreviation}-001 */
   skuAbbreviation?: string;
+  /** Show on homepage category carousel */
+  isFeatured?: boolean;
 };
 
 export type ApiProduct = {
@@ -427,7 +429,11 @@ export type ApiCoupon = {
   amount: number;
   minimumAmount: number;
   usageLimit: number | null;
+  usageLimitPerUser?: number | null;
   usedCount: number;
+  stackableWithOtherCoupons?: boolean;
+  stackableCouponIds?: string[];
+  stackablePartners?: { id: string; code: string; name: string }[];
   startsAt: string | null;
   expiresAt: string | null;
   isActive: boolean;
