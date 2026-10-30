@@ -754,12 +754,20 @@ def admin_overview_view(request):
             name = settings_row.w1_name or "Warehouse 1"
             contact = settings_row.w1_contact
             notes = settings_row.w1_notes
-            low = Product.objects.filter(stock_quantity_w1__lte=5).count()
+            low = Product.objects.filter(
+                status="publish",
+                stock_quantity_w1__gt=0,
+                stock_quantity_w1__lte=5,
+            ).count()
         else:
             name = settings_row.w2_name or "Warehouse 2"
             contact = settings_row.w2_contact
             notes = settings_row.w2_notes
-            low = Product.objects.filter(stock_quantity_w2__lte=5).count()
+            low = Product.objects.filter(
+                status="publish",
+                stock_quantity_w2__gt=0,
+                stock_quantity_w2__lte=5,
+            ).count()
         return {
             "code": code,
             "name": name,

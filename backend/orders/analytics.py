@@ -228,8 +228,9 @@ def _stock_quantity_field(warehouse: str) -> str:
 
 
 def catalog_stock_counts(warehouse: str) -> tuple[int, int]:
+    """Low / out-of-stock counts for active (publish) products only."""
     field = _stock_quantity_field(warehouse)
-    catalog = Product.objects.all()
+    catalog = Product.objects.filter(status="publish")
     low_stock = catalog.filter(**{f"{field}__gt": 0, f"{field}__lte": LOW_STOCK_THRESHOLD}).count()
     out_qs = catalog.filter(
         Q(**{f"{field}__lte": 0})
@@ -550,7 +551,11 @@ def products(params) -> dict[str, Any]:
         "category_name": category_name,
         "total_products": catalog.count(),
         "active_products": catalog.filter(status="publish").count(),
-        "low_stock_products": catalog.filter(stock_quantity__lte=LOW_STOCK_THRESHOLD).count(),
+        "low_stock_products": catalog.filter(
+            status="publish",
+            stock_quantity__gt=0,
+            stock_quantity__lte=LOW_STOCK_THRESHOLD,
+        ).count(),
         "top_selling_products": _top_products(start, end, 20, category_id),
         "products_by_category": [
             {
@@ -685,10 +690,12 @@ def coupons(params) -> dict[str, Any]:
 
 
 def stock(_params=None) -> dict[str, Any]:
+    # Stock health tiles/lists: active (publish) products only.
+    active = Product.objects.filter(status="publish")
     catalog = Product.objects.all()
-    in_stock = catalog.filter(stock_quantity__gt=0).count()
-    out_of_stock = catalog.filter(stock_quantity__lte=0).count()
-    low = catalog.filter(stock_quantity__gt=0, stock_quantity__lte=LOW_STOCK_THRESHOLD)
+    in_stock = active.filter(stock_quantity__gt=0).count()
+    out_of_stock = active.filter(stock_quantity__lte=0).count()
+    low = active.filter(stock_quantity__gt=0, stock_quantity__lte=LOW_STOCK_THRESHOLD)
     low_list = list(low.prefetch_related("categories")[:20])
     total_value = 0.0
     for product in catalog:

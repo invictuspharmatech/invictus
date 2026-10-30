@@ -43,8 +43,11 @@ export default async function AdminInventoryPage({
   const products = await djangoAuthed<ApiProduct[]>(
     `/api/admin/products/${query ? `?${query}` : ""}`,
   );
-  const low = products.filter((product) => isLowStock(stockQty(product, warehouse)));
-  const out = products.filter((product) =>
+  const activeProducts = products.filter(
+    (product) => (product.status || "publish").toLowerCase() === "publish",
+  );
+  const low = activeProducts.filter((product) => isLowStock(stockQty(product, warehouse)));
+  const out = activeProducts.filter((product) =>
     isOutOfStock(product, stockQty(product, warehouse), warehouse),
   );
 
@@ -52,7 +55,8 @@ export default async function AdminInventoryPage({
     <div>
       <h1 className="display-font text-3xl">Inventory</h1>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        Stock by warehouse. Low stock is 1–10 units. Out of stock is qty 0.
+        Stock by warehouse. Low / out-of-stock counts include active products only.
+        Low stock is 1–10 units. Out of stock is qty 0.
       </p>
       <form className="mt-6 flex flex-wrap gap-2">
         <input className="field max-w-xs" name="q" defaultValue={q} placeholder="Search SKU or name" />

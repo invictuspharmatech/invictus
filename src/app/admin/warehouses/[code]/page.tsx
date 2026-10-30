@@ -39,8 +39,9 @@ export default async function AdminWarehouseDetailPage({
   const card = overview.warehouses.find((row) => row.code === code);
   const stockKey = code === WarehouseCode.WAREHOUSE_1 ? "stockQuantityW1" : "stockQuantityW2";
   const lowStock = products.filter((product) => {
+    if ((product.status || "publish").toLowerCase() !== "publish") return false;
     const count = product[stockKey];
-    return count != null && count <= 5;
+    return count != null && count > 0 && count <= 5;
   });
 
   return (
