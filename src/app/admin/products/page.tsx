@@ -26,6 +26,9 @@ export default async function AdminProductsPage({
         <h1 className="display-font text-3xl">Products</h1>
         <div className="flex flex-wrap gap-2">
           {admin ? <CatalogCsvBar kind="products" openImport={importFlag === "1"} autoExport={exportFlag === "1"} /> : null}
+          <Link href="/admin/products/stock-summary" className="ghost-btn">
+            Stock summary
+          </Link>
           {admin ? (
             <Link href="/admin/products/import-images" className="ghost-btn">
               Import from images

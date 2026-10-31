@@ -17,6 +17,14 @@ type SortOrder = "asc" | "desc";
 type FeaturedFilter = "all" | "featured" | "not_featured";
 type NewArrivalFilter = "all" | "yes" | "no";
 type StockFilter = "" | "in_stock" | "out_of_stock" | "on_backorder";
+type WarehouseFilter = "" | "WAREHOUSE_1" | "WAREHOUSE_2";
+
+function warehouseChipClass(active: boolean): string {
+  if (active) {
+    return "bg-emerald-700 px-2 py-0.5 font-mono text-xs text-emerald-50";
+  }
+  return "bg-muted px-2 py-0.5 font-mono text-xs text-foreground";
+}
 
 function compareProducts(a: ApiProduct, b: ApiProduct, sortBy: SortBy, sortOrder: SortOrder): number {
   let result = 0;
@@ -134,6 +142,7 @@ export function AdminProductsTable({
   const [categoryId, setCategoryId] = useState("");
   const [status, setStatus] = useState("all");
   const [stockStatus, setStockStatus] = useState<StockFilter>("");
+  const [warehouseFilter, setWarehouseFilter] = useState<WarehouseFilter>("");
   const [featuredFilter, setFeaturedFilter] = useState<FeaturedFilter>("all");
   const [newArrivalFilter, setNewArrivalFilter] = useState<NewArrivalFilter>("all");
   const [sortBy, setSortBy] = useState<SortBy>("name");
@@ -159,7 +168,7 @@ export function AdminProductsTable({
   useEffect(() => {
     setPage(1);
     setSelectedIds([]);
-  }, [search, categoryId, status, stockStatus, featuredFilter, newArrivalFilter]);
+  }, [search, categoryId, status, stockStatus, warehouseFilter, featuredFilter, newArrivalFilter]);
 
   const statusCounts = useMemo(() => {
     const all = rows.length;
@@ -176,6 +185,7 @@ export function AdminProductsTable({
         if (status === "active" && product.status !== "publish") return false;
         if (status === "inactive" && product.status === "publish") return false;
         if (stockStatus && stockKey(product) !== stockStatus) return false;
+        if (warehouseFilter && product.warehouse !== warehouseFilter) return false;
         if (featuredFilter === "featured" && !product.isFeatured) return false;
         if (featuredFilter === "not_featured" && product.isFeatured) return false;
         if (newArrivalFilter === "yes" && !product.isNewArrival) return false;
@@ -189,6 +199,7 @@ export function AdminProductsTable({
     categoryId,
     status,
     stockStatus,
+    warehouseFilter,
     featuredFilter,
     newArrivalFilter,
     sortBy,
@@ -199,7 +210,7 @@ export function AdminProductsTable({
   const currentPage = Math.min(page, lastPage);
   const pageRows = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
   const filtersOn =
-    Boolean(search || categoryId || stockStatus) ||
+    Boolean(search || categoryId || stockStatus || warehouseFilter) ||
     status !== "all" ||
     featuredFilter !== "all" ||
     newArrivalFilter !== "all";
@@ -388,6 +399,7 @@ export function AdminProductsTable({
     setCategoryId("");
     setStatus("all");
     setStockStatus("");
+    setWarehouseFilter("");
     setFeaturedFilter("all");
     setNewArrivalFilter("all");
   }
@@ -400,7 +412,7 @@ export function AdminProductsTable({
   return (
     <div className="mt-6">
       <div className="tile mb-6 p-4">
-        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-6">
+        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
           <select
             className="field"
             value={categoryId}
@@ -430,6 +442,15 @@ export function AdminProductsTable({
             <option value="in_stock">In stock</option>
             <option value="out_of_stock">Out of stock</option>
             <option value="on_backorder">On backorder</option>
+          </select>
+          <select
+            className="field"
+            value={warehouseFilter}
+            onChange={(event) => setWarehouseFilter(event.target.value as WarehouseFilter)}
+          >
+            <option value="">Warehouse: all</option>
+            <option value="WAREHOUSE_1">Assigned to WH1</option>
+            <option value="WAREHOUSE_2">Assigned to WH2</option>
           </select>
           <select
             className="field"
@@ -766,17 +787,43 @@ export function AdminProductsTable({
                         <td className="px-4 py-3 align-top text-muted-foreground">
                           <div className="flex flex-wrap gap-1">
                             {typeof product.stockQuantityW1 === "number" ? (
-                              <span className="bg-muted px-2 py-0.5 font-mono text-xs text-foreground">
+                              <span
+                                className={warehouseChipClass(product.warehouse === "WAREHOUSE_1")}
+                                title={
+                                  product.warehouse === "WAREHOUSE_1"
+                                    ? "Assigned warehouse"
+                                    : "Stock at Warehouse 1"
+                                }
+                              >
                                 W1: {product.stockQuantityW1}
                               </span>
                             ) : null}
                             {typeof product.stockQuantityW2 === "number" ? (
-                              <span className="bg-muted px-2 py-0.5 font-mono text-xs text-foreground">
+                              <span
+                                className={warehouseChipClass(product.warehouse === "WAREHOUSE_2")}
+                                title={
+                                  product.warehouse === "WAREHOUSE_2"
+                                    ? "Assigned warehouse"
+                                    : "Stock at Warehouse 2"
+                                }
+                              >
                                 W2: {product.stockQuantityW2}
                               </span>
                             ) : null}
                           </div>
-                          <div className="mt-1 text-xs">Home: {warehouseLabel(product.warehouse)}</div>
+                          <div className="mt-1 text-xs">
+                            Home:{" "}
+                            <span
+                              className={
+                                product.warehouse === "WAREHOUSE_1" ||
+                                product.warehouse === "WAREHOUSE_2"
+                                  ? "font-medium text-emerald-400"
+                                  : undefined
+                              }
+                            >
+                              {warehouseLabel(product.warehouse)}
+                            </span>
+                          </div>
                           {admin ? (
                             <button
                               type="button"
