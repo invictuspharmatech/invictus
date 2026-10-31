@@ -108,6 +108,7 @@ const ADMIN_NAV: AdminNavItem[] = [
       { href: "/admin/cms/pages", label: "Pages" },
       { href: "/admin/cms/faq", label: "FAQ" },
       { href: "/admin/cms/banners", label: "Banners / promo bar" },
+      { href: "/admin/cms/media", label: "Media library" },
       { href: "/admin/cms/email", label: "Email settings & templates" },
       { href: "/admin/cms/settings", label: "Site settings" },
       { href: "/admin/cms/test-results", label: "Test results" },

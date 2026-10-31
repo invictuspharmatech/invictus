@@ -14,14 +14,22 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
-  const byPath = new Map<string, { path: string; name: string }>();
+  const byPath = new Map<
+    string,
+    { path: string; name: string; folder?: string; uploadedAt?: string | null }
+  >();
 
   try {
     const response = await djangoFetch("/api/admin/cms/media/", {
       token: await sessionToken(),
     });
     const payload = (await response.json().catch(() => ({}))) as {
-      items?: { path?: string; name?: string }[];
+      items?: {
+        path?: string;
+        name?: string;
+        folder?: string;
+        uploadedAt?: string | null;
+      }[];
     };
     if (response.ok && Array.isArray(payload.items)) {
       for (const item of payload.items) {
@@ -29,6 +37,8 @@ export async function GET() {
         byPath.set(item.path, {
           path: item.path,
           name: item.name || item.path.split("/").pop() || item.path,
+          folder: item.folder,
+          uploadedAt: item.uploadedAt ?? null,
         });
       }
     }
@@ -37,12 +47,23 @@ export async function GET() {
   }
 
   for (const item of listProductMedia()) {
-    if (!byPath.has(item.path)) byPath.set(item.path, item);
+    if (!byPath.has(item.path)) {
+      byPath.set(item.path, {
+        path: item.path,
+        name: item.name,
+        folder: "products",
+        uploadedAt: null,
+      });
+    }
   }
 
-  const items = Array.from(byPath.values()).sort((a, b) =>
-    a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
-  );
+  // Client sorts by newest / name; keep a stable newest-first default here.
+  const items = Array.from(byPath.values()).sort((a, b) => {
+    const aAt = a.uploadedAt || "";
+    const bAt = b.uploadedAt || "";
+    if (aAt !== bAt) return bAt.localeCompare(aAt);
+    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+  });
   return NextResponse.json({ items });
 }
 

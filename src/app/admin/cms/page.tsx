@@ -23,6 +23,11 @@ const CARDS = [
     copy: "Lab documents listed on Test Results.",
   },
   {
+    href: "/admin/cms/media",
+    title: "Media library",
+    copy: "Bulk-upload product and site images, then reuse them from any picker.",
+  },
+  {
     href: "/admin/cms/settings",
     title: "Site settings",
     copy: "Homepage headline and other store copy.",

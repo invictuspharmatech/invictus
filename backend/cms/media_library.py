@@ -1,18 +1,35 @@
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import PurePosixPath
 
 from django.core.files.storage import default_storage
+from django.utils import timezone
 
 from catalog.image_import import IMAGE_EXTENSIONS, sanitize_upload_filename
 
 ALLOWED_FOLDERS = ("products", "site")
 
 
+def _iso_mtime(relative: str) -> str | None:
+    try:
+        modified = default_storage.get_modified_time(relative)
+    except Exception:
+        return None
+    if modified is None:
+        return None
+    if timezone.is_naive(modified):
+        modified = timezone.make_aware(modified, timezone.get_current_timezone())
+    if isinstance(modified, datetime):
+        return modified.isoformat()
+    return None
+
+
 def list_media_items(folder: str | None = None) -> list[dict]:
     """
     List images under MEDIA_ROOT/{products,site}/.
     Returns public URL paths nginx serves at /media/...
+    Includes uploadedAt (file mtime) for admin sorting/filters.
     """
     folders = (
         [folder]
@@ -35,9 +52,17 @@ def list_media_items(folder: str | None = None) -> list[dict]:
                     "path": f"/media/{relative.lstrip('/')}",
                     "name": name,
                     "folder": folder_name,
+                    "uploadedAt": _iso_mtime(relative),
                 }
             )
-    items.sort(key=lambda row: row["name"].lower())
+    # Newest first by default; name is a secondary key for stable ordering.
+    items.sort(
+        key=lambda row: (
+            row.get("uploadedAt") or "",
+            (row.get("name") or "").lower(),
+        ),
+        reverse=True,
+    )
     return items
 
 
