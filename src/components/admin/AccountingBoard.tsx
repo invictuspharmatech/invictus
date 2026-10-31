@@ -2,12 +2,12 @@
 
 import { AccountingPeriod, AccountingTileKey, AccountingWarehouse } from "@/lib/enums";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatMoney } from "@/lib/constants";
 import {
   allocateForWarehouse,
   formatCrypto,
-  parseBtcInput,
+  parseMoneyInput,
   warehouseFilterLabel,
   type AccountingSaleRow,
   type AccountingSummary,
@@ -15,32 +15,51 @@ import {
 } from "@/lib/accounting";
 import type { RevenueSplit } from "@/lib/api-types";
 
+function calculatorStorageKey(period: AccountingPeriod, warehouse: AccountingWarehouse) {
+  return `accounting-payout-calc:${period}:${warehouse}`;
+}
+
+function readStoredTotal(period: AccountingPeriod, warehouse: AccountingWarehouse): number | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(calculatorStorageKey(period, warehouse));
+    if (!raw) return null;
+    const parsed = Number(JSON.parse(raw)?.accumulatedUsd);
+    if (!Number.isFinite(parsed) || parsed <= 0) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredTotal(
+  period: AccountingPeriod,
+  warehouse: AccountingWarehouse,
+  total: number | null,
+) {
+  if (typeof window === "undefined") return;
+  const key = calculatorStorageKey(period, warehouse);
+  if (total == null || total <= 0) {
+    window.sessionStorage.removeItem(key);
+    return;
+  }
+  window.sessionStorage.setItem(key, JSON.stringify({ accumulatedUsd: total }));
+}
+
 function Amount({
   usd,
   cryptoAmount,
   cryptoCode,
-  emphasizeCrypto = false,
 }: {
   usd?: number | null;
   cryptoAmount?: number | null;
   cryptoCode?: string | null;
-  emphasizeCrypto?: boolean;
 }) {
-  if (emphasizeCrypto && cryptoAmount != null && cryptoCode) {
-    return (
-      <div>
-        <p className="font-mono text-3xl">{formatCrypto(cryptoAmount, cryptoCode)}</p>
-        {usd != null ? (
-          <p className="mt-1 text-sm text-muted-foreground">Tracked {formatMoney(usd)}</p>
-        ) : null}
-      </div>
-    );
-  }
   return (
     <div>
-      <p className="text-3xl">{formatMoney(usd ?? 0)}</p>
+      <p className="text-xl font-semibold tracking-tight sm:text-2xl">{formatMoney(usd ?? 0)}</p>
       {cryptoAmount != null && cryptoCode ? (
-        <p className="mt-1 font-mono text-sm text-muted-foreground">
+        <p className="mt-0.5 font-mono text-xs text-muted-foreground">
           {formatCrypto(cryptoAmount, cryptoCode)}
         </p>
       ) : null}
@@ -55,6 +74,7 @@ export function AccountingBoard({
   summary,
   sales,
   split,
+  countingSinceReset,
 }: {
   tiles: TileView[];
   period: AccountingPeriod;
@@ -62,22 +82,38 @@ export function AccountingBoard({
   summary: AccountingSummary;
   sales: AccountingSaleRow[];
   split: RevenueSplit;
+  countingSinceReset: boolean;
 }) {
   const router = useRouter();
   const [resetting, setResetting] = useState(false);
-  const [actualBtc, setActualBtc] = useState("");
-  const countingSinceReset = Boolean(summary.resetAt || tiles.some((tile) => tile.resetAt));
+  const [actualUsd, setActualUsd] = useState("");
+  const [appliedUsd, setAppliedUsd] = useState<number | null>(null);
 
-  const manualBtc = parseBtcInput(actualBtc);
+  useEffect(() => {
+    setAppliedUsd(readStoredTotal(period, warehouse));
+    setActualUsd("");
+  }, [period, warehouse]);
+
   const manualSplit = useMemo(() => {
-    if (manualBtc == null) return null;
-    return allocateForWarehouse(manualBtc, summary.w1Share, warehouse, split);
-  }, [manualBtc, summary.w1Share, warehouse, split]);
+    if (appliedUsd == null) return null;
+    return allocateForWarehouse(appliedUsd, summary.w1Share, warehouse, split);
+  }, [appliedUsd, summary.w1Share, warehouse, split]);
+
+  const pendingUsd = parseMoneyInput(actualUsd);
+  const canCalculate = pendingUsd != null && pendingUsd > 0;
 
   const adminRateLabel = useMemo(() => {
     const sample = allocateForWarehouse(100, summary.w1Share, warehouse, split);
     return sample.admin;
   }, [summary.w1Share, warehouse, split]);
+
+  function calculate() {
+    if (pendingUsd == null || pendingUsd <= 0) return;
+    const next = (appliedUsd ?? 0) + pendingUsd;
+    setAppliedUsd(next);
+    writeStoredTotal(period, warehouse, next);
+    setActualUsd("");
+  }
 
   async function resetAll() {
     if (
@@ -94,14 +130,17 @@ export function AccountingBoard({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ resetAll: true, period, warehouse }),
       });
+      setAppliedUsd(null);
+      setActualUsd("");
+      writeStoredTotal(period, warehouse, null);
       router.refresh();
     } finally {
       setResetting(false);
     }
   }
 
-  function tileCrypto(tile: TileView): number | null | undefined {
-    if (!manualSplit) return tile.cryptoAmount;
+  function tileUsd(tile: TileView): number {
+    if (!manualSplit) return tile.amount;
     switch (tile.key) {
       case AccountingTileKey.ADMIN_25:
         return manualSplit.admin;
@@ -110,8 +149,7 @@ export function AccountingBoard({
       case AccountingTileKey.PARTY_2:
         return manualSplit.party2;
       case AccountingTileKey.SHIPPING:
-        // Shipping stays on tracked invoice amounts — not part of the BTC payout split.
-        return tile.cryptoAmount;
+        return tile.amount;
       default: {
         const exhaustive: never = tile.key;
         return exhaustive;
@@ -119,143 +157,147 @@ export function AccountingBoard({
     }
   }
 
-  function tileEmphasizeCrypto(tile: TileView): boolean {
-    return Boolean(manualSplit) && tile.key !== AccountingTileKey.SHIPPING;
-  }
-
   return (
-    <div className="mt-8 space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm text-muted-foreground">{warehouseFilterLabel(warehouse)}</p>
-          {countingSinceReset ? (
-            <p className="mt-1 text-xs text-muted-foreground">Counting since last reset.</p>
-          ) : null}
+    <div className="mt-3">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <p className="text-sm text-muted-foreground">{warehouseFilterLabel(warehouse)}</p>
+            {countingSinceReset ? (
+              <p className="text-xs text-muted-foreground">Counting since last reset.</p>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            className="ghost-btn !px-3 !py-2"
+            disabled={resetting}
+            onClick={() => void resetAll()}
+          >
+            {resetting ? "Resetting…" : "Reset all to 0"}
+          </button>
+        </div>
+
+        <article className="tile !p-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                Payout calculator · Admin ~{adminRateLabel.toFixed(1)}%
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Enter merchandise USD, then Calculate. Each click adds until Reset all.
+              </p>
+            </div>
+            <label className="grid gap-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              USD amount
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  className="field !py-2 max-w-[10rem] font-mono text-sm"
+                  inputMode="decimal"
+                  placeholder="1000.00"
+                  value={actualUsd}
+                  onChange={(event) => setActualUsd(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      calculate();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="gold-btn !px-3 !py-2"
+                  disabled={!canCalculate}
+                  onClick={calculate}
+                >
+                  Calculate
+                </button>
+              </div>
+            </label>
+          </div>
+          {manualSplit && appliedUsd != null ? (
+            <p className="mt-2 font-mono text-xs text-muted-foreground">
+              Running {formatMoney(appliedUsd)} → Admin {formatMoney(manualSplit.admin)} · Party 1{" "}
+              {formatMoney(manualSplit.party1)} · Party 2 {formatMoney(manualSplit.party2)}
+            </p>
+          ) : (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Tiles show tracked order totals until you Calculate.
+            </p>
+          )}
+        </article>
+
+        <div className="grid gap-2 sm:grid-cols-3">
+          <article className="tile !p-3" title="Merchandise only (shipping excluded).">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              Proceeds received
+            </p>
+            <div className="mt-1.5">
+              <Amount
+                usd={manualSplit && appliedUsd != null ? appliedUsd : summary.proceeds}
+                cryptoAmount={summary.cryptoProceeds}
+                cryptoCode={summary.cryptoCode}
+              />
+            </div>
+          </article>
+          <article
+            className="tile !p-3"
+            title="X in the formula. Remainder is W2. Based on merchandise USD mix."
+          >
+            <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              W1 merchandise share
+            </p>
+            <p className="mt-1.5 text-xl font-semibold tracking-tight sm:text-2xl">
+              {(summary.w1Share * 100).toFixed(1)}%
+            </p>
+          </article>
+          <article
+            className="tile !p-3"
+            title="Admin + Party 1 + Party 2. Must match merchandise proceeds."
+          >
+            <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              Allocation check
+            </p>
+            <div className="mt-1.5">
+              {manualSplit && appliedUsd != null ? (
+                <p className="text-xl font-semibold tracking-tight sm:text-2xl">
+                  {formatMoney(appliedUsd)}
+                </p>
+              ) : (
+                <Amount
+                  usd={summary.allocated}
+                  cryptoAmount={summary.cryptoProceeds}
+                  cryptoCode={summary.cryptoCode}
+                />
+              )}
+            </div>
+          </article>
+        </div>
+
+        <div className="grid gap-2 grid-cols-2 xl:grid-cols-4">
+          {tiles.map((tile) => (
+            <article key={tile.key} className="tile !p-3" title={tile.description}>
+              <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                {tile.percentOfSale != null
+                  ? `${tile.percentOfSale.toFixed(1)}% of merchandise`
+                  : tile.key === AccountingTileKey.SHIPPING
+                    ? "50/50 in Party 1 / Party 2"
+                    : warehouseFilterLabel(warehouse)}
+              </p>
+              <h2 className="mt-1 text-sm font-semibold sm:text-base">{tile.title}</h2>
+              <div className="mt-1.5">
+                <Amount
+                  usd={tileUsd(tile)}
+                  cryptoAmount={tile.cryptoAmount}
+                  cryptoCode={tile.cryptoCode}
+                />
+              </div>
+            </article>
+          ))}
         </div>
       </div>
 
-      <button
-        type="button"
-        className="ghost-btn fixed bottom-6 right-6 z-50 shadow-lg"
-        disabled={resetting}
-        onClick={() => void resetAll()}
-      >
-        {resetting ? "Resetting…" : "Reset all to 0"}
-      </button>
-
-      <article className="tile max-w-xl">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-          Actual BTC received
-        </p>
-        <h2 className="mt-2 text-lg">Payout calculator</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Invoice BTC can drift with rate changes. Enter merchandise BTC actually received
-          (shipping excluded — e.g. <code>0.05</code>). Admin takes ~{adminRateLabel.toFixed(1)}%
-          off the top using the configured warehouse mix, then Party 1 / Party 2 get the rest.
-          Shipping stays on its own tile. Leave blank to show tracked invoice totals only.
-        </p>
-        <label className="mt-4 grid gap-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
-          BTC amount
-          <div className="flex items-center gap-2">
-            <input
-              className="field max-w-xs font-mono"
-              inputMode="decimal"
-              placeholder="0.05"
-              value={actualBtc}
-              onChange={(event) => setActualBtc(event.target.value)}
-            />
-            <span className="text-sm normal-case tracking-normal text-muted-foreground">BTC</span>
-          </div>
-        </label>
-        {manualSplit && manualBtc != null ? (
-          <p className="mt-3 font-mono text-sm text-muted-foreground">
-            {formatCrypto(manualBtc, "BTC")} → Admin {formatCrypto(manualSplit.admin, "BTC")} ·
-            Party 1 {formatCrypto(manualSplit.party1, "BTC")} · Party 2{" "}
-            {formatCrypto(manualSplit.party2, "BTC")}
-          </p>
-        ) : null}
-      </article>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <article className="tile">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            Proceeds received
-          </p>
-          <Amount
-            usd={summary.proceeds}
-            cryptoAmount={manualBtc ?? summary.cryptoProceeds}
-            cryptoCode={manualSplit ? "BTC" : summary.cryptoCode}
-            emphasizeCrypto={Boolean(manualSplit)}
-          />
-          <p className="mt-3 text-sm text-muted-foreground">
-            {manualSplit
-              ? "Using your entered merchandise BTC for the party split below."
-              : "Merchandise only (shipping excluded) for processing / completed orders."}
-          </p>
-        </article>
-        <article className="tile">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            W1 merchandise share
-          </p>
-          <p className="mt-2 text-3xl">{(summary.w1Share * 100).toFixed(1)}%</p>
-          <p className="mt-3 text-sm text-muted-foreground">
-            X in the formula. Remainder is W2. Based on merchandise, then applied to
-            merchandise proceeds.
-          </p>
-        </article>
-        <article className="tile">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            Allocation check
-          </p>
-          {manualSplit && manualBtc != null ? (
-            <>
-              <p className="mt-2 font-mono text-3xl">{formatCrypto(manualBtc, "BTC")}</p>
-              <p className="mt-3 text-sm text-muted-foreground">
-                Admin + Party 1 + Party 2 from your BTC entry (must match). Shipping is separate.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="mt-2 text-3xl">{formatMoney(summary.allocated)}</p>
-              <p className="mt-3 text-sm text-muted-foreground">
-                Admin + Party 1 + Party 2. Must match merchandise proceeds (not shipping).
-              </p>
-            </>
-          )}
-        </article>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {tiles.map((tile) => {
-          const cryptoAmount = tileCrypto(tile);
-          const emphasize = tileEmphasizeCrypto(tile);
-          return (
-            <article key={tile.key} className="tile min-h-44">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                {warehouseFilterLabel(warehouse)}
-                {tile.percentOfSale != null
-                  ? ` · ${tile.percentOfSale.toFixed(1)}% of merchandise`
-                  : tile.key === AccountingTileKey.SHIPPING
-                    ? " · not in party split"
-                    : ""}
-              </p>
-              <h2 className="mt-2 text-lg">{tile.title}</h2>
-              <div className="mt-4">
-                <Amount
-                  usd={tile.amount}
-                  cryptoAmount={cryptoAmount}
-                  cryptoCode={emphasize ? "BTC" : tile.cryptoCode}
-                  emphasizeCrypto={emphasize}
-                />
-              </div>
-              <p className="mt-3 text-sm text-muted-foreground">{tile.description}</p>
-            </article>
-          );
-        })}
-      </div>
-
       {sales.length > 0 ? (
-        <div className="overflow-x-auto tile">
+        <div className="mt-8 overflow-x-auto tile">
           <h2 className="text-lg">Sales in this window</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Orders counted since the last Reset all (or the start of this period).
@@ -295,7 +337,7 @@ export function AccountingBoard({
           </table>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">No counted proceeds in this window.</p>
+        <p className="mt-6 text-sm text-muted-foreground">No counted proceeds in this window.</p>
       )}
     </div>
   );

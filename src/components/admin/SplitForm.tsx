@@ -127,7 +127,7 @@ export function SplitForm({ split }: { split: RevenueSplit }) {
               ))}
               <button
                 type="button"
-                className="ghost-btn max-w-56"
+                className="ghost-btn mx-auto max-w-56 justify-self-center"
                 onClick={() => {
                   const adminKey = group.keys[0];
                   const party1Key = group.keys[1];
@@ -148,7 +148,7 @@ export function SplitForm({ split }: { split: RevenueSplit }) {
       {message ? <p className="mt-4 text-sm text-brand-red">{message}</p> : null}
       {error ? <p className="mt-2 text-sm text-brand-red">{error}</p> : null}
       {saved ? <p className="mt-2 text-sm text-muted-foreground">{saved}</p> : null}
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
         <button
           type="button"
           className="gold-btn"

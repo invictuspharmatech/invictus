@@ -53,17 +53,17 @@ export function tileCopy(key: AccountingTileKey): {
     case AccountingTileKey.PARTY_1:
       return {
         title: "Party 1",
-        description: "Configured Party 1 share of merchandise, weighted by mix.",
+        description: "Party 1 merchandise share + 50% of shipping collected.",
       };
     case AccountingTileKey.PARTY_2:
       return {
         title: "Party 2",
-        description: "Remainder of merchandise so the three parties total 100%.",
+        description: "Remainder of merchandise after Admin + Party 1 + 50% of shipping collected.",
       };
     case AccountingTileKey.SHIPPING:
       return {
         title: "Shipping fees",
-        description: "Always 50/50 W1 · W2 of shipping collected. Kept out of party splits.",
+        description: "Shipping collected (also included 50/50 on Party 1 and Party 2 tiles).",
       };
     default: {
       const exhaustive: never = key;
@@ -168,6 +168,11 @@ export function allocateForWarehouse(
 }
 
 export function parseBtcInput(value: string): number | null {
+  return parseMoneyInput(value);
+}
+
+/** Shared parser for payout calculator USD / BTC amount fields. */
+export function parseMoneyInput(value: string): number | null {
   const trimmed = value.trim().replace(/,/g, "");
   if (!trimmed) return null;
   const parsed = Number(trimmed);
