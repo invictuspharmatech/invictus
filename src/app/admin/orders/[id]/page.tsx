@@ -24,7 +24,7 @@ export default async function AdminOrderDetailPage({
         initial={order}
         policy={policy}
         role={staff.role}
-        editMode={edit === "1"}
+        editMode={edit !== "0"}
       />
     );
   } catch (error) {

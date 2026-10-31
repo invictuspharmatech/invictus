@@ -32,9 +32,11 @@ export function OrderFulfillmentControls({
   const router = useRouter();
   const admin = isFullAdmin(role);
   const dest = oppositeWarehouse(order.warehouse);
-  const canMove = policy.splitEnabled && policy.manualMoveEnabled && admin;
-  const canRequest = policy.splitEnabled && policy.warehouseRequestEnabled;
-  const eligible = SPLIT_STATUSES.has((order.status || "").toUpperCase());
+  const policyAllowsMove = Boolean(policy.splitEnabled && policy.manualMoveEnabled);
+  const policyAllowsRequest = Boolean(policy.splitEnabled && policy.warehouseRequestEnabled);
+  const statusEligible = SPLIT_STATUSES.has((order.status || "").toUpperCase());
+  const moveEnabled = admin && policyAllowsMove && statusEligible;
+  const requestEnabled = policyAllowsRequest && statusEligible;
 
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [qtyDraft, setQtyDraft] = useState<Record<string, number>>(() =>
@@ -52,15 +54,23 @@ export function OrderFulfillmentControls({
     [order.items, selected],
   );
 
-  if (!canMove && !canRequest) return null;
+  const inactiveReason = !admin
+    ? "Only admins can move items between warehouses immediately."
+    : !policy.splitEnabled
+      ? "Warehouse splitting is disabled in warehouse settings."
+      : !policy.manualMoveEnabled
+        ? "Manual warehouse moves are disabled in warehouse settings."
+        : !statusEligible
+          ? "Available when order status is Paid, Processing, or Partially filled."
+          : "";
 
   function toggleAll(checked: boolean) {
-    setSelected(
-      Object.fromEntries(order.items.map((item) => [item.id, checked])),
-    );
+    if (!moveEnabled) return;
+    setSelected(Object.fromEntries(order.items.map((item) => [item.id, checked])));
   }
 
   async function submitSplit() {
+    if (!moveEnabled) return;
     if (!selectedItems.length) {
       setError("Select at least one item to move.");
       return;
@@ -119,6 +129,7 @@ export function OrderFulfillmentControls({
   }
 
   async function submitRequest(itemId: string, quantity: number) {
+    if (!requestEnabled) return;
     setError("");
     const res = await fetch("/api/admin/fulfillment-requests", {
       method: "POST",
@@ -134,17 +145,28 @@ export function OrderFulfillmentControls({
     onUpdated?.();
   }
 
+  // Always show for staff so the control is discoverable; inactive when not usable.
   return (
-    <div className="mt-4 space-y-3 border-t border-border/40 pt-4">
+    <div
+      className={`mt-4 space-y-3 border-t border-border/40 pt-4 ${
+        moveEnabled ? "" : "opacity-60"
+      }`}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-          Move to {warehouseLabel(dest)}
-        </p>
-        {canMove && eligible ? (
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            Move to {warehouseLabel(dest)}
+          </p>
+          {!moveEnabled && inactiveReason ? (
+            <p className="mt-1 text-xs text-muted-foreground">{inactiveReason}</p>
+          ) : null}
+        </div>
+        {admin ? (
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               className="ghost-btn"
+              disabled={!moveEnabled}
               onClick={() => toggleAll(selectedItems.length !== order.items.length)}
             >
               {selectedItems.length === order.items.length ? "Clear all" : "Select all"}
@@ -152,7 +174,7 @@ export function OrderFulfillmentControls({
             <button
               type="button"
               className="gold-btn"
-              disabled={!selectedItems.length}
+              disabled={!moveEnabled || !selectedItems.length}
               onClick={() => {
                 setError("");
                 setWarnings([]);
@@ -165,58 +187,49 @@ export function OrderFulfillmentControls({
         ) : null}
       </div>
 
-      {!eligible && canMove ? (
-        <p className="text-sm text-muted-foreground">
-          Warehouse splits are available when the order is paid / processing.
-        </p>
-      ) : null}
-
       <ul className="space-y-2 text-sm">
         {order.items.map((item) => (
           <li
             key={item.id}
             className="flex flex-wrap items-end gap-2 rounded border border-border/40 px-3 py-2"
           >
-            {canMove && eligible ? (
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={Boolean(selected[item.id])}
-                  onChange={(event) =>
-                    setSelected((prev) => ({ ...prev, [item.id]: event.target.checked }))
-                  }
-                />
-                <span className="min-w-40 font-medium">{item.name}</span>
-              </label>
-            ) : (
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                disabled={!moveEnabled}
+                checked={Boolean(selected[item.id])}
+                onChange={(event) =>
+                  setSelected((prev) => ({ ...prev, [item.id]: event.target.checked }))
+                }
+              />
               <span className="min-w-40 font-medium">{item.name}</span>
-            )}
+            </label>
             <span className="text-xs text-muted-foreground">× {item.quantity}</span>
-            {canMove && eligible ? (
-              <label className="grid gap-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                Move qty
-                <input
-                  className="field max-w-20"
-                  type="number"
-                  min={1}
-                  max={item.quantity}
-                  value={qtyDraft[item.id] ?? item.quantity}
-                  onChange={(event) =>
-                    setQtyDraft((prev) => ({
-                      ...prev,
-                      [item.id]: Math.max(
-                        1,
-                        Math.min(item.quantity, Number(event.target.value) || 1),
-                      ),
-                    }))
-                  }
-                />
-              </label>
-            ) : null}
-            {canRequest ? (
+            <label className="grid gap-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              Move qty
+              <input
+                className="field max-w-20"
+                type="number"
+                min={1}
+                max={item.quantity}
+                disabled={!moveEnabled}
+                value={qtyDraft[item.id] ?? item.quantity}
+                onChange={(event) =>
+                  setQtyDraft((prev) => ({
+                    ...prev,
+                    [item.id]: Math.max(
+                      1,
+                      Math.min(item.quantity, Number(event.target.value) || 1),
+                    ),
+                  }))
+                }
+              />
+            </label>
+            {policyAllowsRequest ? (
               <button
                 className="ghost-btn"
                 type="button"
+                disabled={!requestEnabled}
                 onClick={() =>
                   void submitRequest(
                     item.id,
@@ -243,7 +256,7 @@ export function OrderFulfillmentControls({
         </div>
       ) : null}
 
-      {open ? (
+      {open && moveEnabled ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4">
           <div className="tile w-full max-w-lg space-y-4 p-5">
             <div>

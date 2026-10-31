@@ -187,11 +187,11 @@ export function OrderDetailBoard({
           ← Orders
         </Link>
         {editMode ? (
-          <Link href={`/admin/orders/${order.id}`} className="text-sm text-signal">
-            Exit edit mode
+          <Link href={`/admin/orders/${order.id}?edit=0`} className="text-sm text-signal">
+            View only
           </Link>
         ) : (
-          <Link href={`/admin/orders/${order.id}?edit=1`} className="text-sm text-signal">
+          <Link href={`/admin/orders/${order.id}`} className="text-sm text-signal">
             Edit order
           </Link>
         )}
