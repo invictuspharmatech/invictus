@@ -109,9 +109,8 @@ export function AccountingBoard({
 
   function calculate() {
     if (pendingUsd == null || pendingUsd <= 0) return;
-    const next = (appliedUsd ?? 0) + pendingUsd;
-    setAppliedUsd(next);
-    writeStoredTotal(period, warehouse, next);
+    setAppliedUsd(pendingUsd);
+    writeStoredTotal(period, warehouse, pendingUsd);
     setActualUsd("");
   }
 
@@ -184,7 +183,8 @@ export function AccountingBoard({
                 Payout calculator · Admin ~{adminRateLabel.toFixed(1)}%
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Enter merchandise USD, then Calculate. Each click adds until Reset all.
+                Enter merchandise USD, then Calculate. Each click replaces the total; mix is
+                from orders since last Reset all.
               </p>
             </div>
             <label className="grid gap-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
@@ -216,7 +216,7 @@ export function AccountingBoard({
           </div>
           {manualSplit && appliedUsd != null ? (
             <p className="mt-2 font-mono text-xs text-muted-foreground">
-              Running {formatMoney(appliedUsd)} → Admin {formatMoney(manualSplit.admin)} · Party 1{" "}
+              {formatMoney(appliedUsd)} → Admin {formatMoney(manualSplit.admin)} · Party 1{" "}
               {formatMoney(manualSplit.party1)} · Party 2 {formatMoney(manualSplit.party2)}
             </p>
           ) : (
