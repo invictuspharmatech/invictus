@@ -146,7 +146,7 @@ def catalog() -> list[dict]:
             "shippingSinceReset",
             "currency",
             "/admin/accounting",
-            "Since last reset · revenue eligible",
+            "50/50 W1·W2 · since last reset · revenue eligible",
             supports_dynamic=True,
             icon="truck",
             footer_label="Reset shipping collected",
@@ -159,7 +159,7 @@ def catalog() -> list[dict]:
             "shippingThisWeek",
             "currency",
             "/admin/accounting",
-            "week",
+            "50/50 W1·W2 · week",
             supports_dynamic=True,
         ),
         _metric(

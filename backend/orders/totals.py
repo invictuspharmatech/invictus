@@ -6,7 +6,8 @@ Great Life charges one order:
   invoice      = total_amount
 
 Warehouse splits are fulfillment-only. Shipping is charged once per customer
-order, not per warehouse row.
+order, then attributed 50/50 to W1 and W2 for warehouse accounting — even when
+only one warehouse fulfills the order.
 """
 
 from __future__ import annotations
@@ -57,6 +58,21 @@ def allocate_weighted(total: float, weights: list[float]) -> list[float]:
         shares.append(share)
         remaining = money(remaining - share)
     return shares
+
+
+def equal_warehouse_shipping_shares(shipping_total: float) -> tuple[float, float]:
+    """Always split collected shipping 50/50 between W1 and W2 (W2 absorbs cents)."""
+    w1_share, w2_share = allocate_weighted(shipping_total, [1.0, 1.0])
+    return w1_share, w2_share
+
+
+def warehouse_shipping_share(shipping_total: float, warehouse: str) -> float:
+    """BOTH = full fee; W1/W2 = half each."""
+    total = money(shipping_total)
+    if warehouse not in ("WAREHOUSE_1", "WAREHOUSE_2"):
+        return total
+    w1_share, w2_share = equal_warehouse_shipping_shares(total)
+    return w1_share if warehouse == "WAREHOUSE_1" else w2_share
 
 
 def customer_checkout_totals(

@@ -63,7 +63,7 @@ export function tileCopy(key: AccountingTileKey): {
     case AccountingTileKey.SHIPPING:
       return {
         title: "Shipping fees",
-        description: "Shipping collected on counted orders. Kept out of party splits.",
+        description: "Always 50/50 W1 · W2 of shipping collected. Kept out of party splits.",
       };
     default: {
       const exhaustive: never = key;

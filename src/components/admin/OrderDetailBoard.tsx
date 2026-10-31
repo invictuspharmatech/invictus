@@ -223,8 +223,8 @@ export function OrderDetailBoard({
           <p className="font-medium text-foreground">Order edit mode</p>
           <p className="mt-1">
             Update shipping, adjust quantities (0 removes a line), or add products. Stock is deducted when
-            you add or increase, and returned when you reduce or remove. Warehouse fulfill / move stays
-            available below.
+            you add or increase, and returned when you reduce or remove. Use Move selected below to split
+            lines to the other warehouse (optional note for the customer; no new payment).
           </p>
           {blocked ? (
             <p className="mt-2 text-brand-red">This order status cannot be edited.</p>

@@ -136,17 +136,47 @@ class CustomerOrderGroupTests(SimpleTestCase):
 
 class GreatLifeTotalsTests(SimpleTestCase):
     def test_two_warehouse_cart_charges_shipping_once(self):
-        from orders.totals import allocate_weighted, customer_checkout_totals
+        from orders.totals import allocate_weighted, customer_checkout_totals, equal_warehouse_shipping_shares
 
         totals = customer_checkout_totals(140, shipping_usd=20)
         shares = allocate_weighted(float(totals["merchandise"]), [70, 70])
-        shipping_shares = allocate_weighted(float(totals["shipping"]), [1, 0])
+        shipping_shares = equal_warehouse_shipping_shares(float(totals["shipping"]))
         self.assertEqual(totals["merchandise"], 140)
         self.assertEqual(totals["shipping"], 20)
         self.assertEqual(totals["grand_total"], 160)
         self.assertEqual(shares, [70.0, 70.0])
-        self.assertEqual(shipping_shares, [20.0, 0.0])
+        self.assertEqual(shipping_shares, (10.0, 10.0))
         self.assertEqual(sum(shares) + sum(shipping_shares), 160)
+
+    def test_shipping_is_always_split_equally_for_accounting(self):
+        from orders.accounting import _shipping_for_orders
+        from orders.totals import warehouse_shipping_share
+
+        class _Row:
+            def __init__(self, warehouse, shipping_total):
+                self.warehouse = warehouse
+                self.shipping_total = shipping_total
+
+        # Full fee booked on W1 only — accounting still gives each warehouse half.
+        w1, w2 = _shipping_for_orders([_Row(Order.Warehouse.WAREHOUSE_1, 20)])
+        self.assertEqual(w1, Decimal("10.00"))
+        self.assertEqual(w2, Decimal("10.00"))
+        # Same when booked on W2 only.
+        w1, w2 = _shipping_for_orders([_Row(Order.Warehouse.WAREHOUSE_2, 20)])
+        self.assertEqual(w1, Decimal("10.00"))
+        self.assertEqual(w2, Decimal("10.00"))
+        # Already split on both rows still totals half each.
+        w1, w2 = _shipping_for_orders(
+            [
+                _Row(Order.Warehouse.WAREHOUSE_1, 10),
+                _Row(Order.Warehouse.WAREHOUSE_2, 10),
+            ]
+        )
+        self.assertEqual(w1, Decimal("10.00"))
+        self.assertEqual(w2, Decimal("10.00"))
+        self.assertEqual(warehouse_shipping_share(20, Order.Warehouse.WAREHOUSE_1), 10.0)
+        self.assertEqual(warehouse_shipping_share(20, Order.Warehouse.WAREHOUSE_2), 10.0)
+        self.assertEqual(warehouse_shipping_share(20, "BOTH"), 20.0)
 
     def test_invoice_amount_is_merchandise_plus_one_shipping(self):
         from orders.totals import customer_checkout_totals, selling_triplet

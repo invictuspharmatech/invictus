@@ -88,7 +88,8 @@ export function WarehouseSettingsForm({ settings }: { settings: ApiWarehouseSett
           <strong>Auto-split on shortage</strong>
           <span className="mt-1 block text-muted-foreground">
             If the home warehouse does not have enough quantity, leftover units ship from the other
-            warehouse. Shipping is $10 / $10 when both ship, or the full $20 if only one does.
+            warehouse. Customer shipping is still charged once; the fee is always split 50/50
+            between W1 and W2 for warehouse accounting.
           </span>
         </span>
       </label>
@@ -97,8 +98,8 @@ export function WarehouseSettingsForm({ settings }: { settings: ApiWarehouseSett
         <span>
           <strong>Admin manual moves</strong>
           <span className="mt-1 block text-muted-foreground">
-            Admins can move some or all items on an order to the other warehouse. A whole-order move
-            takes the full shipping fee with it.
+            Admins can move some or all items on an order to the other warehouse. Shipping stays
+            split 50/50 between warehouses for accounting.
           </span>
         </span>
       </label>

@@ -62,6 +62,11 @@ def build_summary(request) -> dict:
                 ],
             }
         )
+    active_warehouse = warehouse or (
+        requested_warehouse
+        if requested_warehouse in (Order.Warehouse.WAREHOUSE_1, Order.Warehouse.WAREHOUSE_2)
+        else "BOTH"
+    )
     return {
         "orders": rows,
         "totalOrders": len(rows),
@@ -69,6 +74,7 @@ def build_summary(request) -> dict:
             "dateFrom": date_from or "",
             "dateTo": date_to or "",
             "statuses": statuses or [],
+            "warehouse": active_warehouse,
         },
     }
 
@@ -76,8 +82,14 @@ def build_summary(request) -> dict:
 def summary_pdf_bytes(payload: dict) -> bytes:
     lines = ["Invictus Pharma — Order Summary", ""]
     filters = payload.get("filters") or {}
+    warehouse = str(filters.get("warehouse") or "BOTH")
+    warehouse_label = {
+        "WAREHOUSE_1": "Warehouse 1",
+        "WAREHOUSE_2": "Warehouse 2",
+        "BOTH": "Both warehouses",
+    }.get(warehouse, warehouse)
     lines.append(
-        f"From {filters.get('dateFrom') or '—'} to {filters.get('dateTo') or '—'} · {payload.get('totalOrders') or 0} orders"
+        f"From {filters.get('dateFrom') or '—'} to {filters.get('dateTo') or '—'} · {warehouse_label} · {payload.get('totalOrders') or 0} orders"
     )
     lines.append("")
     for order in payload.get("orders") or []:

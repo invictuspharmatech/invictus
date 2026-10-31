@@ -77,6 +77,277 @@ def recalc_merchandise(order: Order) -> None:
     order.save(update_fields=["merchandise_total"])
 
 
+def recalc_totals_keep_shipping(order: Order) -> None:
+    """Update merchandise + grand total without touching shipping_total (50/50 stays put)."""
+    raw = sum(float(item.line_total) for item in order.items.all())
+    order.merchandise_total = money(max(0, raw - float(order.discount_total or 0)))
+    order.grand_total = money(float(order.merchandise_total) + float(order.shipping_total or 0))
+    order.save(update_fields=["merchandise_total", "grand_total"])
+
+
+SPLIT_ELIGIBLE_STATUSES = (
+    Order.Status.PAID,
+    Order.Status.PROCESSING,
+    Order.Status.PARTIALLY_FILLED,
+)
+
+
+def _append_note(order: Order, note: str) -> None:
+    text = (note or "").strip()
+    if not text:
+        return
+    existing = (order.notes or "").strip()
+    order.notes = f"{existing}\n{text}".strip() if existing else text
+    order.save(update_fields=["notes"])
+
+
+def find_processing_order_for_customer(
+    *,
+    email: str,
+    warehouse: str,
+    exclude_order_id=None,
+    prefer_group_id: str | None = None,
+) -> Order | None:
+    qs = (
+        Order.objects.filter(
+            customer_email__iexact=(email or "").strip(),
+            warehouse=warehouse,
+            status__in=SPLIT_ELIGIBLE_STATUSES,
+        )
+        .exclude(status__in=[Order.Status.CANCELLED, Order.Status.FAILED])
+        .order_by("-created_at")
+    )
+    if exclude_order_id:
+        qs = qs.exclude(pk=exclude_order_id)
+    if prefer_group_id:
+        same_group = qs.filter(group_id=prefer_group_id).first()
+        if same_group:
+            return same_group
+    return qs.first()
+
+
+def create_split_fulfillment_order(source: Order, warehouse: str, note: str = "") -> Order:
+    """New order # for dest WH; same group_id so payment invoice resolves for reference only."""
+    from orders.order_numbers import allocate_order_number
+
+    order_number = allocate_order_number(warehouse)
+    ref = (
+        f"Fulfillment split from {source.order_number}. "
+        f"Payment reference group {source.group_id} (no new charge)."
+    )
+    combined_note = "\n".join(part for part in [(note or "").strip(), ref] if part)
+    return Order.objects.create(
+        order_number=order_number,
+        group_id=source.group_id,
+        split_index=max(2, int(source.split_index or 1) + 1),
+        warehouse=warehouse,
+        user=source.user,
+        status=Order.Status.PROCESSING,
+        payment_status=source.payment_status or Order.PaymentStatus.PAID,
+        payment_method=source.payment_method or "btc",
+        merchandise_total=0,
+        shipping_total=0,
+        grand_total=0,
+        customer_name=source.customer_name,
+        customer_email=source.customer_email,
+        shipping_line1=source.shipping_line1,
+        shipping_line2=source.shipping_line2,
+        shipping_city=source.shipping_city,
+        shipping_state=source.shipping_state,
+        shipping_postal=source.shipping_postal,
+        shipping_country=source.shipping_country,
+        notes=combined_note,
+        affiliate=source.affiliate,
+        commission_amount=0,
+        coupon=source.coupon,
+        coupon_code=source.coupon_code,
+        discount_total=0,
+        shipping_waived=source.shipping_waived,
+        paid_at=source.paid_at,
+    )
+
+
+def _transfer_line_stock(
+    product: Product,
+    source_warehouse: str,
+    dest_warehouse: str,
+    quantity: int,
+    *,
+    restock_source: bool,
+) -> None:
+    if restock_source:
+        product.adjust_stock(source_warehouse, quantity, save=True)
+    product.adjust_stock(dest_warehouse, -quantity, save=True)
+
+
+def _move_lines_to_order(
+    moves: list[tuple[OrderItem, int]],
+    dest_order: Order,
+    dest_warehouse: str,
+    *,
+    restock_source: bool,
+) -> None:
+    for item, quantity in moves:
+        source = item.order
+        product = item.product
+        _transfer_line_stock(
+            product,
+            source.warehouse,
+            dest_warehouse,
+            quantity,
+            restock_source=restock_source,
+        )
+        dest_line = dest_order.items.filter(product_id=product.id).first() if product else None
+        line_total = money(float(item.unit_price) * quantity)
+        if dest_line:
+            dest_line.quantity += quantity
+            dest_line.line_total = money(float(dest_line.unit_price) * dest_line.quantity)
+            dest_line.warehouse = dest_warehouse
+            dest_line.save(update_fields=["quantity", "line_total", "warehouse"])
+        else:
+            OrderItem.objects.create(
+                order=dest_order,
+                product=product,
+                name=item.name,
+                sku=item.sku,
+                unit_price=item.unit_price,
+                quantity=quantity,
+                line_total=line_total,
+                warehouse=dest_warehouse,
+            )
+        if quantity >= item.quantity:
+            item.delete()
+        else:
+            item.quantity -= quantity
+            item.line_total = money(float(item.unit_price) * item.quantity)
+            item.save(update_fields=["quantity", "line_total"])
+
+
+@transaction.atomic
+def admin_split_move(
+    source: Order,
+    item_specs: list[dict],
+    dest_warehouse: str,
+    *,
+    restock_source: bool = False,
+    note: str = "",
+) -> dict:
+    """
+    Admin fulfillment split for paid/processing orders.
+
+    - Full move (all lines, full qty): reassign warehouse on the same order.
+    - Partial: merge into an existing processing order for the same customer at
+      dest WH, or create a new order (new order #, same group_id, no new payment).
+    - Shipping totals are left untouched (site-wide 50/50 attribution).
+    - Merchandise/grand totals are recalculated on affected orders.
+    - restock_source default False (oversold-safe).
+    """
+    dest_warehouse = (dest_warehouse or "").strip().upper()
+    if dest_warehouse not in (W1, W2):
+        raise FulfillmentError("Choose Warehouse 1 or Warehouse 2.")
+    if dest_warehouse == source.warehouse:
+        raise FulfillmentError("Item is already in that warehouse.")
+    if source.status not in SPLIT_ELIGIBLE_STATUSES:
+        raise FulfillmentError("Only paid / processing orders can be split between warehouses.")
+
+    source = Order.objects.select_for_update().prefetch_related("items").get(pk=source.pk)
+    items_by_id = {str(item.id): item for item in source.items.select_related("product").all()}
+    if not items_by_id:
+        raise FulfillmentError("This order has no items to move.")
+
+    moves: list[tuple[OrderItem, int]] = []
+    warnings: list[str] = []
+    for spec in item_specs:
+        item_id = str(spec.get("itemId") or spec.get("item_id") or "")
+        item = items_by_id.get(item_id)
+        if not item:
+            raise FulfillmentError("One of the selected items was not found on this order.")
+        try:
+            quantity = int(spec.get("quantity") if spec.get("quantity") is not None else item.quantity)
+        except (TypeError, ValueError) as exc:
+            raise FulfillmentError("Invalid quantity.") from exc
+        if quantity < 1 or quantity > item.quantity:
+            raise FulfillmentError(f"Invalid quantity for {item.name}.")
+        product = item.product
+        if product:
+            dest_stock = product.stock_for(dest_warehouse)
+            if not can_cover(dest_stock, quantity, product.allow_backorder):
+                warnings.append(
+                    f"{item.name}: {dest_warehouse} has {dest_stock} in stock; moving {quantity} anyway."
+                )
+        moves.append((item, quantity))
+
+    if not moves:
+        raise FulfillmentError("Select at least one item to move.")
+
+    covering_all = len(moves) == len(items_by_id) and all(
+        qty == items_by_id[str(item.id)].quantity for item, qty in moves
+    )
+
+    if covering_all:
+        for item, quantity in moves:
+            product = item.product
+            if product:
+                _transfer_line_stock(
+                    product,
+                    source.warehouse,
+                    dest_warehouse,
+                    quantity,
+                    restock_source=restock_source,
+                )
+            item.warehouse = dest_warehouse
+            item.save(update_fields=["warehouse"])
+        source.warehouse = dest_warehouse
+        source.save(update_fields=["warehouse"])
+        if note:
+            _append_note(source, note.strip())
+        recalc_totals_keep_shipping(source)
+        return {
+            "mode": "reassign",
+            "sourceOrderId": str(source.id),
+            "destOrderId": str(source.id),
+            "warnings": warnings,
+            "restockSource": bool(restock_source),
+        }
+
+    dest_order = find_processing_order_for_customer(
+        email=source.customer_email,
+        warehouse=dest_warehouse,
+        exclude_order_id=source.id,
+        prefer_group_id=source.group_id,
+    )
+    created = False
+    if dest_order is None:
+        dest_order = create_split_fulfillment_order(source, dest_warehouse, note=note)
+        created = True
+    else:
+        dest_order = Order.objects.select_for_update().get(pk=dest_order.pk)
+        if note:
+            _append_note(dest_order, note.strip())
+
+    _move_lines_to_order(moves, dest_order, dest_warehouse, restock_source=restock_source)
+
+    source = Order.objects.select_for_update().prefetch_related("items").get(pk=source.pk)
+    if not source.items.exists():
+        # Safety net if every line was moved outside the full-reassign path.
+        source.status = Order.Status.CANCELLED
+        source.save(update_fields=["status"])
+
+    if note:
+        _append_note(source, f"Split to {dest_order.order_number}: {note.strip()}")
+
+    recalc_totals_keep_shipping(source)
+    recalc_totals_keep_shipping(dest_order)
+    return {
+        "mode": "created" if created else "merged",
+        "sourceOrderId": str(source.id),
+        "destOrderId": str(dest_order.id),
+        "destOrderNumber": dest_order.order_number,
+        "warnings": warnings,
+        "restockSource": bool(restock_source),
+    }
+
+
 def assert_order_editable(order: Order, user=None) -> None:
     """Block edits on terminal statuses unless the actor is a full admin/superuser."""
     if is_full_admin(user):
@@ -191,6 +462,8 @@ def group_grand_total(order: Order) -> float:
 
 
 def apply_group_shipping(group_id: str, shipping_usd: float | None = None) -> None:
+    from orders.totals import equal_warehouse_shipping_shares
+
     orders = live_group_orders(group_id)
     live = []
     empty = []
@@ -214,8 +487,17 @@ def apply_group_shipping(group_id: str, shipping_usd: float | None = None) -> No
 
         shipping_usd = get_default_shipping_usd()
     shipping = 0.0 if waived else money(shipping_usd)
+    by_warehouse = {order.warehouse: order for order in live}
+    # Book 50/50 on the order rows when both warehouses fulfill. When only one
+    # warehouse has items, keep the full fee on that row for the customer invoice;
+    # accounting / dashboard still attribute shipping 50/50 to both warehouses.
+    if W1 in by_warehouse and W2 in by_warehouse:
+        w1_ship, w2_ship = equal_warehouse_shipping_shares(shipping)
+        ship_by_warehouse = {W1: w1_ship, W2: w2_ship}
+    else:
+        ship_by_warehouse = {live[0].warehouse: shipping}
     for index, order in enumerate(live):
-        share = 0.0 if index > 0 else shipping
+        share = ship_by_warehouse.get(order.warehouse, 0.0)
         merch = money(max(0, raws[index] - discount_shares[index]))
         order.discount_total = discount_shares[index]
         order.merchandise_total = merch

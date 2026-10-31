@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Calendar } from "lucide-react";
 import { STAFF_ORDER_STATUSES, formatOrderStatus } from "@/lib/enums";
+import { isFullAdmin } from "@/lib/roles";
 
 type SummaryRow = {
   id: string;
@@ -86,26 +87,39 @@ function SummaryDateField({
   );
 }
 
-export function OrderSummaryBoard() {
+export function OrderSummaryBoard({
+  role,
+  initialWarehouse = "BOTH",
+}: {
+  role: string;
+  initialWarehouse?: string;
+}) {
+  const admin = isFullAdmin(role);
   const maxDate = useMemo(() => todayLocal(), []);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [warehouse, setWarehouse] = useState(initialWarehouse);
   const [selected, setSelected] = useState<string[]>(["all"]);
   const [rows, setRows] = useState<SummaryRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
+  const buildParams = useCallback(() => {
     const params = new URLSearchParams();
     if (dateFrom) params.set("dateFrom", dateFrom);
     if (dateTo) params.set("dateTo", dateTo);
+    if (admin && warehouse !== "BOTH") params.set("warehouse", warehouse);
     if (!selected.includes("all")) {
       selected.forEach((status) => params.append("statuses", status));
     }
-    const response = await fetch(`/api/admin/orders/summary?${params.toString()}`);
+    return params;
+  }, [admin, dateFrom, dateTo, selected, warehouse]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    const response = await fetch(`/api/admin/orders/summary?${buildParams().toString()}`);
     const payload = (await response.json()) as
       | { orders: SummaryRow[]; totalOrders: number; error?: string }
       | { error?: string };
@@ -116,7 +130,7 @@ export function OrderSummaryBoard() {
     }
     setRows(payload.orders);
     setTotal(payload.totalOrders);
-  }, [dateFrom, dateTo, selected]);
+  }, [buildParams]);
 
   useEffect(() => {
     void load();
@@ -152,13 +166,7 @@ export function OrderSummaryBoard() {
   }
 
   async function downloadPdf() {
-    const params = new URLSearchParams();
-    if (dateFrom) params.set("dateFrom", dateFrom);
-    if (dateTo) params.set("dateTo", dateTo);
-    if (!selected.includes("all")) {
-      selected.forEach((status) => params.append("statuses", status));
-    }
-    const response = await fetch(`/api/admin/orders/summary/pdf?${params.toString()}`);
+    const response = await fetch(`/api/admin/orders/summary/pdf?${buildParams().toString()}`);
     if (!response.ok) {
       setError("Could not download PDF.");
       return;
@@ -204,7 +212,23 @@ export function OrderSummaryBoard() {
           max={maxDate}
           onChange={updateTo}
         />
-        <div className="md:col-span-2 flex flex-wrap gap-2 text-sm">
+        {admin ? (
+          <label className="grid gap-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+            Warehouse
+            <select
+              className="field"
+              value={warehouse}
+              onChange={(event) => setWarehouse(event.target.value)}
+            >
+              <option value="BOTH">Both</option>
+              <option value="WAREHOUSE_1">Warehouse 1</option>
+              <option value="WAREHOUSE_2">Warehouse 2</option>
+            </select>
+          </label>
+        ) : (
+          <div className="hidden md:block" />
+        )}
+        <div className="md:col-span-4 flex flex-wrap gap-2 text-sm">
           <label className="flex items-center gap-1">
             <input type="checkbox" checked={selected.includes("all")} onChange={() => toggleStatus("all")} />
             All

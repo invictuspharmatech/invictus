@@ -132,15 +132,16 @@ export function AccountingBoard({
             <p className="mt-1 text-xs text-muted-foreground">Counting since last reset.</p>
           ) : null}
         </div>
-        <button
-          type="button"
-          className="ghost-btn"
-          disabled={resetting}
-          onClick={() => void resetAll()}
-        >
-          {resetting ? "Resetting…" : "Reset all to 0"}
-        </button>
       </div>
+
+      <button
+        type="button"
+        className="ghost-btn fixed bottom-6 right-6 z-50 shadow-lg"
+        disabled={resetting}
+        onClick={() => void resetAll()}
+      >
+        {resetting ? "Resetting…" : "Reset all to 0"}
+      </button>
 
       <article className="tile max-w-xl">
         <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">

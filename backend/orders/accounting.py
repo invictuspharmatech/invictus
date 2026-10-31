@@ -127,7 +127,7 @@ def tile_copy(split: dict[str, Decimal]) -> dict[str, tuple[str, str]]:
         ),
         TILE_SHIPPING: (
             "Shipping fees",
-            "Shipping collected on counted orders. Kept out of Admin / Party splits; resets with Reset all.",
+            "Always 50/50 W1 · W2 of shipping collected. Kept out of Admin / Party splits; resets with Reset all.",
         ),
     }
 
@@ -287,14 +287,13 @@ def _invoice_crypto(order: Order) -> tuple[Decimal, str | None]:
 
 
 def _shipping_for_orders(orders: list[Order]) -> tuple[Decimal, Decimal]:
-    w1 = Decimal("0")
-    w2 = Decimal("0")
-    for order in orders:
-        amount = as_decimal(order.shipping_total)
-        if order.warehouse == Order.Warehouse.WAREHOUSE_1:
-            w1 += amount
-        else:
-            w2 += amount
+    """Shipping fee is always split equally between W1 and W2, regardless of which
+    warehouse row holds shipping_total or which warehouse fulfilled the items."""
+    total = sum((as_decimal(order.shipping_total) for order in orders), Decimal("0"))
+    if total <= 0:
+        return Decimal("0"), Decimal("0")
+    w1 = quantize_usd(total / Decimal("2"))
+    w2 = quantize_usd(total - w1)
     return w1, w2
 
 

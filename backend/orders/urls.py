@@ -44,6 +44,7 @@ urlpatterns = [
     path("admin/orders/<uuid:pk>/line-items/", views.admin_order_line_items_view),
     path("admin/orders/<uuid:pk>/add-item/", views.admin_order_add_item_view),
     path("admin/orders/<uuid:pk>/move-item/", views.admin_order_move_item),
+    path("admin/orders/<uuid:pk>/split-move/", views.admin_order_split_move),
     path("admin/orders/<uuid:pk>/tracking/", views.admin_order_tracking_view),
     path("admin/orders/<uuid:pk>/label/", postage_views.postage_create_label_view),
     path(

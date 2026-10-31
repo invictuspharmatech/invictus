@@ -601,6 +601,7 @@ def admin_order_status_view(request, pk):
 @api_view(["POST"])
 @permission_classes([IsPortalStaff])
 def admin_order_move_item(request, pk):
+    """Legacy single-item move (fulfillment request UI). Prefer split-move for admin splits."""
     order = Order.objects.filter(pk=pk).first()
     if not order:
         return Response({"error": "Not found."}, status=404)
@@ -616,6 +617,62 @@ def admin_order_move_item(request, pk):
         return Response({"error": str(exc)}, status=400)
     refreshed = Order.objects.prefetch_related("items").filter(group_id=order.group_id)
     return Response(OrderSerializer(refreshed, many=True).data)
+
+
+@api_view(["POST"])
+@permission_classes([IsPortalStaff])
+def admin_order_split_move(request, pk):
+    """Bulk warehouse split for paid/processing orders. Does not create a new payment."""
+    from orders.fulfillment import admin_split_move
+
+    order = Order.objects.filter(pk=pk).first()
+    if not order:
+        return Response({"error": "Not found."}, status=404)
+    warehouse = managed_warehouse(request.user)
+    if warehouse and order.warehouse != warehouse and not is_full_admin(request.user):
+        return Response({"error": "Not found."}, status=404)
+    dest = request.data.get("destWarehouse") or request.data.get("dest_warehouse")
+    dest = dest or opposite_warehouse(order.warehouse)
+    restock_source = bool(request.data.get("restockSource") or request.data.get("restock_source"))
+    note = str(request.data.get("note") or "").strip()
+    raw_items = request.data.get("items")
+    if isinstance(raw_items, list) and raw_items:
+        item_specs = raw_items
+    else:
+        item_id = request.data.get("itemId") or request.data.get("item_id")
+        if not item_id:
+            return Response({"error": "Select at least one item."}, status=400)
+        item_specs = [
+            {
+                "itemId": item_id,
+                "quantity": request.data.get("quantity"),
+            }
+        ]
+    try:
+        assert_can_move(request.user, order.warehouse, immediate=True)
+        result = admin_split_move(
+            order,
+            item_specs,
+            dest,
+            restock_source=restock_source,
+            note=note,
+        )
+    except FulfillmentError as exc:
+        return Response({"error": str(exc)}, status=400)
+    source = Order.objects.prefetch_related("items", "btc_invoices", "shipping_labels").get(
+        pk=result["sourceOrderId"]
+    )
+    dest_order = Order.objects.prefetch_related("items", "btc_invoices", "shipping_labels").get(
+        pk=result["destOrderId"]
+    )
+    return Response(
+        {
+            "ok": True,
+            **result,
+            "order": OrderSerializer(source).data,
+            "destOrder": OrderSerializer(dest_order).data,
+        }
+    )
 
 
 @api_view(["GET", "POST"])
@@ -714,12 +771,26 @@ def admin_overview_view(request):
         dash_reset_at = timezone.make_aware(dash_reset_at, timezone.get_current_timezone())
     if dash_reset_at and (reset_at is None or dash_reset_at > reset_at):
         reset_at = dash_reset_at
-    shipping_reset_qs = revenue_qs
+    # Shipping is attributed 50/50 to both warehouses, so dashboard shipping tiles
+    # always start from unscoped totals, then take half when a warehouse is selected.
+    from orders.totals import warehouse_shipping_share
+
+    shipping_base_qs = Order.objects.filter(status__in=REVENUE_ELIGIBLE)
+    shipping_reset_qs = shipping_base_qs
     if reset_at:
-        shipping_reset_qs = revenue_qs.filter(created_at__gte=reset_at)
+        shipping_reset_qs = shipping_base_qs.filter(created_at__gte=reset_at)
     week_since = week_start
     if reset_at and reset_at > week_start:
         week_since = reset_at
+    shipping_since_reset_total = float(
+        shipping_reset_qs.aggregate(total=Sum("shipping_total"))["total"] or 0
+    )
+    shipping_this_week_total = float(
+        shipping_base_qs.filter(created_at__gte=week_since).aggregate(total=Sum("shipping_total"))[
+            "total"
+        ]
+        or 0
+    )
 
     low_stock, out_of_stock = catalog_stock_counts(warehouse)
 
@@ -825,12 +896,8 @@ def admin_overview_view(request):
                 total=Sum("grand_total")
             )["total"]
             or 0,
-            "shippingSinceReset": shipping_reset_qs.aggregate(total=Sum("shipping_total"))["total"]
-            or 0,
-            "shippingThisWeek": revenue_qs.filter(created_at__gte=week_since).aggregate(
-                total=Sum("shipping_total")
-            )["total"]
-            or 0,
+            "shippingSinceReset": warehouse_shipping_share(shipping_since_reset_total, warehouse),
+            "shippingThisWeek": warehouse_shipping_share(shipping_this_week_total, warehouse),
             "ordersPending": orders_qs.filter(status=Order.Status.PENDING).count(),
             "ordersFailed": orders_qs.filter(status=Order.Status.FAILED).count(),
             "ordersProcessing": orders_qs.filter(status__in=PROCESSING_LIKE).count(),
