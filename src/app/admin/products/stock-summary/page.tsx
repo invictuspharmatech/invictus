@@ -1,14 +1,17 @@
 import Link from "next/link";
-import { djangoAuthed } from "@/lib/django";
+import { djangoAuthed, djangoJson } from "@/lib/django";
 import { requireStaff } from "@/lib/auth";
 import { ProductStockSummary } from "@/components/admin/ProductStockSummary";
-import type { ApiProduct } from "@/lib/api-types";
+import type { ApiCategory, ApiProduct } from "@/lib/api-types";
 
 export default async function ProductStockSummaryPage() {
   const staff = await requireStaff();
   if (!staff) return null;
 
-  const products = await djangoAuthed<ApiProduct[]>("/api/admin/products/");
+  const [products, categories] = await Promise.all([
+    djangoAuthed<ApiProduct[]>("/api/admin/products/"),
+    djangoJson<ApiCategory[]>("/api/categories/"),
+  ]);
 
   return (
     <div>
@@ -24,7 +27,7 @@ export default async function ProductStockSummaryPage() {
           Back to products
         </Link>
       </div>
-      <ProductStockSummary products={products} />
+      <ProductStockSummary products={products} categories={categories} />
     </div>
   );
 }
