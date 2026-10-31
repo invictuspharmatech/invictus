@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { Cinzel, Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import { CartProvider } from "@/components/shop/CartProvider";
@@ -13,20 +15,17 @@ import type { ApiCategory } from "@/lib/api-types";
 import { asBannerRuntime } from "@/lib/feature-banners";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const cinzel = Cinzel({
+// Self-hosted fonts — next/font/google can crash Docker/CI builds when Google
+// returns extensionless /l/font?kit= URLs (Next.js #99114).
+const cinzel = localFont({
+  src: [
+    { path: "./fonts/cinzel-latin-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/cinzel-latin-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/cinzel-latin-700-normal.woff2", weight: "700", style: "normal" },
+    { path: "./fonts/cinzel-latin-800-normal.woff2", weight: "800", style: "normal" },
+  ],
   variable: "--font-cinzel",
-  subsets: ["latin"],
-  weight: ["400", "600", "700", "800"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -87,7 +86,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} h-full antialiased bg-background`}
+      className={`${GeistSans.variable} ${GeistMono.variable} ${cinzel.variable} h-full antialiased bg-background`}
     >
       <body className="min-h-full flex flex-col">
         <CartProvider>
