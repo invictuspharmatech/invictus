@@ -285,192 +285,294 @@ export function PostageLabelModal({
   if (!first) return null;
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4">
-      <div className="tile max-h-[90vh] w-full max-w-3xl overflow-y-auto">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg">Bitcoin Postage label</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-background/80 p-0 sm:items-center sm:p-4">
+      <div
+        className="tile flex h-[100dvh] w-full max-w-3xl flex-col !p-0 sm:h-auto sm:max-h-[min(90vh,90dvh)]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="postage-label-title"
+      >
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border/40 px-3 py-3 sm:px-5">
+          <div className="min-w-0">
+            <h2 id="postage-label-title" className="text-base sm:text-lg">
+              Bitcoin Postage label
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
               {bulk
                 ? `${orders.length} order(s) · max ${MAX_BTCPOSTAGE_LABEL_BATCH} per batch · create-purchase once per order`
                 : first.orderNumber}
               {" · "}
               Uses the BTC Postage account linked to each order&apos;s warehouse
-              {!bulk && first.warehouse ? ` (${first.warehouse.replace("_", " ").toLowerCase()})` : ""}.
+              {!bulk && first.warehouse
+                ? ` (${first.warehouse.replace("_", " ").toLowerCase()})`
+                : ""}
+              .
             </p>
           </div>
-          <button type="button" className="ghost-btn" onClick={onClose} disabled={busy}>
+          <button
+            type="button"
+            className="ghost-btn shrink-0 !px-3 !py-2"
+            onClick={onClose}
+            disabled={busy}
+          >
             Close
           </button>
         </div>
-        {senders.length > 0 ? (
-          <label className="mt-4 grid gap-1 text-sm">
-            Saved sender
-            <select
-              className="field"
-              value={senderId}
-              onChange={(event) => {
-                const next = senders.find((row) => row.id === event.target.value);
-                setSenderId(event.target.value);
-                if (next) setForm((current) => applySender(current, next));
-              }}
-            >
-              {senders.map((row) => (
-                <option key={row.id} value={row.id}>
-                  {row.fromName} · {row.fromCity}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <fieldset className="grid gap-2">
-            <legend className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              From
-            </legend>
-            <input className="field" placeholder="Name" value={form.fromName} onChange={(e) => setField("fromName", e.target.value)} />
-            <input className="field" placeholder="Street" value={form.fromStreet} onChange={(e) => setField("fromStreet", e.target.value)} />
-            <input className="field" placeholder="Apt" value={form.fromApt} onChange={(e) => setField("fromApt", e.target.value)} />
-            <input className="field" placeholder="City" value={form.fromCity} onChange={(e) => setField("fromCity", e.target.value)} />
-            <div className="grid grid-cols-2 gap-2">
-              <input className="field" placeholder="State" value={form.fromState} onChange={(e) => setField("fromState", e.target.value)} />
-              <input className="field" placeholder="ZIP" value={form.fromZip} onChange={(e) => setField("fromZip", e.target.value)} />
-            </div>
-          </fieldset>
-          {bulk ? (
-            <fieldset className="grid gap-2">
-              <legend className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                Recipients
-              </legend>
-              <ul className="max-h-64 space-y-2 overflow-y-auto text-sm">
-                {orders.map((row) => (
-                  <li key={row.id} className="border border-border/40 p-2">
-                    <p className="font-mono text-xs">{row.orderNumber}</p>
-                    <p>{row.customerName}</p>
-                    <p className="text-muted-foreground">
-                      {row.shippingLine1}
-                      {row.shippingLine2 ? `, ${row.shippingLine2}` : ""}
-                      {row.shippingCity ? `, ${row.shippingCity}` : ""} {row.shippingState}{" "}
-                      {row.shippingPostal}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </fieldset>
-          ) : (
-            <fieldset className="grid gap-2">
-              <legend className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                To
-              </legend>
-              <input className="field" placeholder="Name" value={form.toName} onChange={(e) => setField("toName", e.target.value)} />
-              <input className="field" placeholder="Street" value={form.toStreet} onChange={(e) => setField("toStreet", e.target.value)} />
-              <input className="field" placeholder="Street 2" value={form.toStreet2} onChange={(e) => setField("toStreet2", e.target.value)} />
-              <input className="field" placeholder="City" value={form.toCity} onChange={(e) => setField("toCity", e.target.value)} />
-              <div className="grid grid-cols-2 gap-2">
-                <input className="field" placeholder="State" value={form.toState} onChange={(e) => setField("toState", e.target.value)} />
-                <input className="field" placeholder="ZIP" value={form.toZip} onChange={(e) => setField("toZip", e.target.value)} />
-              </div>
-            </fieldset>
-          )}
-        </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <label className="grid gap-1 text-sm">
-            Carrier
-            <select className="field" value={form.carrier} onChange={(e) => setField("carrier", e.target.value)}>
-              <option value="usps">USPS</option>
-              <option value="ups">UPS</option>
-              <option value="fedex">FedEx</option>
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm">
-            USPS package
-            <select
-              className="field"
-              value={form.packageType}
-              onChange={(e) => {
-                const packageType = e.target.value;
-                const flat = isUspsPriorityFlatRate(packageType);
-                const dims = flat ? flatRateDimensions(packageType) : PACKAGE_PRESETS[0];
-                setForm((current) => ({
-                  ...current,
-                  packageType,
-                  service: flat ? "Priority" : current.service || "GroundAdvantage",
-                  length: dims.length,
-                  width: dims.width,
-                  height: dims.height,
-                }));
-              }}
-            >
-              {USPS_PACKAGE_TYPES.map((row) => (
-                <option key={row.value} value={row.value}>
-                  {row.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm">
-            Service
-            {isUspsPriorityFlatRate(form.packageType) ? (
-              <select className="field" value="Priority" disabled>
-                <option value="Priority">Priority (required for flat rate)</option>
-              </select>
-            ) : (
-              <select className="field" value={form.service} onChange={(e) => setField("service", e.target.value)}>
-                <option value="GroundAdvantage">Ground Advantage</option>
-                <option value="Priority">Priority</option>
-              </select>
-            )}
-          </label>
-          {form.packageType === "USPScustom" ? (
+
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5">
+          {senders.length > 0 ? (
             <label className="grid gap-1 text-sm">
-              Custom size
+              Saved sender
               <select
                 className="field"
-                value={`${form.length}|${form.width}|${form.height}`}
-                onChange={(e) => {
-                  const preset = PACKAGE_PRESETS.find(
-                    (row) => `${row.length}|${row.width}|${row.height}` === e.target.value,
-                  );
-                  if (!preset) return;
-                  setForm((current) => ({
-                    ...current,
-                    length: preset.length,
-                    width: preset.width,
-                    height: preset.height,
-                  }));
+                value={senderId}
+                onChange={(event) => {
+                  const next = senders.find((row) => row.id === event.target.value);
+                  setSenderId(event.target.value);
+                  if (next) setForm((current) => applySender(current, next));
                 }}
               >
-                {PACKAGE_PRESETS.map((row) => (
-                  <option key={row.key} value={`${row.length}|${row.width}|${row.height}`}>
-                    {row.label}
+                {senders.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.fromName} · {row.fromCity}
                   </option>
                 ))}
               </select>
             </label>
           ) : null}
-          <label className="grid gap-1 text-sm">
-            Weight lbs
-            <input className="field" value={form.weightLbs} onChange={(e) => setField("weightLbs", e.target.value)} />
-          </label>
-          <label className="grid gap-1 text-sm">
-            Weight oz
-            <input className="field" value={form.weightOz} onChange={(e) => setField("weightOz", e.target.value)} />
-          </label>
-          {form.carrier === "usps" ? (
-            <label className="flex items-end gap-2 text-sm">
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <fieldset className="grid gap-2">
+              <legend className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                From
+              </legend>
               <input
-                type="checkbox"
-                checked={form.testMode}
-                onChange={(e) => setField("testMode", e.target.checked)}
+                className="field"
+                placeholder="Name"
+                value={form.fromName}
+                onChange={(e) => setField("fromName", e.target.value)}
               />
-              Test mode
+              <input
+                className="field"
+                placeholder="Street"
+                value={form.fromStreet}
+                onChange={(e) => setField("fromStreet", e.target.value)}
+              />
+              <input
+                className="field"
+                placeholder="Apt"
+                value={form.fromApt}
+                onChange={(e) => setField("fromApt", e.target.value)}
+              />
+              <input
+                className="field"
+                placeholder="City"
+                value={form.fromCity}
+                onChange={(e) => setField("fromCity", e.target.value)}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  className="field"
+                  placeholder="State"
+                  value={form.fromState}
+                  onChange={(e) => setField("fromState", e.target.value)}
+                />
+                <input
+                  className="field"
+                  placeholder="ZIP"
+                  value={form.fromZip}
+                  onChange={(e) => setField("fromZip", e.target.value)}
+                />
+              </div>
+            </fieldset>
+            {bulk ? (
+              <fieldset className="grid gap-2">
+                <legend className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  Recipients
+                </legend>
+                <ul className="max-h-48 space-y-2 overflow-y-auto text-sm sm:max-h-64">
+                  {orders.map((row) => (
+                    <li key={row.id} className="border border-border/40 p-2">
+                      <p className="font-mono text-xs">{row.orderNumber}</p>
+                      <p>{row.customerName}</p>
+                      <p className="text-muted-foreground">
+                        {row.shippingLine1}
+                        {row.shippingLine2 ? `, ${row.shippingLine2}` : ""}
+                        {row.shippingCity ? `, ${row.shippingCity}` : ""} {row.shippingState}{" "}
+                        {row.shippingPostal}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </fieldset>
+            ) : (
+              <fieldset className="grid gap-2">
+                <legend className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  To
+                </legend>
+                <input
+                  className="field"
+                  placeholder="Name"
+                  value={form.toName}
+                  onChange={(e) => setField("toName", e.target.value)}
+                />
+                <input
+                  className="field"
+                  placeholder="Street"
+                  value={form.toStreet}
+                  onChange={(e) => setField("toStreet", e.target.value)}
+                />
+                <input
+                  className="field"
+                  placeholder="Street 2"
+                  value={form.toStreet2}
+                  onChange={(e) => setField("toStreet2", e.target.value)}
+                />
+                <input
+                  className="field"
+                  placeholder="City"
+                  value={form.toCity}
+                  onChange={(e) => setField("toCity", e.target.value)}
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    className="field"
+                    placeholder="State"
+                    value={form.toState}
+                    onChange={(e) => setField("toState", e.target.value)}
+                  />
+                  <input
+                    className="field"
+                    placeholder="ZIP"
+                    value={form.toZip}
+                    onChange={(e) => setField("toZip", e.target.value)}
+                  />
+                </div>
+              </fieldset>
+            )}
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+            <label className="grid gap-1 text-sm">
+              Carrier
+              <select
+                className="field"
+                value={form.carrier}
+                onChange={(e) => setField("carrier", e.target.value)}
+              >
+                <option value="usps">USPS</option>
+                <option value="ups">UPS</option>
+                <option value="fedex">FedEx</option>
+              </select>
             </label>
+            <label className="grid gap-1 text-sm">
+              USPS package
+              <select
+                className="field"
+                value={form.packageType}
+                onChange={(e) => {
+                  const packageType = e.target.value;
+                  const flat = isUspsPriorityFlatRate(packageType);
+                  const dims = flat ? flatRateDimensions(packageType) : PACKAGE_PRESETS[0];
+                  setForm((current) => ({
+                    ...current,
+                    packageType,
+                    service: flat ? "Priority" : current.service || "GroundAdvantage",
+                    length: dims.length,
+                    width: dims.width,
+                    height: dims.height,
+                  }));
+                }}
+              >
+                {USPS_PACKAGE_TYPES.map((row) => (
+                  <option key={row.value} value={row.value}>
+                    {row.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm">
+              Service
+              {isUspsPriorityFlatRate(form.packageType) ? (
+                <select className="field" value="Priority" disabled>
+                  <option value="Priority">Priority (required for flat rate)</option>
+                </select>
+              ) : (
+                <select
+                  className="field"
+                  value={form.service}
+                  onChange={(e) => setField("service", e.target.value)}
+                >
+                  <option value="GroundAdvantage">Ground Advantage</option>
+                  <option value="Priority">Priority</option>
+                </select>
+              )}
+            </label>
+            {form.packageType === "USPScustom" ? (
+              <label className="grid gap-1 text-sm">
+                Custom size
+                <select
+                  className="field"
+                  value={`${form.length}|${form.width}|${form.height}`}
+                  onChange={(e) => {
+                    const preset = PACKAGE_PRESETS.find(
+                      (row) => `${row.length}|${row.width}|${row.height}` === e.target.value,
+                    );
+                    if (!preset) return;
+                    setForm((current) => ({
+                      ...current,
+                      length: preset.length,
+                      width: preset.width,
+                      height: preset.height,
+                    }));
+                  }}
+                >
+                  {PACKAGE_PRESETS.map((row) => (
+                    <option key={row.key} value={`${row.length}|${row.width}|${row.height}`}>
+                      {row.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <label className="grid gap-1 text-sm">
+              Weight lbs
+              <input
+                className="field"
+                value={form.weightLbs}
+                onChange={(e) => setField("weightLbs", e.target.value)}
+              />
+            </label>
+            <label className="grid gap-1 text-sm">
+              Weight oz
+              <input
+                className="field"
+                value={form.weightOz}
+                onChange={(e) => setField("weightOz", e.target.value)}
+              />
+            </label>
+            {form.carrier === "usps" ? (
+              <label className="flex items-center gap-2 text-sm sm:items-end sm:pb-3">
+                <input
+                  type="checkbox"
+                  checked={form.testMode}
+                  onChange={(e) => setField("testMode", e.target.checked)}
+                />
+                Test mode
+              </label>
+            ) : null}
+          </div>
+          {error ? <p className="mt-3 text-sm text-brand-red">{error}</p> : null}
+          {progress ? (
+            <p className="mt-3 text-sm text-muted-foreground">Creating {progress}…</p>
           ) : null}
         </div>
-        {error ? <p className="mt-3 text-sm text-brand-red">{error}</p> : null}
-        {progress ? <p className="mt-3 text-sm text-muted-foreground">Creating {progress}…</p> : null}
-        <div className="mt-5 flex gap-2">
-          <button type="button" className="gold-btn" disabled={busy} onClick={() => void submit()}>
+
+        <div className="flex shrink-0 flex-wrap gap-2 border-t border-border/40 px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5 sm:pb-3">
+          <button
+            type="button"
+            className="gold-btn"
+            disabled={busy}
+            onClick={() => void submit()}
+          >
             {busy ? "Creating…" : bulk ? "Create labels" : "Create label"}
           </button>
           <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>

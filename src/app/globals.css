@@ -526,7 +526,17 @@ body {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  padding-inline: 2.5rem;
+  padding-inline: 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+
+@media (min-width: 768px) {
+  .feature-banner-marquee-item {
+    padding-inline: 2.5rem;
+    font-size: 1rem;
+  }
 }
 
 .feature-banner-marquee-separator {
@@ -544,5 +554,48 @@ body {
     width: 100%;
     white-space: normal;
     padding-inline: 1rem;
+  }
+
+  .feature-banner-marquee-item {
+    padding-inline: 0.75rem;
+  }
+
+  .feature-banner-marquee-separator {
+    display: none;
+  }
+}
+
+/* Feature banner strip — one message at a time (slider mode) */
+.feature-banner-slider-panel {
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 0.55s ease,
+    transform 0.55s ease;
+  pointer-events: none;
+}
+
+.feature-banner-slider-panel-active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.feature-banner-slider-message {
+  max-width: min(100%, 72rem);
+}
+
+.feature-banner-slider-fit {
+  display: flex;
+  width: 100%;
+  max-width: min(100%, 72rem);
+  align-items: center;
+  justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feature-banner-slider-panel {
+    transform: none;
+    transition: opacity 0.2s ease;
   }
 }
