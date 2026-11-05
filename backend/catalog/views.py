@@ -315,6 +315,52 @@ def admin_products_bulk(request):
             product.save(update_fields=["warehouse"])
             updated += 1
 
+    elif action == "update_inventory":
+        raw_updates = request.data.get("updates") or []
+        if not isinstance(raw_updates, list) or not raw_updates:
+            return Response({"error": "No inventory updates provided."}, status=400)
+        by_id: dict[str, dict] = {}
+        for row in raw_updates:
+            if not isinstance(row, dict):
+                continue
+            row_id = str(row.get("id") or "").strip()
+            if row_id:
+                by_id[row_id] = row
+        if not by_id:
+            return Response({"error": "No inventory updates provided."}, status=400)
+        for product in products:
+            patch = by_id.get(str(product.pk))
+            if not patch:
+                continue
+            fields: list[str] = []
+            if "warehouse" in patch:
+                warehouse = str(patch.get("warehouse") or "").strip()
+                if warehouse not in (
+                    Product.Warehouse.WAREHOUSE_1,
+                    Product.Warehouse.WAREHOUSE_2,
+                ):
+                    errors.append(f"{product.name}: invalid warehouse.")
+                    continue
+                product.warehouse = warehouse
+                fields.append("warehouse")
+            if "stockQuantityW1" in patch:
+                try:
+                    product.stock_quantity_w1 = max(0, int(patch.get("stockQuantityW1") or 0))
+                except (TypeError, ValueError):
+                    errors.append(f"{product.name}: invalid W1 stock.")
+                    continue
+                fields.append("stock_quantity_w1")
+            if "stockQuantityW2" in patch:
+                try:
+                    product.stock_quantity_w2 = max(0, int(patch.get("stockQuantityW2") or 0))
+                except (TypeError, ValueError):
+                    errors.append(f"{product.name}: invalid W2 stock.")
+                    continue
+                fields.append("stock_quantity_w2")
+            if fields:
+                product.save(update_fields=fields)
+                updated += 1
+
     elif action == "set_backorder":
         if "allowBackorder" in request.data:
             raw = request.data.get("allowBackorder")

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, SlidersHorizontal, Trash2 } from "lucide-react";
 import { ProductQuickEditPanel } from "@/components/admin/ProductQuickEditPanel";
 import { formatMoney, mediaUrl } from "@/lib/constants";
-import { warehouseLabel, warehouseShort } from "@/lib/warehouse";
+import { warehouseLabel } from "@/lib/warehouse";
 import type { ApiCategory, ApiProduct } from "@/lib/api-types";
 
 const PER_PAGE = 20;
@@ -24,6 +24,149 @@ function warehouseChipClass(active: boolean): string {
     return "bg-emerald-700 px-2 py-0.5 font-mono text-xs text-emerald-50";
   }
   return "bg-muted px-2 py-0.5 font-mono text-xs text-foreground";
+}
+
+type InventoryDraft = {
+  w1: string;
+  w2: string;
+  warehouse: string;
+};
+
+function draftFromProduct(product: ApiProduct): InventoryDraft {
+  return {
+    w1: String(product.stockQuantityW1 ?? 0),
+    w2: String(product.stockQuantityW2 ?? 0),
+    warehouse: product.warehouse,
+  };
+}
+
+function parseStockInput(value: string): number {
+  const parsed = Number.parseInt(value.trim(), 10);
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return parsed;
+}
+
+function isInventoryDraftDirty(product: ApiProduct, draft: InventoryDraft): boolean {
+  const w1Changed =
+    typeof product.stockQuantityW1 === "number" &&
+    parseStockInput(draft.w1) !== (product.stockQuantityW1 ?? 0);
+  const w2Changed =
+    typeof product.stockQuantityW2 === "number" &&
+    parseStockInput(draft.w2) !== (product.stockQuantityW2 ?? 0);
+  const warehouseChanged = draft.warehouse !== product.warehouse;
+  return w1Changed || w2Changed || warehouseChanged;
+}
+
+function productWithDraft(product: ApiProduct, draft: InventoryDraft | undefined): ApiProduct {
+  if (!draft) return product;
+  return {
+    ...product,
+    warehouse: draft.warehouse || product.warehouse,
+    stockQuantityW1:
+      typeof product.stockQuantityW1 === "number" ? parseStockInput(draft.w1) : product.stockQuantityW1,
+    stockQuantityW2:
+      typeof product.stockQuantityW2 === "number" ? parseStockInput(draft.w2) : product.stockQuantityW2,
+  };
+}
+
+function InventoryDraftEditor({
+  product,
+  draftOrBase,
+  dirty,
+  onChange,
+  className,
+  compact = false,
+}: {
+  product: ApiProduct;
+  draftOrBase: InventoryDraft;
+  dirty: boolean;
+  onChange: (patch: Partial<InventoryDraft>) => void;
+  className?: string;
+  /** Mobile: assigned WH stock only + short WH1/WH2 labels. */
+  compact?: boolean;
+}) {
+  const assignedIsW1 = draftOrBase.warehouse === "WAREHOUSE_1";
+  const showW1 =
+    typeof product.stockQuantityW1 === "number" && (!compact || assignedIsW1);
+  const showW2 =
+    typeof product.stockQuantityW2 === "number" && (!compact || !assignedIsW1);
+
+  return (
+    <div className={className}>
+      <div className={`flex flex-wrap items-center ${compact ? "gap-1" : "gap-1.5"}`}>
+        {showW1 ? (
+          <label
+            className={`inline-flex items-center ${warehouseChipClass(assignedIsW1)} ${
+              compact ? "!gap-0.5 !px-1 !py-0 text-[10px]" : "gap-0.5"
+            }`}
+            title={assignedIsW1 ? "Assigned warehouse stock" : "Stock at Warehouse 1"}
+          >
+            W1
+            <input
+              className={`rounded border-0 bg-transparent font-mono text-inherit outline-none ring-1 ring-white/20 focus:ring-signal ${
+                compact
+                  ? "w-8 px-0 py-0 text-[10px]"
+                  : "w-14 px-1 py-0.5 text-xs"
+              }`}
+              inputMode="numeric"
+              value={draftOrBase.w1}
+              onChange={(event) => onChange({ w1: event.target.value })}
+            />
+          </label>
+        ) : null}
+        {showW2 ? (
+          <label
+            className={`inline-flex items-center ${warehouseChipClass(!assignedIsW1)} ${
+              compact ? "!gap-0.5 !px-1 !py-0 text-[10px]" : "gap-0.5"
+            }`}
+            title={!assignedIsW1 ? "Assigned warehouse stock" : "Stock at Warehouse 2"}
+          >
+            W2
+            <input
+              className={`rounded border-0 bg-transparent font-mono text-inherit outline-none ring-1 ring-white/20 focus:ring-signal ${
+                compact
+                  ? "w-8 px-0 py-0 text-[10px]"
+                  : "w-14 px-1 py-0.5 text-xs"
+              }`}
+              inputMode="numeric"
+              value={draftOrBase.w2}
+              onChange={(event) => onChange({ w2: event.target.value })}
+            />
+          </label>
+        ) : null}
+        {compact ? (
+          <select
+            className="field !w-auto !min-w-0 !px-1 !py-0 text-[10px]"
+            value={draftOrBase.warehouse}
+            title="Home warehouse"
+            aria-label="Home warehouse"
+            onChange={(event) => onChange({ warehouse: event.target.value })}
+          >
+            <option value="WAREHOUSE_1">WH1</option>
+            <option value="WAREHOUSE_2">WH2</option>
+          </select>
+        ) : null}
+      </div>
+      {!compact ? (
+        <label className="mt-1.5 grid gap-1 text-[11px]">
+          Home WH
+          <select
+            className="field !py-1.5 text-xs"
+            value={draftOrBase.warehouse}
+            onChange={(event) => onChange({ warehouse: event.target.value })}
+          >
+            <option value="WAREHOUSE_1">Warehouse 1</option>
+            <option value="WAREHOUSE_2">Warehouse 2</option>
+          </select>
+        </label>
+      ) : null}
+      {dirty ? (
+        <p className={`text-amber-300 ${compact ? "mt-0.5 text-[10px]" : "mt-1 text-[11px]"}`}>
+          {compact ? "Draft" : "Draft — not saved yet"}
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 function compareProducts(a: ApiProduct, b: ApiProduct, sortBy: SortBy, sortOrder: SortOrder): number {
@@ -151,10 +294,34 @@ export function AdminProductsTable({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkError, setBulkError] = useState("");
+  const [inventoryDrafts, setInventoryDrafts] = useState<Record<string, InventoryDraft>>({});
+  const [inventoryBusy, setInventoryBusy] = useState(false);
+  const [inventoryError, setInventoryError] = useState("");
 
   useEffect(() => {
     setRows(products);
   }, [products]);
+
+  const dirtyInventory = useMemo(() => {
+    const items: { product: ApiProduct; draft: InventoryDraft }[] = [];
+    for (const product of rows) {
+      const draft = inventoryDrafts[product.id];
+      if (draft && isInventoryDraftDirty(product, draft)) {
+        items.push({ product, draft });
+      }
+    }
+    return items;
+  }, [rows, inventoryDrafts]);
+
+  useEffect(() => {
+    if (dirtyInventory.length === 0) return;
+    function onBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirtyInventory.length]);
 
   useEffect(() => {
     if (quickEditId == null) return;
@@ -231,6 +398,12 @@ export function AdminProductsTable({
 
   function replaceRow(updated: ApiProduct) {
     setRows((prev) => prev.map((row) => (row.id === updated.id ? { ...row, ...updated } : row)));
+    setInventoryDrafts((prev) => {
+      if (!prev[updated.id]) return prev;
+      const { [updated.id]: _removed, ...rest } = prev;
+      void _removed;
+      return rest;
+    });
   }
 
   async function toggleFlag(product: ApiProduct, field: "isFeatured" | "isNewArrival") {
@@ -246,22 +419,98 @@ export function AdminProductsTable({
     }
   }
 
-  async function moveWarehouse(product: ApiProduct) {
-    if (!admin) return;
-    setBusyId(`wh-${product.id}`);
+  function setInventoryDraft(
+    product: ApiProduct,
+    patch: Partial<InventoryDraft>,
+  ) {
+    setInventoryDrafts((prev) => {
+      const current = prev[product.id] ?? draftFromProduct(product);
+      const next = { ...current, ...patch };
+      if (!isInventoryDraftDirty(product, next)) {
+        const { [product.id]: _removed, ...rest } = prev;
+        void _removed;
+        return rest;
+      }
+      return { ...prev, [product.id]: next };
+    });
+    setInventoryError("");
+  }
+
+  function discardInventoryDrafts() {
+    if (dirtyInventory.length === 0) return;
+    if (
+      !window.confirm(
+        `Discard ${dirtyInventory.length} unsaved inventory change${dirtyInventory.length === 1 ? "" : "s"}?`,
+      )
+    ) {
+      return;
+    }
+    setInventoryDrafts({});
+    setInventoryError("");
+  }
+
+  async function saveInventoryDrafts() {
+    if (!admin || dirtyInventory.length === 0) return;
+    setInventoryBusy(true);
+    setInventoryError("");
     try {
-      const res = await fetch(`/api/admin/products/${product.id}/warehouse`, { method: "POST" });
-      if (!res.ok) throw new Error("Could not move warehouse.");
-      const data = (await res.json()) as { warehouse?: string };
-      setRows((prev) =>
-        prev.map((row) =>
-          row.id === product.id ? { ...row, warehouse: data.warehouse || row.warehouse } : row,
-        ),
-      );
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Could not move warehouse.");
+      const updates = dirtyInventory.map(({ product, draft }) => {
+        const row: Record<string, unknown> = { id: product.id };
+        if (draft.warehouse !== product.warehouse) {
+          row.warehouse = draft.warehouse;
+        }
+        if (
+          typeof product.stockQuantityW1 === "number" &&
+          parseStockInput(draft.w1) !== (product.stockQuantityW1 ?? 0)
+        ) {
+          row.stockQuantityW1 = parseStockInput(draft.w1);
+        }
+        if (
+          typeof product.stockQuantityW2 === "number" &&
+          parseStockInput(draft.w2) !== (product.stockQuantityW2 ?? 0)
+        ) {
+          row.stockQuantityW2 = parseStockInput(draft.w2);
+        }
+        return row;
+      });
+      const res = await fetch("/api/admin/products/bulk", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          action: "update_inventory",
+          ids: updates.map((row) => row.id),
+          updates,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        products?: ApiProduct[];
+        errors?: string[];
+      };
+      if (!res.ok) {
+        setInventoryError(data.error || "Could not update inventory.");
+        return;
+      }
+      if (Array.isArray(data.products)) {
+        const byId = new Map(data.products.map((product) => [product.id, product]));
+        setRows((prev) =>
+          prev.map((row) => (byId.has(row.id) ? { ...row, ...byId.get(row.id)! } : row)),
+        );
+      }
+      setInventoryDrafts((prev) => {
+        const next = { ...prev };
+        for (const { product } of dirtyInventory) {
+          delete next[product.id];
+        }
+        return next;
+      });
+      if (data.errors?.length) {
+        setInventoryError(data.errors.join(" "));
+      }
+    } catch {
+      setInventoryError("Could not update inventory.");
     } finally {
-      setBusyId(null);
+      setInventoryBusy(false);
     }
   }
 
@@ -410,7 +659,7 @@ export function AdminProductsTable({
   const someSelected = selectedIds.length > 0;
 
   return (
-    <div className="mt-6">
+    <div className={`mt-6 ${dirtyInventory.length > 0 ? "pb-28" : ""}`}>
       <div className="tile mb-6 p-4">
         <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
           <select
@@ -677,7 +926,7 @@ export function AdminProductsTable({
                     SKU{sortMark("sku")}
                   </th>
                   <th className="px-4 py-3">Stock</th>
-                  <th className="px-4 py-3">Stock at location</th>
+                  <th className="hidden px-4 py-3 md:table-cell">Stock at location</th>
                   <th className="cursor-pointer px-4 py-3" onClick={() => toggleSort("regularPrice")}>
                     Price{sortMark("regularPrice")}
                   </th>
@@ -692,12 +941,24 @@ export function AdminProductsTable({
               <tbody>
                 {pageRows.map((product) => {
                   const open = quickEditId === product.id;
+                  const draft = inventoryDrafts[product.id];
+                  const dirty = Boolean(draft && isInventoryDraftDirty(product, draft));
+                  const view = productWithDraft(product, draft);
+                  const draftOrBase = draft ?? draftFromProduct(product);
                   const src = mediaUrl(product.image);
                   const onSale =
                     product.salePrice != null && product.salePrice > 0 && product.salePrice < product.regularPrice;
                   return (
                     <Fragment key={product.id}>
-                      <tr className={`border-t border-border/40 ${open ? "bg-signal/10" : "hover:bg-card/60"}`}>
+                      <tr
+                        className={`border-t border-border/40 ${
+                          open
+                            ? "bg-signal/10"
+                            : dirty
+                              ? "bg-amber-950/30"
+                              : "hover:bg-card/60"
+                        }`}
+                      >
                         <td
                           className={`sticky left-0 z-20 w-12 px-3 py-3 ${
                             open ? "bg-[#241410]" : "bg-card"
@@ -718,40 +979,54 @@ export function AdminProductsTable({
                           ) : null}
                         </td>
                         <td
-                          className={`sticky left-12 z-20 min-w-[7.5rem] px-3 py-3 shadow-[6px_0_10px_-8px_rgba(0,0,0,0.8)] ${
-                            open ? "bg-[#241410]" : "bg-card"
+                          className={`sticky left-12 z-20 min-w-[8.5rem] px-2 py-2 shadow-[6px_0_10px_-8px_rgba(0,0,0,0.8)] md:min-w-[7.5rem] md:px-3 md:py-3 ${
+                            open ? "bg-[#241410]" : dirty ? "bg-amber-950/40" : "bg-card"
                           }`}
                         >
                           {admin ? (
-                            <div className="flex items-center gap-1">
-                              <Link
-                                href={`/admin/cms/products/${product.id}`}
-                                title="Edit"
-                                className="p-1.5 text-signal hover:bg-signal/15"
-                              >
-                                <Pencil className="size-4" />
-                              </Link>
-                              <button
-                                type="button"
-                                title="Quick edit: name, image, prices, quantity, backorder"
-                                onClick={() =>
-                                  setQuickEditId((id) => (id === product.id ? null : product.id))
-                                }
-                                className={`p-1.5 hover:bg-signal/15 ${
-                                  open ? "bg-signal/20 text-signal" : "text-muted-foreground hover:text-signal"
-                                }`}
-                              >
-                                <SlidersHorizontal className="size-4" />
-                              </button>
-                              <button
-                                type="button"
-                                title="Delete"
-                                disabled={busyId === `del-${product.id}`}
-                                onClick={() => void deleteProduct(product)}
-                                className="p-1.5 text-red-400 hover:bg-red-950/50 hover:text-red-300 disabled:opacity-50"
-                              >
-                                <Trash2 className="size-4" />
-                              </button>
+                            <div className="space-y-1 md:space-y-2">
+                              <div className="flex items-center gap-0.5 md:gap-1">
+                                <Link
+                                  href={`/admin/cms/products/${product.id}`}
+                                  title="Edit"
+                                  className="p-1.5 text-signal hover:bg-signal/15"
+                                >
+                                  <Pencil className="size-4" />
+                                </Link>
+                                <button
+                                  type="button"
+                                  title="Quick edit: name, image, prices, quantity, backorder"
+                                  onClick={() =>
+                                    setQuickEditId((id) => (id === product.id ? null : product.id))
+                                  }
+                                  className={`p-1.5 hover:bg-signal/15 ${
+                                    open
+                                      ? "bg-signal/20 text-signal"
+                                      : "text-muted-foreground hover:text-signal"
+                                  }`}
+                                >
+                                  <SlidersHorizontal className="size-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Delete"
+                                  disabled={busyId === `del-${product.id}`}
+                                  onClick={() => void deleteProduct(product)}
+                                  className="p-1.5 text-red-400 hover:bg-red-950/50 hover:text-red-300 disabled:opacity-50"
+                                >
+                                  <Trash2 className="size-4" />
+                                </button>
+                              </div>
+                              {enableWarehouseBulk ? (
+                                <InventoryDraftEditor
+                                  product={product}
+                                  draftOrBase={draftOrBase}
+                                  dirty={dirty}
+                                  compact
+                                  className="md:hidden"
+                                  onChange={(patch) => setInventoryDraft(product, patch)}
+                                />
+                              ) : null}
                             </div>
                           ) : null}
                         </td>
@@ -783,57 +1058,46 @@ export function AdminProductsTable({
                           <div className="mt-0.5 text-[11px] text-muted-foreground">{statusLabel(product.status)}</div>
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{product.sku || "—"}</td>
-                        <td className="whitespace-nowrap px-4 py-3">{stockLabel(product)}</td>
-                        <td className="px-4 py-3 align-top text-muted-foreground">
-                          <div className="flex flex-wrap gap-1">
-                            {typeof product.stockQuantityW1 === "number" ? (
-                              <span
-                                className={warehouseChipClass(product.warehouse === "WAREHOUSE_1")}
-                                title={
-                                  product.warehouse === "WAREHOUSE_1"
-                                    ? "Assigned warehouse"
-                                    : "Stock at Warehouse 1"
-                                }
-                              >
-                                W1: {product.stockQuantityW1}
-                              </span>
-                            ) : null}
-                            {typeof product.stockQuantityW2 === "number" ? (
-                              <span
-                                className={warehouseChipClass(product.warehouse === "WAREHOUSE_2")}
-                                title={
-                                  product.warehouse === "WAREHOUSE_2"
-                                    ? "Assigned warehouse"
-                                    : "Stock at Warehouse 2"
-                                }
-                              >
-                                W2: {product.stockQuantityW2}
-                              </span>
-                            ) : null}
-                          </div>
-                          <div className="mt-1 text-xs">
-                            Home:{" "}
-                            <span
-                              className={
-                                product.warehouse === "WAREHOUSE_1" ||
-                                product.warehouse === "WAREHOUSE_2"
-                                  ? "font-medium text-emerald-400"
-                                  : undefined
-                              }
-                            >
-                              {warehouseLabel(product.warehouse)}
-                            </span>
-                          </div>
-                          {admin ? (
-                            <button
-                              type="button"
-                              className="mt-1 text-[11px] uppercase tracking-[0.12em] text-signal hover:text-foreground"
-                              disabled={busyId === `wh-${product.id}`}
-                              onClick={() => void moveWarehouse(product)}
-                            >
-                              Move to {warehouseShort(product.warehouse === "WAREHOUSE_1" ? "WAREHOUSE_2" : "WAREHOUSE_1")}
-                            </button>
-                          ) : null}
+                        <td className="whitespace-nowrap px-4 py-3">{stockLabel(view)}</td>
+                        <td className="hidden px-4 py-3 align-top text-muted-foreground md:table-cell">
+                          {admin && enableWarehouseBulk ? (
+                            <InventoryDraftEditor
+                              product={product}
+                              draftOrBase={draftOrBase}
+                              dirty={dirty}
+                              className="space-y-2"
+                              onChange={(patch) => setInventoryDraft(product, patch)}
+                            />
+                          ) : (
+                            <>
+                              <div className="flex flex-wrap gap-1">
+                                {typeof product.stockQuantityW1 === "number" ? (
+                                  <span
+                                    className={warehouseChipClass(
+                                      product.warehouse === "WAREHOUSE_1",
+                                    )}
+                                  >
+                                    W1: {product.stockQuantityW1}
+                                  </span>
+                                ) : null}
+                                {typeof product.stockQuantityW2 === "number" ? (
+                                  <span
+                                    className={warehouseChipClass(
+                                      product.warehouse === "WAREHOUSE_2",
+                                    )}
+                                  >
+                                    W2: {product.stockQuantityW2}
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div className="mt-1 text-xs">
+                                Home:{" "}
+                                <span className="font-medium text-emerald-400">
+                                  {warehouseLabel(product.warehouse)}
+                                </span>
+                              </div>
+                            </>
+                          )}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 font-medium">
                           {onSale ? (
@@ -955,6 +1219,43 @@ export function AdminProductsTable({
           ) : null}
         </div>
       )}
+
+      {admin && dirtyInventory.length > 0 ? (
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border/50 bg-card/95 px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(0,0,0,0.35)] backdrop-blur sm:px-4 sm:py-3">
+          <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">
+                {dirtyInventory.length} draft
+                {dirtyInventory.length === 1 ? "" : "s"} ready
+              </p>
+              <p className="hidden text-xs text-muted-foreground sm:block">
+                Search and edit freely — changes stay until you update all or discard.
+              </p>
+              {inventoryError ? (
+                <p className="mt-1 text-sm text-brand-red">{inventoryError}</p>
+              ) : null}
+            </div>
+            <div className="flex w-full gap-2 sm:w-auto">
+              <button
+                type="button"
+                className="ghost-btn flex-1 !px-3 !py-2 sm:flex-none"
+                disabled={inventoryBusy}
+                onClick={discardInventoryDrafts}
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                className="gold-btn flex-1 !px-3 !py-2 sm:flex-none"
+                disabled={inventoryBusy}
+                onClick={() => void saveInventoryDrafts()}
+              >
+                {inventoryBusy ? "Updating…" : `Update all (${dirtyInventory.length})`}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

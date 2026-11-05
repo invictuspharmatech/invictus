@@ -5,7 +5,7 @@ import { isFullAdmin } from "@/lib/roles";
 import Link from "next/link";
 import type { ApiProduct } from "@/lib/api-types";
 
-const LOW_STOCK_MAX = 10;
+const LOW_STOCK_MAX = 5;
 
 function stockQty(product: ApiProduct, warehouse?: string): number | null {
   if (warehouse === "1") return product.stockQuantityW1;
@@ -56,7 +56,7 @@ export default async function AdminInventoryPage({
       <h1 className="display-font text-3xl">Inventory</h1>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
         Stock by warehouse. Low / out-of-stock counts include active products only.
-        Low stock is 1–10 units. Out of stock is qty 0.
+        Low stock is 1–5 units. Out of stock is qty 0.
       </p>
       <form className="mt-6 flex flex-wrap gap-2">
         <input className="field max-w-xs" name="q" defaultValue={q} placeholder="Search SKU or name" />

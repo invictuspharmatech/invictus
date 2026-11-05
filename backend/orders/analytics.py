@@ -17,7 +17,7 @@ from orders.status import COMPLETED_LIKE, PAID_LIKE, REVENUE_ELIGIBLE
 COMPLETED_STATUSES = list(COMPLETED_LIKE)
 OUT_OF_STOCK_STATUSES = ("outofstock", "out_of_stock")
 
-LOW_STOCK_THRESHOLD = 10
+LOW_STOCK_THRESHOLD = 5
 CHART_FORMATS = {
     "day": "%Y-%m-%d",
     "week": "%Y-W%W",

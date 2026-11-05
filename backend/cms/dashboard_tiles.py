@@ -209,7 +209,7 @@ def catalog() -> list[dict]:
             "lowStockCount",
             "count",
             "/admin/inventory",
-            "Active products · stock 1–10 · live count",
+            "Active products · stock 1–5 · live count",
             supports_dynamic=True,
         ),
         _metric(
