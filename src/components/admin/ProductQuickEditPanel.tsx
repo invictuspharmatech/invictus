@@ -35,6 +35,7 @@ export function ProductQuickEditPanel({ product, onCancel, onSaved }: Props) {
   );
   const [isFeatured, setIsFeatured] = useState(product.isFeatured);
   const [isNewArrival, setIsNewArrival] = useState(product.isNewArrival);
+  const [status, setStatus] = useState(product.status === "publish" ? "publish" : "draft");
   const [image, setImage] = useState(product.image ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -50,6 +51,7 @@ export function ProductQuickEditPanel({ product, onCancel, onSaved }: Props) {
     setMaxQty(Math.max(1, Number(product.maxQuantityPerOrder ?? 1) || 1));
     setIsFeatured(product.isFeatured);
     setIsNewArrival(product.isNewArrival);
+    setStatus(product.status === "publish" ? "publish" : "draft");
     setImage(product.image ?? "");
     setError("");
   }, [product]);
@@ -84,6 +86,7 @@ export function ProductQuickEditPanel({ product, onCancel, onSaved }: Props) {
       allowBackorder,
       isFeatured,
       isNewArrival,
+      status,
       image,
       maxQuantityPerOrder: limitQty ? Math.max(1, Number(maxQty) || 1) : null,
     };
@@ -199,6 +202,17 @@ export function ProductQuickEditPanel({ product, onCancel, onSaved }: Props) {
             />
           </label>
         ) : null}
+        <label className="grid gap-1 text-xs sm:col-span-2">
+          Status
+          <select
+            className="field"
+            value={status}
+            onChange={(e) => setStatus(e.target.value === "publish" ? "publish" : "draft")}
+          >
+            <option value="publish">Active</option>
+            <option value="draft">Inactive</option>
+          </select>
+        </label>
         <label className="flex items-center gap-2 text-xs">
           <input
             type="checkbox"

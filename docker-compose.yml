@@ -31,9 +31,12 @@ services:
     volumes:
       - ./data/media:/app/media
       - ./data/static:/app/staticfiles
-      # Host mysqld socket — app talks to the machine MySQL, not a container DB.
+      # Host mysqld socket dir (not the .sock file alone).
+      # MariaDB recreates mysqld.sock on restart with a new inode; mounting only
+      # the file leaves the container on a stale socket until recreate. Mounting
+      # the directory always sees the current socket.
       # Ubuntu/Debian: /var/run/mysqld/mysqld.sock
-      - /var/run/mysqld/mysqld.sock:/run/mysqld/mysqld.sock
+      - /var/run/mysqld:/run/mysqld
     healthcheck:
       test:
         [

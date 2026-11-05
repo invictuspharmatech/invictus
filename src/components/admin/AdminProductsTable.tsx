@@ -134,20 +134,19 @@ function InventoryDraftEditor({
             />
           </label>
         ) : null}
-        {compact ? (
-          <select
-            className="field !w-auto !min-w-0 !px-1 !py-0 text-[10px]"
-            value={draftOrBase.warehouse}
-            title="Home warehouse"
-            aria-label="Home warehouse"
-            onChange={(event) => onChange({ warehouse: event.target.value })}
-          >
-            <option value="WAREHOUSE_1">WH1</option>
-            <option value="WAREHOUSE_2">WH2</option>
-          </select>
-        ) : null}
       </div>
-      {!compact ? (
+      {compact ? (
+        <select
+          className="field mt-1 !w-auto !min-w-0 !px-1 !py-0 text-[10px]"
+          value={draftOrBase.warehouse}
+          title="Home warehouse"
+          aria-label="Home warehouse"
+          onChange={(event) => onChange({ warehouse: event.target.value })}
+        >
+          <option value="WAREHOUSE_1">WH1</option>
+          <option value="WAREHOUSE_2">WH2</option>
+        </select>
+      ) : (
         <label className="mt-1.5 grid gap-1 text-[11px]">
           Home WH
           <select
@@ -159,7 +158,7 @@ function InventoryDraftEditor({
             <option value="WAREHOUSE_2">Warehouse 2</option>
           </select>
         </label>
-      ) : null}
+      )}
       {dirty ? (
         <p className={`text-amber-300 ${compact ? "mt-0.5 text-[10px]" : "mt-1 text-[11px]"}`}>
           {compact ? "Draft" : "Draft — not saved yet"}
@@ -514,19 +513,16 @@ export function AdminProductsTable({
     }
   }
 
-  async function deleteProduct(product: ApiProduct) {
+  async function toggleProductStatus(product: ApiProduct) {
     if (!admin) return;
-    if (!window.confirm(`Delete “${product.name}”? This cannot be undone.`)) return;
-    setBusyId(`del-${product.id}`);
+    const nextStatus = product.status === "publish" ? "draft" : "publish";
+    setBusyId(`status-${product.id}`);
     try {
-      const res = await fetch(`/api/admin/products/${product.id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Could not delete product.");
-      setRows((prev) => prev.filter((row) => row.id !== product.id));
-      setSelectedIds((prev) => prev.filter((id) => id !== product.id));
-      if (quickEditId === product.id) setQuickEditId(null);
+      const updated = await patchProduct(product.id, { status: nextStatus });
+      replaceRow(updated);
       router.refresh();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Could not delete product.");
+      window.alert(error instanceof Error ? error.message : "Could not update status.");
     } finally {
       setBusyId(null);
     }
@@ -915,10 +911,10 @@ export function AdminProductsTable({
                       />
                     ) : null}
                   </th>
-                  <th className="sticky left-12 z-20 min-w-[7.5rem] bg-card px-3 py-3 shadow-[6px_0_10px_-8px_rgba(0,0,0,0.8)]">
+                  <th className="sticky left-12 z-20 w-[5.5rem] min-w-[5.5rem] max-w-[5.5rem] bg-card px-1 py-3 shadow-[6px_0_10px_-8px_rgba(0,0,0,0.8)] md:w-auto md:min-w-[7.5rem] md:max-w-none md:px-3">
                     Actions
                   </th>
-                  <th className="px-4 py-3">Image</th>
+                  <th className="hidden px-4 py-3 md:table-cell">Image</th>
                   <th className="cursor-pointer px-4 py-3" onClick={() => toggleSort("name")}>
                     Name{sortMark("name")}
                   </th>
@@ -961,7 +957,7 @@ export function AdminProductsTable({
                       >
                         <td
                           className={`sticky left-0 z-20 w-12 px-3 py-3 ${
-                            open ? "bg-[#241410]" : "bg-card"
+                            open ? "bg-[#241410]" : dirty ? "bg-amber-950/40" : "bg-card"
                           }`}
                         >
                           {admin ? (
@@ -979,7 +975,7 @@ export function AdminProductsTable({
                           ) : null}
                         </td>
                         <td
-                          className={`sticky left-12 z-20 min-w-[8.5rem] px-2 py-2 shadow-[6px_0_10px_-8px_rgba(0,0,0,0.8)] md:min-w-[7.5rem] md:px-3 md:py-3 ${
+                          className={`sticky left-12 z-20 w-[5.5rem] min-w-[5.5rem] max-w-[5.5rem] px-1 py-2 shadow-[6px_0_10px_-8px_rgba(0,0,0,0.8)] md:w-auto md:min-w-[7.5rem] md:max-w-none md:px-3 md:py-3 ${
                             open ? "bg-[#241410]" : dirty ? "bg-amber-950/40" : "bg-card"
                           }`}
                         >
@@ -1009,10 +1005,18 @@ export function AdminProductsTable({
                                 </button>
                                 <button
                                   type="button"
-                                  title="Delete"
-                                  disabled={busyId === `del-${product.id}`}
-                                  onClick={() => void deleteProduct(product)}
-                                  className="p-1.5 text-red-400 hover:bg-red-950/50 hover:text-red-300 disabled:opacity-50"
+                                  title={
+                                    product.status === "publish"
+                                      ? "Active — click to set inactive"
+                                      : "Inactive — click to set active"
+                                  }
+                                  disabled={busyId === `status-${product.id}`}
+                                  onClick={() => void toggleProductStatus(product)}
+                                  className={`hidden p-1.5 disabled:opacity-50 md:inline-flex ${
+                                    product.status === "publish"
+                                      ? "text-emerald-400 hover:bg-emerald-950/40 hover:text-emerald-300"
+                                      : "text-red-400 hover:bg-red-950/50 hover:text-red-300"
+                                  }`}
                                 >
                                   <Trash2 className="size-4" />
                                 </button>
@@ -1030,7 +1034,7 @@ export function AdminProductsTable({
                             </div>
                           ) : null}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="hidden px-4 py-3 md:table-cell">
                           {src ? (
                             <img
                               src={src}

@@ -237,6 +237,14 @@ If backend is restarting:
   docker compose logs backend
   Typical cause: wrong MYSQL_PASSWORD or missing /var/run/mysqld/mysqld.sock
 
+  If MariaDB is fine (systemctl status ok, socket exists) but backend still
+  cannot connect until you force-recreate: that is a STALE SOCKET mount.
+  Docker had mounted the old .sock inode; after mysqld restart the file is new.
+  compose mounts /var/run/mysqld (the directory), not only mysqld.sock.
+  Fix once:
+    docker compose up -d --force-recreate backend
+  After that, MariaDB restarts should not require recreating backend.
+
 
 ------------------------------------------------------------------------
 12) Create the first admin user
