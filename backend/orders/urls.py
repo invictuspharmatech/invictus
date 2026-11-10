@@ -32,6 +32,8 @@ urlpatterns = [
     path("admin/analytics/sales-charts/", analytics_views.analytics_sales_charts_view),
     path("admin/orders/", views.admin_orders_view),
     path("admin/orders/bulk-status/", views.admin_orders_bulk_status_view),
+    path("admin/orders/bulk-delete/", views.admin_orders_bulk_delete_view),
+    path("admin/orders/bulk-restore/", views.admin_orders_bulk_restore_view),
     path("admin/orders/customers-search/", views.admin_order_customers_search),
     path("admin/orders/customer-lookup/", views.admin_order_customer_lookup),
     path("admin/orders/preview/", views.admin_order_preview),

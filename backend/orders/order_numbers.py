@@ -62,7 +62,7 @@ def allocate_order_number(warehouse: str) -> str:
     for _ in range(SEQUENCE_MAX):
         seq = _allocate_sequence(year, wh)
         candidate = f"{year}W{wh}{str(seq).zfill(SEQUENCE_WIDTH)}"
-        if not Order.objects.filter(order_number=candidate).exists():
+        if not Order.all_objects.filter(order_number=candidate).exists():
             return candidate
     raise ValueError(
         f"All {SEQUENCE_MAX} order numbers for warehouse {wh} in {year} are in use."

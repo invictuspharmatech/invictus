@@ -90,6 +90,7 @@ export type ApiOrder = {
   discountTotal?: number;
   shippingWaived?: boolean;
   createdAt: string;
+  deletedAt?: string | null;
   trackingNumber?: string;
   userId?: string | null;
   shippingLine1?: string;

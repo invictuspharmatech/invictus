@@ -19,6 +19,7 @@ from accounts.permissions import (
     IsPortalStaff,
     IsStoreStaff,
     is_full_admin,
+    is_superuser,
     managed_warehouse,
 )
 from catalog.models import Category, Product
@@ -415,7 +416,13 @@ def account_summary_view(request):
 @api_view(["GET"])
 @permission_classes([IsPortalStaff])
 def admin_orders_view(request):
-    qs = Order.objects.prefetch_related("items", "btc_invoices", "shipping_labels").all()
+    trashed = request.GET.get("trashed") in ("1", "true", "yes")
+    if trashed and not is_superuser(request.user):
+        return Response({"error": "Forbidden."}, status=403)
+    base_manager = Order.all_objects if trashed else Order.objects
+    qs = base_manager.prefetch_related("items", "btc_invoices", "shipping_labels").all()
+    if trashed:
+        qs = qs.trashed()
     warehouse = managed_warehouse(request.user)
     if warehouse:
         qs = qs.filter(warehouse=warehouse)
@@ -443,13 +450,21 @@ def admin_orders_view(request):
         qs = qs.filter(created_at__date__gte=date_from)
     if date_to:
         qs = qs.filter(created_at__date__lte=date_to)
-    base = Order.objects.all()
+    base = base_manager.all()
+    if trashed:
+        base = base.trashed()
     if warehouse:
         base = base.filter(warehouse=warehouse)
     elif requested_warehouse in (Order.Warehouse.WAREHOUSE_1, Order.Warehouse.WAREHOUSE_2):
         base = base.filter(warehouse=requested_warehouse)
     counts = tab_counts(base)
-    return Response({"orders": OrderSerializer(qs[:300], many=True).data, "counts": counts})
+    return Response(
+        {
+            "orders": OrderSerializer(qs[:300], many=True).data,
+            "counts": counts,
+            "trashed": trashed,
+        }
+    )
 
 
 def _staff_order(request, pk) -> Order | Response:
@@ -987,6 +1002,35 @@ def admin_orders_bulk_status_view(request):
         send_order_status_event(order)
         updated += 1
     return Response({"ok": True, "updated": updated})
+
+
+@api_view(["POST"])
+@permission_classes([IsPortalStaff])
+def admin_orders_bulk_delete_view(request):
+    """Soft-delete orders (move to trash). Full admins only."""
+    if not is_full_admin(request.user):
+        return Response({"error": "Forbidden."}, status=403)
+    ids = request.data.get("ids") or []
+    if not isinstance(ids, list) or not ids:
+        return Response({"error": "Select at least one order."}, status=400)
+    now = timezone.now()
+    qs = Order.objects.filter(pk__in=ids, deleted_at__isnull=True)
+    updated = qs.update(deleted_at=now)
+    return Response({"ok": True, "deleted": updated})
+
+
+@api_view(["POST"])
+@permission_classes([IsPortalStaff])
+def admin_orders_bulk_restore_view(request):
+    """Restore soft-deleted orders from trash. Superuser only."""
+    if not is_superuser(request.user):
+        return Response({"error": "Forbidden."}, status=403)
+    ids = request.data.get("ids") or []
+    if not isinstance(ids, list) or not ids:
+        return Response({"error": "Select at least one order."}, status=400)
+    qs = Order.all_objects.filter(pk__in=ids, deleted_at__isnull=False)
+    updated = qs.update(deleted_at=None)
+    return Response({"ok": True, "restored": updated})
 
 
 @api_view(["POST"])

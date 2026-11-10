@@ -5,7 +5,7 @@ import { Fragment, useCallback, useEffect, useState } from "react";
 import { ArrowRightCircle, Check, Eye, Pencil, Printer } from "lucide-react";
 import { STAFF_ORDER_STATUSES, formatOrderStatus, orderStatusTab } from "@/lib/enums";
 import { formatMoney } from "@/lib/constants";
-import { isFullAdmin } from "@/lib/roles";
+import { isFullAdmin, isSuperuser } from "@/lib/roles";
 import { warehouseLabel, warehouseShort } from "@/lib/warehouse";
 import { OrderAddressQuickEdit } from "@/components/admin/OrderAddressQuickEdit";
 import { OrderItemsQuickEdit } from "@/components/admin/OrderItemsQuickEdit";
@@ -44,12 +44,16 @@ export function OrdersBoard({
   role,
   initialStatus = "all",
   initialWarehouse = "BOTH",
+  initialTrashed = false,
 }: {
   role: string;
   initialStatus?: string;
   initialWarehouse?: string;
+  initialTrashed?: boolean;
 }) {
   const admin = isFullAdmin(role);
+  const superuser = isSuperuser(role);
+  const trashed = superuser && initialTrashed;
   const [orders, setOrders] = useState<ApiOrder[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -88,6 +92,7 @@ export function OrdersBoard({
     if (dateFrom) params.set("dateFrom", dateFrom);
     if (dateTo) params.set("dateTo", dateTo);
     if (admin && warehouse !== "BOTH") params.set("warehouse", warehouse);
+    if (trashed) params.set("trashed", "1");
     const response = await fetch(`/api/admin/orders?${params.toString()}`);
     const payload = (await response.json().catch(() => null)) as
       | AdminOrdersResponse
@@ -105,7 +110,7 @@ export function OrdersBoard({
     setOrders(payload.orders);
     setCounts(payload.counts || {});
     setSelected([]);
-  }, [admin, appliedSearch, dateFrom, dateTo, status, warehouse]);
+  }, [admin, appliedSearch, dateFrom, dateTo, status, trashed, warehouse]);
 
   useEffect(() => {
     void load();
@@ -133,6 +138,48 @@ export function OrdersBoard({
     if (!bulkStatus || selected.length === 0) return;
     if (bulkStatus === "create_labels") {
       openLabelModal(selectedOrders());
+      return;
+    }
+    if (bulkStatus === "soft_delete") {
+      if (
+        !window.confirm(
+          `Move ${selected.length} selected order${selected.length === 1 ? "" : "s"} to trash? You can restore them later from Trash (super admin).`,
+        )
+      ) {
+        return;
+      }
+      const response = await fetch("/api/admin/orders/bulk-delete", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ids: selected }),
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(payload?.error || "Could not move orders to trash.");
+        return;
+      }
+      await load();
+      return;
+    }
+    if (bulkStatus === "restore") {
+      if (
+        !window.confirm(
+          `Restore ${selected.length} selected order${selected.length === 1 ? "" : "s"} from trash?`,
+        )
+      ) {
+        return;
+      }
+      const response = await fetch("/api/admin/orders/bulk-restore", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ids: selected }),
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(payload?.error || "Could not restore orders.");
+        return;
+      }
+      await load();
       return;
     }
     const response = await fetch("/api/admin/orders/bulk-status", {
@@ -192,21 +239,35 @@ export function OrdersBoard({
     <div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="display-font text-3xl">Orders</h1>
+          <h1 className="display-font text-3xl">{trashed ? "Orders trash" : "Orders"}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Eye quick-edits the ship-to address; pencil quick-edits line items. Click the order
-            number for the full order page. Status changes use row actions or bulk menu.
+            {trashed
+              ? "Soft-deleted orders. Super admin can restore selected rows back to the live list."
+              : "Eye quick-edits the ship-to address; pencil quick-edits line items. Click the order number for the full order page. Status changes use row actions or bulk menu."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {admin ? (
-            <Link href="/admin/orders/create" className="gold-btn">
-              Create order
+          {trashed ? (
+            <Link href="/admin/orders" className="ghost-btn">
+              Back to orders
             </Link>
-          ) : null}
-          <Link href="/admin/orders/summary" className="ghost-btn">
-            Order summary
-          </Link>
+          ) : (
+            <>
+              {admin ? (
+                <Link href="/admin/orders/create" className="gold-btn">
+                  Create order
+                </Link>
+              ) : null}
+              <Link href="/admin/orders/summary" className="ghost-btn">
+                Order summary
+              </Link>
+              {superuser ? (
+                <Link href="/admin/orders?trashed=1" className="ghost-btn">
+                  Trash
+                </Link>
+              ) : null}
+            </>
+          )}
           <p className="text-sm text-muted-foreground">{counts.all ?? orders.length} orders</p>
         </div>
       </div>
@@ -283,12 +344,19 @@ export function OrdersBoard({
             onChange={(event) => setBulkStatus(event.target.value)}
           >
             <option value="">Bulk actions</option>
-            {BULK_STATUSES.map((item) => (
-              <option key={item} value={item}>
-                Mark {formatOrderStatus(item)}
-              </option>
-            ))}
-            <option value="create_labels">Create Bitcoin Postage labels</option>
+            {trashed ? (
+              superuser ? <option value="restore">Restore from trash</option> : null
+            ) : (
+              <>
+                {BULK_STATUSES.map((item) => (
+                  <option key={item} value={item}>
+                    Mark {formatOrderStatus(item)}
+                  </option>
+                ))}
+                <option value="create_labels">Create Bitcoin Postage labels</option>
+                {admin ? <option value="soft_delete">Move to trash</option> : null}
+              </>
+            )}
           </select>
           <button
             type="button"
@@ -394,64 +462,66 @@ export function OrdersBoard({
                               aria-label={`Select order ${order.orderNumber}`}
                             />
                           </label>
-                          <div className="grid shrink-0 grid-cols-[2rem_2rem] gap-1">
-                            <button
-                              type="button"
-                              className={`${actionIconBtn} ${addressOpen ? "bg-signal/20" : ""}`}
-                              title="Quick edit customer address"
-                              onClick={() => toggleQuickEdit(order.id, "address")}
-                            >
-                              <Eye className="size-4" aria-hidden />
-                            </button>
-                            <button
-                              type="button"
-                              className={`${actionIconBtn} ${itemsOpen ? "bg-signal/20" : ""}`}
-                              title="Quick edit order items"
-                              onClick={() => toggleQuickEdit(order.id, "items")}
-                            >
-                              <Pencil className="size-4" aria-hidden />
-                            </button>
-                            <button
-                              type="button"
-                              className={actionIconBtn}
-                              title={
-                                statusIds.length > 1
-                                  ? `Move ${statusIds.length} selected to processing`
-                                  : "Move to processing"
-                              }
-                              onClick={() =>
-                                void setStatuses(
-                                  statusIds,
-                                  "PROCESSING",
+                          {!trashed ? (
+                            <div className="grid shrink-0 grid-cols-[2rem_2rem] gap-1">
+                              <button
+                                type="button"
+                                className={`${actionIconBtn} ${addressOpen ? "bg-signal/20" : ""}`}
+                                title="Quick edit customer address"
+                                onClick={() => toggleQuickEdit(order.id, "address")}
+                              >
+                                <Eye className="size-4" aria-hidden />
+                              </button>
+                              <button
+                                type="button"
+                                className={`${actionIconBtn} ${itemsOpen ? "bg-signal/20" : ""}`}
+                                title="Quick edit order items"
+                                onClick={() => toggleQuickEdit(order.id, "items")}
+                              >
+                                <Pencil className="size-4" aria-hidden />
+                              </button>
+                              <button
+                                type="button"
+                                className={actionIconBtn}
+                                title={
                                   statusIds.length > 1
-                                    ? `Move ${statusIds.length} selected orders to processing?`
-                                    : `Move order ${order.orderNumber} to processing?`,
-                                )
-                              }
-                            >
-                              <ArrowRightCircle className="size-4" aria-hidden />
-                            </button>
-                            <button
-                              type="button"
-                              className={actionIconBtn}
-                              title={
-                                statusIds.length > 1
-                                  ? `Mark ${statusIds.length} selected as completed`
-                                  : "Mark as complete"
-                              }
-                              onClick={() =>
-                                void setStatuses(
-                                  statusIds,
-                                  "COMPLETED",
+                                    ? `Move ${statusIds.length} selected to processing`
+                                    : "Move to processing"
+                                }
+                                onClick={() =>
+                                  void setStatuses(
+                                    statusIds,
+                                    "PROCESSING",
+                                    statusIds.length > 1
+                                      ? `Move ${statusIds.length} selected orders to processing?`
+                                      : `Move order ${order.orderNumber} to processing?`,
+                                  )
+                                }
+                              >
+                                <ArrowRightCircle className="size-4" aria-hidden />
+                              </button>
+                              <button
+                                type="button"
+                                className={actionIconBtn}
+                                title={
                                   statusIds.length > 1
-                                    ? `Mark ${statusIds.length} selected orders as completed?`
-                                    : `Mark order ${order.orderNumber} as completed?`,
-                                )
-                              }
-                            >
-                              <Check className="size-4" aria-hidden />
-                            </button>
-                          </div>
+                                    ? `Mark ${statusIds.length} selected as completed`
+                                    : "Mark as complete"
+                                }
+                                onClick={() =>
+                                  void setStatuses(
+                                    statusIds,
+                                    "COMPLETED",
+                                    statusIds.length > 1
+                                      ? `Mark ${statusIds.length} selected orders as completed?`
+                                      : `Mark order ${order.orderNumber} as completed?`,
+                                  )
+                                }
+                              >
+                                <Check className="size-4" aria-hidden />
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
                       </td>
                       <td className="px-3 py-2 align-middle">
@@ -467,6 +537,11 @@ export function OrdersBoard({
                       </td>
                       <td className="px-3 py-2 align-middle text-xs whitespace-nowrap text-muted-foreground">
                         {formatDate(order.createdAt)}
+                        {trashed && order.deletedAt ? (
+                          <p className="mt-1 text-[10px] uppercase tracking-wide text-brand-red">
+                            trashed {formatDate(order.deletedAt)}
+                          </p>
+                        ) : null}
                       </td>
                       <td className="px-3 py-2 align-middle whitespace-nowrap">
                         <OrderStatusBadge status={order.status} />

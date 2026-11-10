@@ -37,6 +37,7 @@ class OrderSerializer(serializers.ModelSerializer):
     discountTotal = serializers.FloatField(source="discount_total")
     shippingWaived = serializers.BooleanField(source="shipping_waived")
     createdAt = serializers.DateTimeField(source="created_at")
+    deletedAt = serializers.DateTimeField(source="deleted_at", allow_null=True, required=False)
     paymentStatus = serializers.CharField(source="payment_status")
     paymentMethod = serializers.CharField(source="payment_method")
     trackingNumber = serializers.CharField(source="tracking_number")
@@ -73,6 +74,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "discountTotal",
             "shippingWaived",
             "createdAt",
+            "deletedAt",
             "trackingNumber",
             "userId",
             "shippingLine1",

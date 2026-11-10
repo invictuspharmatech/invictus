@@ -51,6 +51,19 @@ class Coupon(models.Model):
         return self.code
 
 
+class OrderQuerySet(models.QuerySet):
+    def alive(self):
+        return self.filter(deleted_at__isnull=True)
+
+    def trashed(self):
+        return self.filter(deleted_at__isnull=False)
+
+
+class AliveOrderManager(models.Manager.from_queryset(OrderQuerySet)):
+    def get_queryset(self):
+        return super().get_queryset().alive()
+
+
 class Order(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
@@ -74,6 +87,9 @@ class Order(models.Model):
         PAID = "PAID", "Paid"
         PARTIAL = "PARTIAL", "Partial"
         FAILED = "FAILED", "Failed"
+
+    objects = AliveOrderManager()
+    all_objects = models.Manager.from_queryset(OrderQuerySet)()
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order_number = models.CharField(max_length=64, unique=True)
@@ -133,6 +149,7 @@ class Order(models.Model):
     paid_at = models.DateTimeField(null=True, blank=True)
     shipped_at = models.DateTimeField(null=True, blank=True)
     tracking_number = models.CharField(max_length=120, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
     class Meta:
         ordering = ["-created_at"]
