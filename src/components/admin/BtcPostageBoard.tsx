@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Check, Copy } from "lucide-react";
 import type {
   ApiPostageAccount,
   ApiPostageCredits,
@@ -8,6 +9,8 @@ import type {
   ApiPostageSettings,
 } from "@/lib/api-types";
 import { warehouseLabel } from "@/lib/warehouse";
+
+const CREDIT_WAREHOUSES = ["WAREHOUSE_1", "WAREHOUSE_2"] as const;
 
 const EMPTY_SENDER = {
   warehouse: "",
@@ -20,6 +23,16 @@ const EMPTY_SENDER = {
   fromCountry: "US",
   isDefault: false,
 };
+
+async function copyText(value: string) {
+  if (!value) return false;
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 type AccountDraft = {
   warehouse: string;
@@ -69,11 +82,20 @@ function draftsFromSettings(settings: ApiPostageSettings): AccountDraft[] {
 
 export function BtcPostageBoard({ settings }: { settings: ApiPostageSettings }) {
   const [accounts, setAccounts] = useState<AccountDraft[]>(() => draftsFromSettings(settings));
-  const [creditsWarehouse, setCreditsWarehouse] = useState("WAREHOUSE_1");
-  const [credits, setCredits] = useState("");
-  const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState("btc");
-  const [charge, setCharge] = useState<ApiPostageCredits | null>(null);
+  const [creditsByWarehouse, setCreditsByWarehouse] = useState<Record<string, string>>({});
+  const [amountByWarehouse, setAmountByWarehouse] = useState<Record<string, string>>({
+    WAREHOUSE_1: "",
+    WAREHOUSE_2: "",
+  });
+  const [currencyByWarehouse, setCurrencyByWarehouse] = useState<Record<string, string>>({
+    WAREHOUSE_1: "btc",
+    WAREHOUSE_2: "btc",
+  });
+  const [chargeByWarehouse, setChargeByWarehouse] = useState<Record<string, ApiPostageCredits | null>>(
+    {},
+  );
+  const [creditErrorByWarehouse, setCreditErrorByWarehouse] = useState<Record<string, string>>({});
+  const [copiedKey, setCopiedKey] = useState("");
   const [senders, setSenders] = useState<ApiPostageSender[]>([]);
   const [senderForm, setSenderForm] = useState(EMPTY_SENDER);
   const [error, setError] = useState("");
@@ -86,13 +108,16 @@ export function BtcPostageBoard({ settings }: { settings: ApiPostageSettings }) 
     );
     const data = (await response.json().catch(() => null)) as ApiPostageCredits | { error?: string } | null;
     if (!response.ok || !data || !("credits" in data)) {
-      setCredits("");
-      setError(
-        data && "error" in data ? data.error || "Could not load credits." : "Could not load credits.",
-      );
+      setCreditsByWarehouse((current) => ({ ...current, [warehouse]: "" }));
+      setCreditErrorByWarehouse((current) => ({
+        ...current,
+        [warehouse]:
+          data && "error" in data ? data.error || "Could not load credits." : "Could not load credits.",
+      }));
       return;
     }
-    setCredits(data.credits);
+    setCreditsByWarehouse((current) => ({ ...current, [warehouse]: data.credits }));
+    setCreditErrorByWarehouse((current) => ({ ...current, [warehouse]: "" }));
   }, []);
 
   const loadSenders = useCallback(async () => {
@@ -102,9 +127,20 @@ export function BtcPostageBoard({ settings }: { settings: ApiPostageSettings }) 
   }, []);
 
   useEffect(() => {
-    void loadCredits(creditsWarehouse);
+    for (const warehouse of CREDIT_WAREHOUSES) {
+      void loadCredits(warehouse);
+    }
     void loadSenders();
-  }, [creditsWarehouse, loadCredits, loadSenders]);
+  }, [loadCredits, loadSenders]);
+
+  async function handleCopy(key: string, value: string) {
+    const ok = await copyText(value);
+    if (!ok) return;
+    setCopiedKey(key);
+    window.setTimeout(() => {
+      setCopiedKey((current) => (current === key ? "" : current));
+    }, 1500);
+  }
 
   function updateAccount(warehouse: string, patch: Partial<AccountDraft>) {
     setAccounts((current) =>
@@ -219,77 +255,167 @@ export function BtcPostageBoard({ settings }: { settings: ApiPostageSettings }) 
         </button>
       </section>
 
-      <section className="tile max-w-xl">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg">Label credits</h2>
-            <p className="mt-1 text-3xl">{credits ? `$${credits}` : "—"}</p>
-          </div>
-          <button type="button" className="ghost-btn" onClick={() => void loadCredits(creditsWarehouse)}>
-            Refresh
-          </button>
+      <section className="tile space-y-4">
+        <div>
+          <h2 className="text-lg">Label credits</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Balance and top-up for each warehouse account, shown side by side.
+          </p>
         </div>
-        <div className="mt-4 grid gap-3">
-          <label className="grid gap-1 text-sm">
-            Account / warehouse
-            <select
-              className="field"
-              value={creditsWarehouse}
-              onChange={(event) => setCreditsWarehouse(event.target.value)}
-            >
-              <option value="WAREHOUSE_1">Warehouse 1</option>
-              <option value="WAREHOUSE_2">Warehouse 2</option>
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm">
-            Amount (USD)
-            <input className="field" value={amount} onChange={(event) => setAmount(event.target.value)} />
-          </label>
-          <label className="grid gap-1 text-sm">
-            Pay with
-            <select className="field" value={currency} onChange={(event) => setCurrency(event.target.value)}>
-              <option value="btc">Bitcoin</option>
-              <option value="ltc">Litecoin</option>
-              <option value="xmr">Monero</option>
-            </select>
-          </label>
-          <button
-            type="button"
-            className="gold-btn max-w-48"
-            disabled={busy === "charge"}
-            onClick={async () => {
-              setBusy("charge");
-              setError("");
-              setCharge(null);
-              const response = await fetch("/api/admin/btcpostage/charge", {
-                method: "POST",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify({ amount, currency, warehouse: creditsWarehouse }),
-              });
-              const data = (await response.json().catch(() => null)) as
-                | ApiPostageCredits
-                | { error?: string }
-                | null;
-              setBusy("");
-              if (!response.ok || !data || !("credits" in data)) {
-                setError(
-                  data && "error" in data ? data.error || "Purchase failed." : "Purchase failed.",
-                );
-                return;
-              }
-              setCharge(data);
-              if (data.credits) setCredits(data.credits);
-            }}
-          >
-            Add funds
-          </button>
+        <div className="grid gap-6 lg:grid-cols-2">
+          {CREDIT_WAREHOUSES.map((warehouse) => {
+            const credits = creditsByWarehouse[warehouse] || "";
+            const amount = amountByWarehouse[warehouse] || "";
+            const currency = currencyByWarehouse[warehouse] || "btc";
+            const charge = chargeByWarehouse[warehouse] || null;
+            const creditError = creditErrorByWarehouse[warehouse] || "";
+            const chargeBusy = busy === `charge-${warehouse}`;
+            const amountCopyKey = `amount-${warehouse}`;
+            const addressCopyKey = `address-${warehouse}`;
+            const payAmount = charge?.amount || "";
+            const payCurrency = (charge?.currency || currency).toUpperCase();
+            const payAddress = charge?.address || "";
+            return (
+              <div key={warehouse} className="grid gap-3 rounded border border-border/50 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-medium">{warehouseLabel(warehouse)}</h3>
+                    <p className="mt-1 text-3xl">{credits ? `$${credits}` : "—"}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    disabled={busy === `credits-${warehouse}`}
+                    onClick={() => {
+                      setBusy(`credits-${warehouse}`);
+                      void loadCredits(warehouse).finally(() => setBusy(""));
+                    }}
+                  >
+                    Refresh
+                  </button>
+                </div>
+                <div className="grid gap-3">
+                  <label className="grid gap-1 text-sm">
+                    Amount (USD)
+                    <input
+                      className="field"
+                      value={amount}
+                      onChange={(event) =>
+                        setAmountByWarehouse((current) => ({
+                          ...current,
+                          [warehouse]: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                  <label className="grid gap-1 text-sm">
+                    Pay with
+                    <select
+                      className="field"
+                      value={currency}
+                      onChange={(event) =>
+                        setCurrencyByWarehouse((current) => ({
+                          ...current,
+                          [warehouse]: event.target.value,
+                        }))
+                      }
+                    >
+                      <option value="btc">Bitcoin</option>
+                      <option value="ltc">Litecoin</option>
+                      <option value="xmr">Monero</option>
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    className="gold-btn max-w-48"
+                    disabled={chargeBusy}
+                    onClick={async () => {
+                      setBusy(`charge-${warehouse}`);
+                      setCreditErrorByWarehouse((current) => ({ ...current, [warehouse]: "" }));
+                      setChargeByWarehouse((current) => ({ ...current, [warehouse]: null }));
+                      const response = await fetch("/api/admin/btcpostage/charge", {
+                        method: "POST",
+                        headers: { "content-type": "application/json" },
+                        body: JSON.stringify({ amount, currency, warehouse }),
+                      });
+                      const data = (await response.json().catch(() => null)) as
+                        | ApiPostageCredits
+                        | { error?: string }
+                        | null;
+                      setBusy("");
+                      if (!response.ok || !data || !("credits" in data)) {
+                        setCreditErrorByWarehouse((current) => ({
+                          ...current,
+                          [warehouse]:
+                            data && "error" in data
+                              ? data.error || "Purchase failed."
+                              : "Purchase failed.",
+                        }));
+                        return;
+                      }
+                      setChargeByWarehouse((current) => ({ ...current, [warehouse]: data }));
+                      if (data.credits) {
+                        setCreditsByWarehouse((current) => ({
+                          ...current,
+                          [warehouse]: data.credits,
+                        }));
+                      }
+                    }}
+                  >
+                    Add funds
+                  </button>
+                </div>
+                {payAddress ? (
+                  <div className="mt-1 space-y-3 rounded border border-border/40 bg-muted/20 p-3 text-sm">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                        Amount ({payCurrency})
+                      </p>
+                      <div className="mt-1 flex items-start gap-2">
+                        <p className="min-w-0 flex-1 break-all font-mono text-xs">{payAmount}</p>
+                        <button
+                          type="button"
+                          className="ghost-btn shrink-0 !px-2 !py-1"
+                          title="Copy amount"
+                          onClick={() => void handleCopy(amountCopyKey, payAmount)}
+                        >
+                          {copiedKey === amountCopyKey ? (
+                            <Check className="size-3.5" aria-hidden />
+                          ) : (
+                            <Copy className="size-3.5" aria-hidden />
+                          )}
+                          <span className="sr-only">Copy amount</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                        Address
+                      </p>
+                      <div className="mt-1 flex items-start gap-2">
+                        <p className="min-w-0 flex-1 break-all font-mono text-xs">{payAddress}</p>
+                        <button
+                          type="button"
+                          className="ghost-btn shrink-0 !px-2 !py-1"
+                          title="Copy address"
+                          onClick={() => void handleCopy(addressCopyKey, payAddress)}
+                        >
+                          {copiedKey === addressCopyKey ? (
+                            <Check className="size-3.5" aria-hidden />
+                          ) : (
+                            <Copy className="size-3.5" aria-hidden />
+                          )}
+                          <span className="sr-only">Copy address</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+                {creditError ? <p className="text-sm text-brand-red">{creditError}</p> : null}
+              </div>
+            );
+          })}
         </div>
-        {charge?.address ? (
-          <div className="mt-4 text-sm">
-            <p>Send {charge.amount} {(charge.currency || currency).toUpperCase()} to:</p>
-            <p className="mt-2 break-all font-mono text-xs">{charge.address}</p>
-          </div>
-        ) : null}
       </section>
 
       <section className="tile max-w-3xl">
