@@ -157,7 +157,7 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="relative z-30 border-b border-border/50">
+      <header className="sticky top-0 z-30 border-b border-border/50 bg-background/95 backdrop-blur-xl">
         <div className="mx-auto flex w-full items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-6">
             <Logo href="/admin" />

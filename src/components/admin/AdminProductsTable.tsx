@@ -282,7 +282,7 @@ export function AdminProductsTable({
   const [bulkWarehouse, setBulkWarehouse] = useState("WAREHOUSE_1");
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useState("active");
   const [stockStatus, setStockStatus] = useState<StockFilter>("");
   const [warehouseFilter, setWarehouseFilter] = useState<WarehouseFilter>("");
   const [featuredFilter, setFeaturedFilter] = useState<FeaturedFilter>("all");
@@ -377,7 +377,7 @@ export function AdminProductsTable({
   const pageRows = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
   const filtersOn =
     Boolean(search || categoryId || stockStatus || warehouseFilter) ||
-    status !== "all" ||
+    status !== "active" ||
     featuredFilter !== "all" ||
     newArrivalFilter !== "all";
 
@@ -642,7 +642,7 @@ export function AdminProductsTable({
   function clearFilters() {
     setSearch("");
     setCategoryId("");
-    setStatus("all");
+    setStatus("active");
     setStockStatus("");
     setWarehouseFilter("");
     setFeaturedFilter("all");

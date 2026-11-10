@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { ChevronDown, Menu } from "lucide-react";
 import { useCart } from "@/components/shop/CartProvider";
 import { HeaderAccountMenu } from "@/components/site/HeaderAccountMenu";
 import { HeaderSearch } from "@/components/site/HeaderSearch";
+import { MobileSlideOut } from "@/components/site/MobileSlideOut";
 import { PromoTicker, type PromoSlide } from "@/components/site/PromoTicker";
 import { isFullAdmin } from "@/lib/roles";
 import {
@@ -137,20 +138,6 @@ export function SiteHeader({
     setToolsOpen(false);
   }, [pathname]);
 
-  useEffect(() => {
-    if (!open) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = previous;
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
   if (pathname.startsWith("/admin")) {
     return null;
   }
@@ -220,129 +207,107 @@ export function SiteHeader({
         </div>
       </div>
 
-      {open ? (
-        <div
-          className="fixed inset-0 z-[200] xl:hidden"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Mobile menu"
+      <MobileSlideOut open={open} onClose={closeMenu} title="Menu" hiddenFrom="xl:hidden">
+        <HeaderSearch className="relative mb-3 w-full" inputId="mobile-header-search" />
+        <Link href="/" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
+          Home
+        </Link>
+        <MobileAccordion label="Shop" open={shopOpen} onToggle={() => setShopOpen((value) => !value)}>
+          {shop.map((item) => (
+            <Link
+              key={item.href + item.label}
+              href={item.href}
+              className={MOBILE_CHILD_LINK_CLASS}
+              onClick={closeMenu}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </MobileAccordion>
+        <MobileAccordion label="FAQ" open={faqOpen} onToggle={() => setFaqOpen((value) => !value)}>
+          <Link href="/faq" className={MOBILE_CHILD_LINK_CLASS} onClick={closeMenu}>
+            FAQ
+          </Link>
+          <Link href={TEST_RESULTS_LINK.href} className={MOBILE_CHILD_LINK_CLASS} onClick={closeMenu}>
+            {TEST_RESULTS_LINK.label}
+          </Link>
+          {POLICY_LINKS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={MOBILE_CHILD_LINK_CLASS}
+              onClick={closeMenu}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </MobileAccordion>
+        <MobileAccordion
+          label="Tools & resources"
+          open={toolsOpen}
+          onToggle={() => setToolsOpen((value) => !value)}
         >
-          <div
-            className="absolute inset-0 bg-ink/70"
-            aria-hidden
-            onClick={closeMenu}
-          />
-          <div className="absolute inset-y-0 right-0 z-10 flex w-full max-w-sm flex-col overflow-hidden border-l border-border bg-background text-foreground shadow-2xl">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <span className={`${MOBILE_TYPE_CLASS} text-foreground`}>Menu</span>
-              <button type="button" className="p-2" aria-label="Close menu" onClick={closeMenu}>
-                <X className="size-6" />
-              </button>
-            </div>
-            <div className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain p-4">
-              <HeaderSearch className="relative mb-3 w-full" inputId="mobile-header-search" />
-              <Link href="/" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
-                Home
-              </Link>
-              <MobileAccordion label="Shop" open={shopOpen} onToggle={() => setShopOpen((value) => !value)}>
-                {shop.map((item) => (
-                  <Link
-                    key={item.href + item.label}
-                    href={item.href}
-                    className={MOBILE_CHILD_LINK_CLASS}
-                    onClick={closeMenu}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </MobileAccordion>
-              <MobileAccordion label="FAQ" open={faqOpen} onToggle={() => setFaqOpen((value) => !value)}>
-                <Link href="/faq" className={MOBILE_CHILD_LINK_CLASS} onClick={closeMenu}>
-                  FAQ
-                </Link>
-                <Link href={TEST_RESULTS_LINK.href} className={MOBILE_CHILD_LINK_CLASS} onClick={closeMenu}>
-                  {TEST_RESULTS_LINK.label}
-                </Link>
-                {POLICY_LINKS.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={MOBILE_CHILD_LINK_CLASS}
-                    onClick={closeMenu}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </MobileAccordion>
-              <MobileAccordion
-                label="Tools & resources"
-                open={toolsOpen}
-                onToggle={() => setToolsOpen((value) => !value)}
-              >
-                {TOOL_LINKS.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={MOBILE_CHILD_LINK_CLASS}
-                    onClick={closeMenu}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </MobileAccordion>
-              <Link href="/contact" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
-                Contact
-              </Link>
-              <Link href={accountHref} className={MOBILE_LINK_CLASS} onClick={closeMenu}>
-                My account
-              </Link>
-              {session ? (
-                <Link href="/account/orders" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
-                  Orders
-                </Link>
-              ) : null}
-              {session ? (
-                <Link href="/account/profile" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
-                  Profile
-                </Link>
-              ) : null}
-              {session?.isAffiliate ? (
-                <Link href="/account/affiliate" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
-                  Affiliate tracking
-                </Link>
-              ) : null}
-              {showAdmin ? (
-                <Link href="/admin" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
-                  Admin
-                </Link>
-              ) : null}
-              {session ? (
-                <button
-                  type="button"
-                  className={`w-full text-left ${MOBILE_LINK_CLASS}`}
-                  onClick={() => {
-                    closeMenu();
-                    void fetch("/api/auth/logout", { method: "POST" }).then(() => {
-                      router.push("/");
-                      router.refresh();
-                    });
-                  }}
-                >
-                  Sign out
-                </button>
-              ) : null}
-              <Link
-                href="/cart"
-                className={`flex items-center justify-between rounded-sm px-3 py-3 ${MOBILE_TYPE_CLASS}`}
-                onClick={closeMenu}
-              >
-                Cart
-                <CartCount count={count} />
-              </Link>
-            </div>
-          </div>
-        </div>
-      ) : null}
+          {TOOL_LINKS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={MOBILE_CHILD_LINK_CLASS}
+              onClick={closeMenu}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </MobileAccordion>
+        <Link href="/contact" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
+          Contact
+        </Link>
+        <Link href={accountHref} className={MOBILE_LINK_CLASS} onClick={closeMenu}>
+          My account
+        </Link>
+        {session ? (
+          <Link href="/account/orders" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
+            Orders
+          </Link>
+        ) : null}
+        {session ? (
+          <Link href="/account/profile" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
+            Profile
+          </Link>
+        ) : null}
+        {session?.isAffiliate ? (
+          <Link href="/account/affiliate" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
+            Affiliate tracking
+          </Link>
+        ) : null}
+        {showAdmin ? (
+          <Link href="/admin" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
+            Admin
+          </Link>
+        ) : null}
+        {session ? (
+          <button
+            type="button"
+            className={`w-full text-left ${MOBILE_LINK_CLASS}`}
+            onClick={() => {
+              closeMenu();
+              void fetch("/api/auth/logout", { method: "POST" }).then(() => {
+                router.push("/");
+                router.refresh();
+              });
+            }}
+          >
+            Sign out
+          </button>
+        ) : null}
+        <Link
+          href="/cart"
+          className={`flex items-center justify-between rounded-sm px-3 py-3 ${MOBILE_TYPE_CLASS}`}
+          onClick={closeMenu}
+        >
+          Cart
+          <CartCount count={count} />
+        </Link>
+      </MobileSlideOut>
     </header>
   );
 }
