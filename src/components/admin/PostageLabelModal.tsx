@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ApiOrder, ApiPostageSender } from "@/lib/api-types";
+import { warehouseShort } from "@/lib/warehouse";
 
 export const MAX_BTCPOSTAGE_LABEL_BATCH = 10;
 
@@ -13,20 +14,17 @@ const PACKAGE_PRESETS = [
 ] as const;
 
 const USPS_PACKAGE_TYPES = [
-  {
-    value: "USPScustom",
-    label: "Custom Box/Package",
-  },
+  { value: "USPScustom", label: "Custom Box/Package" },
   { value: "Parcel", label: "Parcel" },
   { value: "LargeParcel", label: "Large Parcel" },
   { value: "Flat", label: "Flat" },
   {
     value: "FlatRateEnvelope",
-    label: "Flat Rate Envelope (12.5\" × 9.5\")",
+    label: 'Flat Rate Envelope (12.5" × 9.5")',
   },
   {
     value: "MediumFlatRateBox",
-    label: "Medium Flat Rate Box (11\" × 8.5\" × 5.5\")",
+    label: 'Medium Flat Rate Box (11" × 8.5" × 5.5")',
   },
 ] as const;
 
@@ -41,7 +39,7 @@ function flatRateDimensions(packageType: string) {
   return { length: "12.5", width: "9.5", height: "0.75" };
 }
 
-type LabelForm = {
+type SenderForm = {
   fromName: string;
   fromStreet: string;
   fromApt: string;
@@ -49,6 +47,9 @@ type LabelForm = {
   fromState: string;
   fromZip: string;
   fromCountry: string;
+};
+
+type RecipientForm = {
   toName: string;
   toStreet: string;
   toStreet2: string;
@@ -56,6 +57,9 @@ type LabelForm = {
   toState: string;
   toZip: string;
   toCountry: string;
+};
+
+type PackageForm = {
   carrier: string;
   packageType: string;
   service: string;
@@ -64,10 +68,9 @@ type LabelForm = {
   length: string;
   width: string;
   height: string;
-  testMode: boolean;
 };
 
-function emptyForm(order?: ApiOrder): LabelForm {
+function emptySender(): SenderForm {
   return {
     fromName: "",
     fromStreet: "",
@@ -76,6 +79,11 @@ function emptyForm(order?: ApiOrder): LabelForm {
     fromState: "",
     fromZip: "",
     fromCountry: "US",
+  };
+}
+
+function emptyRecipient(order?: ApiOrder): RecipientForm {
+  return {
     toName: order?.customerName || "",
     toStreet: order?.shippingLine1 || "",
     toStreet2: order?.shippingLine2 || "",
@@ -83,6 +91,11 @@ function emptyForm(order?: ApiOrder): LabelForm {
     toState: order?.shippingState || "",
     toZip: order?.shippingPostal || "",
     toCountry: order?.shippingCountry || "US",
+  };
+}
+
+function emptyPackage(): PackageForm {
+  return {
     carrier: "usps",
     packageType: "USPScustom",
     service: "GroundAdvantage",
@@ -91,11 +104,10 @@ function emptyForm(order?: ApiOrder): LabelForm {
     length: PACKAGE_PRESETS[0].length,
     width: PACKAGE_PRESETS[0].width,
     height: PACKAGE_PRESETS[0].height,
-    testMode: false,
   };
 }
 
-function applySender(form: LabelForm, sender: ApiPostageSender): LabelForm {
+function applySender(form: SenderForm, sender: ApiPostageSender): SenderForm {
   return {
     ...form,
     fromName: sender.fromName,
@@ -117,43 +129,165 @@ function pickDefaultSender(
   const code = (warehouse || "").trim().toUpperCase();
   if (code) {
     const forWh = senders.filter((row) => (row.warehouse || "").trim().toUpperCase() === code);
-    const preferred =
-      forWh.find((row) => row.isDefault) || forWh[0];
+    const preferred = forWh.find((row) => row.isDefault) || forWh[0];
     if (preferred) return preferred;
   }
   return senders.find((row) => row.isDefault) || senders[0];
 }
 
-function recipientAddress(order: ApiOrder) {
-  return {
-    toName: order.customerName,
-    toStreet: order.shippingLine1 || "",
-    toStreet2: order.shippingLine2 || "",
-    toCity: order.shippingCity || "",
-    toState: order.shippingState || "",
-    toZip: order.shippingPostal || "",
-    toCountry: order.shippingCountry || "US",
-  };
+function senderOptionLabel(row: ApiPostageSender) {
+  const wh =
+    row.warehouse === "WAREHOUSE_1"
+      ? " · WH1"
+      : row.warehouse === "WAREHOUSE_2"
+        ? " · WH2"
+        : row.warehouse
+          ? ` · ${row.warehouse}`
+          : "";
+  return `${row.fromName} · ${row.fromCity}${wh}${row.isDefault ? " (default)" : ""}`;
 }
 
-function createPurchaseBody(form: LabelForm, recipient: ReturnType<typeof recipientAddress>) {
-  const flat = form.carrier === "usps" && isUspsPriorityFlatRate(form.packageType);
+function hasMixedWarehouses(orders: ApiOrder[]) {
+  const codes = new Set(
+    orders.map((row) => (row.warehouse || "").trim().toUpperCase()).filter(Boolean),
+  );
+  return codes.size > 1;
+}
+
+function seedPerOrderSenders(orders: ApiOrder[], senders: ApiPostageSender[]) {
+  const forms: Record<string, SenderForm> = {};
+  const ids: Record<string, string> = {};
+  for (const order of orders) {
+    const chosen = pickDefaultSender(senders, order.warehouse);
+    forms[order.id] = chosen ? applySender(emptySender(), chosen) : emptySender();
+    ids[order.id] = chosen?.id || "";
+  }
+  return { forms, ids };
+}
+
+function validateSender(from: SenderForm, label = "sender"): string | null {
+  if (
+    !from.fromName.trim() ||
+    !from.fromStreet.trim() ||
+    !from.fromCity.trim() ||
+    !from.fromState.trim() ||
+    !from.fromZip.trim()
+  ) {
+    return `Fill the ${label} address before creating a label.`;
+  }
+  return null;
+}
+
+function SenderSelect({
+  senders,
+  value,
+  onChange,
+  compact = false,
+}: {
+  senders: ApiPostageSender[];
+  value: string;
+  onChange: (senderId: string, sender: ApiPostageSender | undefined) => void;
+  compact?: boolean;
+}) {
+  if (!senders.length) return null;
+  return (
+    <label className={compact ? "grid gap-0.5 text-xs text-muted-foreground" : "grid gap-1 text-sm"}>
+      Saved sender
+      <select
+        className={compact ? "field !py-1.5 text-sm" : "field"}
+        value={value}
+        onChange={(event) => {
+          const next = senders.find((row) => row.id === event.target.value);
+          onChange(event.target.value, next);
+        }}
+      >
+        {senders.map((row) => (
+          <option key={row.id} value={row.id}>
+            {senderOptionLabel(row)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function SenderFields({
+  sender,
+  onChange,
+  compact = false,
+}: {
+  sender: SenderForm;
+  onChange: (patch: Partial<SenderForm>) => void;
+  compact?: boolean;
+}) {
+  const fieldClass = compact ? "field !py-1.5 text-sm" : "field";
+  return (
+    <div className="grid gap-2">
+      <input
+        className={fieldClass}
+        placeholder="Name"
+        value={sender.fromName}
+        onChange={(e) => onChange({ fromName: e.target.value })}
+      />
+      <input
+        className={fieldClass}
+        placeholder="Street"
+        value={sender.fromStreet}
+        onChange={(e) => onChange({ fromStreet: e.target.value })}
+      />
+      <input
+        className={fieldClass}
+        placeholder="Apt"
+        value={sender.fromApt}
+        onChange={(e) => onChange({ fromApt: e.target.value })}
+      />
+      <input
+        className={fieldClass}
+        placeholder="City"
+        value={sender.fromCity}
+        onChange={(e) => onChange({ fromCity: e.target.value })}
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          className={fieldClass}
+          placeholder="State"
+          value={sender.fromState}
+          onChange={(e) => onChange({ fromState: e.target.value })}
+        />
+        <input
+          className={fieldClass}
+          placeholder="ZIP"
+          value={sender.fromZip}
+          onChange={(e) => onChange({ fromZip: e.target.value })}
+        />
+      </div>
+    </div>
+  );
+}
+
+function createPurchaseBody(
+  sender: SenderForm,
+  recipient: RecipientForm,
+  pkg: PackageForm,
+  testMode: boolean,
+) {
+  const flat = pkg.carrier === "usps" && isUspsPriorityFlatRate(pkg.packageType);
   const dims = flat
-    ? flatRateDimensions(form.packageType)
-    : { length: form.length, width: form.width, height: form.height };
-  const service = flat ? "Priority" : form.service;
+    ? flatRateDimensions(pkg.packageType)
+    : { length: pkg.length, width: pkg.width, height: pkg.height };
+  const service = flat ? "Priority" : pkg.service;
   return {
-    carrier: form.carrier,
+    carrier: pkg.carrier,
     service,
     label_format: "PDF",
     labelFormat: "PDF",
-    from_name: form.fromName,
-    from_street: form.fromStreet,
-    from_apt: form.fromApt,
-    from_city: form.fromCity,
-    from_state: form.fromState,
-    from_zip: form.fromZip,
-    from_country: form.fromCountry || "US",
+    from_name: sender.fromName,
+    from_street: sender.fromStreet,
+    from_apt: sender.fromApt,
+    from_city: sender.fromCity,
+    from_state: sender.fromState,
+    from_zip: sender.fromZip,
+    from_country: sender.fromCountry || "US",
     to_name: recipient.toName,
     to_street: recipient.toStreet,
     to_street2: recipient.toStreet2,
@@ -161,22 +295,221 @@ function createPurchaseBody(form: LabelForm, recipient: ReturnType<typeof recipi
     to_state: recipient.toState,
     to_zip: recipient.toZip,
     to_country: recipient.toCountry || "US",
-    package_type: form.packageType,
-    packagetype_usps: form.packageType,
-    packageType: form.packageType,
-    weight_lbs: form.weightLbs.trim() || "0",
-    weight_oz: form.weightOz.trim() || "0",
-    input_weight_lbs: form.weightLbs.trim() || "0",
-    input_weight_oz: form.weightOz.trim() || "0",
+    package_type: pkg.packageType,
+    packagetype_usps: pkg.packageType,
+    packageType: pkg.packageType,
+    weight_lbs: pkg.weightLbs.trim() || "0",
+    weight_oz: pkg.weightOz.trim() || "0",
+    input_weight_lbs: pkg.weightLbs.trim() || "0",
+    input_weight_oz: pkg.weightOz.trim() || "0",
     input_length: dims.length,
     input_width: dims.width,
     input_height: dims.height,
     length: dims.length,
     width: dims.width,
     height: dims.height,
-    test_mode: form.carrier === "usps" ? form.testMode : false,
-    testMode: form.carrier === "usps" ? form.testMode : false,
+    test_mode: pkg.carrier === "usps" ? testMode : false,
+    testMode: pkg.carrier === "usps" ? testMode : false,
   };
+}
+
+function PackageFields({
+  pkg,
+  onChange,
+  compact = false,
+}: {
+  pkg: PackageForm;
+  onChange: (patch: Partial<PackageForm>) => void;
+  compact?: boolean;
+}) {
+  const flat = isUspsPriorityFlatRate(pkg.packageType);
+  const fieldClass = compact ? "field !py-1.5 text-sm" : "field";
+  const labelClass = compact
+    ? "grid gap-0.5 text-xs text-muted-foreground"
+    : "grid gap-1 text-sm";
+
+  return (
+    <div className={`grid gap-3 ${compact ? "sm:grid-cols-2" : "sm:grid-cols-2 md:grid-cols-3"}`}>
+      <label className={labelClass}>
+        Carrier
+        <select
+          className={fieldClass}
+          value={pkg.carrier}
+          onChange={(e) => onChange({ carrier: e.target.value })}
+        >
+          <option value="usps">USPS</option>
+          <option value="ups">UPS</option>
+          <option value="fedex">FedEx</option>
+        </select>
+      </label>
+      <label className={labelClass}>
+        USPS package
+        <select
+          className={fieldClass}
+          value={pkg.packageType}
+          onChange={(e) => {
+            const packageType = e.target.value;
+            const nextFlat = isUspsPriorityFlatRate(packageType);
+            const dims = nextFlat ? flatRateDimensions(packageType) : PACKAGE_PRESETS[0];
+            onChange({
+              packageType,
+              service: nextFlat ? "Priority" : pkg.service || "GroundAdvantage",
+              length: dims.length,
+              width: dims.width,
+              height: dims.height,
+            });
+          }}
+        >
+          {USPS_PACKAGE_TYPES.map((row) => (
+            <option key={row.value} value={row.value}>
+              {row.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={labelClass}>
+        Service
+        {flat ? (
+          <select className={fieldClass} value="Priority" disabled>
+            <option value="Priority">Priority (required for flat rate)</option>
+          </select>
+        ) : (
+          <select
+            className={fieldClass}
+            value={pkg.service}
+            onChange={(e) => onChange({ service: e.target.value })}
+          >
+            <option value="GroundAdvantage">Ground Advantage</option>
+            <option value="Priority">Priority</option>
+          </select>
+        )}
+      </label>
+      {pkg.packageType === "USPScustom" ? (
+        <label className={labelClass}>
+          Custom size
+          <select
+            className={fieldClass}
+            value={`${pkg.length}|${pkg.width}|${pkg.height}`}
+            onChange={(e) => {
+              const preset = PACKAGE_PRESETS.find(
+                (row) => `${row.length}|${row.width}|${row.height}` === e.target.value,
+              );
+              if (!preset) return;
+              onChange({
+                length: preset.length,
+                width: preset.width,
+                height: preset.height,
+              });
+            }}
+          >
+            {PACKAGE_PRESETS.map((row) => (
+              <option key={row.key} value={`${row.length}|${row.width}|${row.height}`}>
+                {row.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      <label className={labelClass}>
+        Weight lbs
+        <input
+          className={fieldClass}
+          value={pkg.weightLbs}
+          onChange={(e) => onChange({ weightLbs: e.target.value })}
+        />
+      </label>
+      <label className={labelClass}>
+        Weight oz
+        <input
+          className={fieldClass}
+          value={pkg.weightOz}
+          onChange={(e) => onChange({ weightOz: e.target.value })}
+        />
+      </label>
+      {!flat ? (
+        <>
+          <label className={labelClass}>
+            Length
+            <input
+              className={fieldClass}
+              value={pkg.length}
+              onChange={(e) => onChange({ length: e.target.value })}
+            />
+          </label>
+          <label className={labelClass}>
+            Width
+            <input
+              className={fieldClass}
+              value={pkg.width}
+              onChange={(e) => onChange({ width: e.target.value })}
+            />
+          </label>
+          <label className={labelClass}>
+            Height
+            <input
+              className={fieldClass}
+              value={pkg.height}
+              onChange={(e) => onChange({ height: e.target.value })}
+            />
+          </label>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function RecipientFields({
+  recipient,
+  onChange,
+  compact = false,
+}: {
+  recipient: RecipientForm;
+  onChange: (patch: Partial<RecipientForm>) => void;
+  compact?: boolean;
+}) {
+  const fieldClass = compact ? "field !py-1.5 text-sm" : "field";
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      <input
+        className={`${fieldClass} sm:col-span-2`}
+        placeholder="Name"
+        value={recipient.toName}
+        onChange={(e) => onChange({ toName: e.target.value })}
+      />
+      <input
+        className={`${fieldClass} sm:col-span-2`}
+        placeholder="Street"
+        value={recipient.toStreet}
+        onChange={(e) => onChange({ toStreet: e.target.value })}
+      />
+      <input
+        className={`${fieldClass} sm:col-span-2`}
+        placeholder="Apt / Street 2"
+        value={recipient.toStreet2}
+        onChange={(e) => onChange({ toStreet2: e.target.value })}
+      />
+      <input
+        className={fieldClass}
+        placeholder="City"
+        value={recipient.toCity}
+        onChange={(e) => onChange({ toCity: e.target.value })}
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          className={fieldClass}
+          placeholder="State"
+          value={recipient.toState}
+          onChange={(e) => onChange({ toState: e.target.value })}
+        />
+        <input
+          className={fieldClass}
+          placeholder="ZIP"
+          value={recipient.toZip}
+          onChange={(e) => onChange({ toZip: e.target.value })}
+        />
+      </div>
+    </div>
+  );
 }
 
 export function PostageLabelModal({
@@ -190,12 +523,52 @@ export function PostageLabelModal({
 }) {
   const first = orders[0];
   const bulk = orders.length > 1;
-  const [form, setForm] = useState<LabelForm>(() => emptyForm(first));
+  const mixedWarehouses = useMemo(() => hasMixedWarehouses(orders), [orders]);
+  const [sharedFrom, setSharedFrom] = useState(() => !hasMixedWarehouses(orders));
+  const [sender, setSender] = useState<SenderForm>(() => emptySender());
+  const [recipient, setRecipient] = useState<RecipientForm>(() => emptyRecipient(first));
+  const [pkg, setPkg] = useState<PackageForm>(() => emptyPackage());
+  const [recipientsById, setRecipientsById] = useState<Record<string, RecipientForm>>(() =>
+    Object.fromEntries(orders.map((row) => [row.id, emptyRecipient(row)])),
+  );
+  const [packagesById, setPackagesById] = useState<Record<string, PackageForm>>(() =>
+    Object.fromEntries(orders.map((row) => [row.id, emptyPackage()])),
+  );
+  const [sendersById, setSendersById] = useState<Record<string, SenderForm>>(() =>
+    Object.fromEntries(orders.map((row) => [row.id, emptySender()])),
+  );
+  const [senderIdsById, setSenderIdsById] = useState<Record<string, string>>(() =>
+    Object.fromEntries(orders.map((row) => [row.id, ""])),
+  );
   const [senders, setSenders] = useState<ApiPostageSender[]>([]);
   const [senderId, setSenderId] = useState("");
+  const [testMode, setTestMode] = useState(false);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
+
+  const orderIdsKey = orders.map((row) => row.id).join(",");
+  useEffect(() => {
+    setSharedFrom(!hasMixedWarehouses(orders));
+    setRecipient(emptyRecipient(first));
+    setRecipientsById(Object.fromEntries(orders.map((row) => [row.id, emptyRecipient(row)])));
+    setPackagesById(Object.fromEntries(orders.map((row) => [row.id, emptyPackage()])));
+    if (senders.length) {
+      const seeded = seedPerOrderSenders(orders, senders);
+      setSendersById(seeded.forms);
+      setSenderIdsById(seeded.ids);
+      const chosen = pickDefaultSender(senders, first?.warehouse);
+      if (chosen) {
+        setSenderId(chosen.id);
+        setSender(applySender(emptySender(), chosen));
+      }
+    } else {
+      setSendersById(Object.fromEntries(orders.map((row) => [row.id, emptySender()])));
+      setSenderIdsById(Object.fromEntries(orders.map((row) => [row.id, ""])));
+    }
+    // Re-seed only when the selected order set changes, not on every parent re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- orderIdsKey is the intentional dependency
+  }, [orderIdsKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -207,74 +580,117 @@ export function PostageLabelModal({
       const chosen = pickDefaultSender(data, first?.warehouse);
       if (chosen) {
         setSenderId(chosen.id);
-        setForm((current) => applySender(current, chosen));
+        setSender(applySender(emptySender(), chosen));
       }
+      const seeded = seedPerOrderSenders(orders, data);
+      setSendersById(seeded.forms);
+      setSenderIdsById(seeded.ids);
     })();
     return () => {
       cancelled = true;
     };
-  }, [first?.warehouse]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed against current selection when senders load
+  }, [first?.warehouse, orderIdsKey]);
 
-  const requiredFrom = useMemo(
-    () => ["fromName", "fromStreet", "fromCity", "fromState", "fromZip"] as const,
-    [],
-  );
+  function updateBulkRecipient(orderId: string, patch: Partial<RecipientForm>) {
+    setRecipientsById((current) => ({
+      ...current,
+      [orderId]: { ...(current[orderId] || emptyRecipient()), ...patch },
+    }));
+  }
 
-  function setField<K extends keyof LabelForm>(key: K, value: LabelForm[K]) {
-    setForm((current) => ({ ...current, [key]: value }));
+  function updateBulkPackage(orderId: string, patch: Partial<PackageForm>) {
+    setPackagesById((current) => ({
+      ...current,
+      [orderId]: { ...(current[orderId] || emptyPackage()), ...patch },
+    }));
+  }
+
+  function updateBulkSender(orderId: string, patch: Partial<SenderForm>) {
+    setSendersById((current) => ({
+      ...current,
+      [orderId]: { ...(current[orderId] || emptySender()), ...patch },
+    }));
+  }
+
+  function validateRecipient(to: RecipientForm, orderNumber: string): string | null {
+    if (
+      !to.toName.trim() ||
+      !to.toStreet.trim() ||
+      !to.toCity.trim() ||
+      !to.toState.trim() ||
+      !to.toZip.trim()
+    ) {
+      return `Fill the recipient address for ${orderNumber} before creating a label.`;
+    }
+    return null;
+  }
+
+  function validatePackage(rowPkg: PackageForm, orderNumber: string): string | null {
+    const lbs = Number(rowPkg.weightLbs || 0);
+    const oz = Number(rowPkg.weightOz || 0);
+    if (lbs * 16 + oz <= 0) {
+      return `Enter a package weight for ${orderNumber}.`;
+    }
+    return null;
   }
 
   async function submit() {
     setError("");
-    for (const key of requiredFrom) {
-      if (!form[key].trim()) {
-        setError("Fill the sender address before creating a label.");
+
+    const useSharedFrom = !bulk || sharedFrom;
+    if (useSharedFrom) {
+      const fromError = validateSender(sender);
+      if (fromError) {
+        setError(fromError);
         return;
       }
     }
-    const lbs = Number(form.weightLbs || 0);
-    const oz = Number(form.weightOz || 0);
-    if (lbs * 16 + oz <= 0) {
-      setError("Enter a package weight.");
-      return;
-    }
-    const targets = bulk
-      ? orders
-      : [
-          {
-            ...first,
-            customerName: form.toName,
-            shippingLine1: form.toStreet,
-            shippingLine2: form.toStreet2,
-            shippingCity: form.toCity,
-            shippingState: form.toState,
-            shippingPostal: form.toZip,
-            shippingCountry: form.toCountry,
-          },
-        ];
-    for (const row of targets) {
-      const to = recipientAddress(row);
-      if (
-        !to.toName.trim() ||
-        !to.toStreet.trim() ||
-        !to.toCity.trim() ||
-        !to.toState.trim() ||
-        !to.toZip.trim()
-      ) {
-        setError(`Fill the recipient address for ${row.orderNumber} before creating a label.`);
+
+    const targets = orders.map((row) => {
+      const to = bulk ? recipientsById[row.id] || emptyRecipient(row) : recipient;
+      const rowPkg = bulk ? packagesById[row.id] || emptyPackage() : pkg;
+      const from = useSharedFrom
+        ? sender
+        : sendersById[row.id] || emptySender();
+      return { order: row, to, pkg: rowPkg, from };
+    });
+
+    for (const target of targets) {
+      if (!useSharedFrom) {
+        const fromError = validateSender(
+          target.from,
+          `FROM address for ${target.order.orderNumber}`,
+        );
+        if (fromError) {
+          setError(fromError);
+          return;
+        }
+      }
+      const recipientError = validateRecipient(target.to, target.order.orderNumber);
+      if (recipientError) {
+        setError(recipientError);
+        return;
+      }
+      const packageError = validatePackage(target.pkg, target.order.orderNumber);
+      if (packageError) {
+        setError(packageError);
         return;
       }
     }
+
     setBusy(true);
     const updated: ApiOrder[] = [];
     try {
       for (let index = 0; index < targets.length; index += 1) {
-        const row = targets[index];
+        const target = targets[index];
         setProgress(`${index + 1} / ${targets.length}`);
-        const response = await fetch(`/api/admin/orders/${row.id}/label`, {
+        const response = await fetch(`/api/admin/orders/${target.order.id}/label`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify(createPurchaseBody(form, recipientAddress(row))),
+          body: JSON.stringify(
+            createPurchaseBody(target.from, target.to, target.pkg, testMode),
+          ),
         });
         const payload = (await response.json().catch(() => null)) as
           | { error?: string; order?: ApiOrder }
@@ -283,7 +699,7 @@ export function PostageLabelModal({
           const done = updated.length;
           setError(
             payload?.error ||
-              `Could not create the Bitcoin Postage label for ${row.orderNumber}.` +
+              `Could not create the Bitcoin Postage label for ${target.order.orderNumber}.` +
                 (done ? ` ${done} label(s) were created before this.` : ""),
           );
           if (updated.length) onCreated(updated);
@@ -303,7 +719,9 @@ export function PostageLabelModal({
   return (
     <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-background/80 p-0 sm:items-center sm:p-4">
       <div
-        className="tile flex h-[100dvh] w-full max-w-3xl flex-col !p-0 sm:h-auto sm:max-h-[min(90vh,90dvh)]"
+        className={`tile flex h-[100dvh] w-full flex-col !p-0 sm:h-auto sm:max-h-[min(92vh,92dvh)] ${
+          bulk ? "max-w-5xl" : "max-w-3xl"
+        }`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="postage-label-title"
@@ -311,11 +729,13 @@ export function PostageLabelModal({
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border/40 px-3 py-3 sm:px-5">
           <div className="min-w-0">
             <h2 id="postage-label-title" className="text-base sm:text-lg">
-              Bitcoin Postage label
+              {bulk ? "Bitcoin Postage — Bulk labels" : "Bitcoin Postage label"}
             </h2>
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
               {bulk
-                ? `${orders.length} order(s) · max ${MAX_BTCPOSTAGE_LABEL_BATCH} per batch · create-purchase once per order`
+                ? `${orders.length} order(s) · max ${MAX_BTCPOSTAGE_LABEL_BATCH} per batch · ${
+                    sharedFrom ? "shared FROM" : "per-order FROM (warehouse default)"
+                  } · per-order TO & package`
                 : first.orderNumber}
               {" · "}
               Uses the BTC Postage account linked to each order&apos;s warehouse
@@ -336,254 +756,178 @@ export function PostageLabelModal({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5">
-          {senders.length > 0 ? (
-            <label className="grid gap-1 text-sm">
-              Saved sender
-              <select
-                className="field"
-                value={senderId}
-                onChange={(event) => {
-                  const next = senders.find((row) => row.id === event.target.value);
-                  setSenderId(event.target.value);
-                  if (next) setForm((current) => applySender(current, next));
-                }}
-              >
-                {senders.map((row) => (
-                  <option key={row.id} value={row.id}>
-                    {row.fromName} · {row.fromCity}
-                    {row.warehouse === "WAREHOUSE_1"
-                      ? " · WH1"
-                      : row.warehouse === "WAREHOUSE_2"
-                        ? " · WH2"
-                        : row.warehouse
-                          ? ` · ${row.warehouse}`
-                          : ""}
-                    {row.isDefault ? " (default)" : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <fieldset className="grid gap-2">
-              <legend className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                From
-              </legend>
-              <input
-                className="field"
-                placeholder="Name"
-                value={form.fromName}
-                onChange={(e) => setField("fromName", e.target.value)}
-              />
-              <input
-                className="field"
-                placeholder="Street"
-                value={form.fromStreet}
-                onChange={(e) => setField("fromStreet", e.target.value)}
-              />
-              <input
-                className="field"
-                placeholder="Apt"
-                value={form.fromApt}
-                onChange={(e) => setField("fromApt", e.target.value)}
-              />
-              <input
-                className="field"
-                placeholder="City"
-                value={form.fromCity}
-                onChange={(e) => setField("fromCity", e.target.value)}
-              />
-              <div className="grid grid-cols-2 gap-2">
+          {bulk ? (
+            <div className="space-y-3">
+              <label className="flex items-start gap-2 rounded border border-border/50 bg-muted/20 p-3 text-sm">
                 <input
-                  className="field"
-                  placeholder="State"
-                  value={form.fromState}
-                  onChange={(e) => setField("fromState", e.target.value)}
-                />
-                <input
-                  className="field"
-                  placeholder="ZIP"
-                  value={form.fromZip}
-                  onChange={(e) => setField("fromZip", e.target.value)}
-                />
-              </div>
-            </fieldset>
-            {bulk ? (
-              <fieldset className="grid gap-2">
-                <legend className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                  Recipients
-                </legend>
-                <ul className="max-h-48 space-y-2 overflow-y-auto text-sm sm:max-h-64">
-                  {orders.map((row) => (
-                    <li key={row.id} className="border border-border/40 p-2">
-                      <p className="font-mono text-xs">{row.orderNumber}</p>
-                      <p>{row.customerName}</p>
-                      <p className="text-muted-foreground">
-                        {row.shippingLine1}
-                        {row.shippingLine2 ? `, ${row.shippingLine2}` : ""}
-                        {row.shippingCity ? `, ${row.shippingCity}` : ""} {row.shippingState}{" "}
-                        {row.shippingPostal}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </fieldset>
-            ) : (
-              <fieldset className="grid gap-2">
-                <legend className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                  To
-                </legend>
-                <input
-                  className="field"
-                  placeholder="Name"
-                  value={form.toName}
-                  onChange={(e) => setField("toName", e.target.value)}
-                />
-                <input
-                  className="field"
-                  placeholder="Street"
-                  value={form.toStreet}
-                  onChange={(e) => setField("toStreet", e.target.value)}
-                />
-                <input
-                  className="field"
-                  placeholder="Street 2"
-                  value={form.toStreet2}
-                  onChange={(e) => setField("toStreet2", e.target.value)}
-                />
-                <input
-                  className="field"
-                  placeholder="City"
-                  value={form.toCity}
-                  onChange={(e) => setField("toCity", e.target.value)}
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    className="field"
-                    placeholder="State"
-                    value={form.toState}
-                    onChange={(e) => setField("toState", e.target.value)}
-                  />
-                  <input
-                    className="field"
-                    placeholder="ZIP"
-                    value={form.toZip}
-                    onChange={(e) => setField("toZip", e.target.value)}
-                  />
-                </div>
-              </fieldset>
-            )}
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-            <label className="grid gap-1 text-sm">
-              Carrier
-              <select
-                className="field"
-                value={form.carrier}
-                onChange={(e) => setField("carrier", e.target.value)}
-              >
-                <option value="usps">USPS</option>
-                <option value="ups">UPS</option>
-                <option value="fedex">FedEx</option>
-              </select>
-            </label>
-            <label className="grid gap-1 text-sm">
-              USPS package
-              <select
-                className="field"
-                value={form.packageType}
-                onChange={(e) => {
-                  const packageType = e.target.value;
-                  const flat = isUspsPriorityFlatRate(packageType);
-                  const dims = flat ? flatRateDimensions(packageType) : PACKAGE_PRESETS[0];
-                  setForm((current) => ({
-                    ...current,
-                    packageType,
-                    service: flat ? "Priority" : current.service || "GroundAdvantage",
-                    length: dims.length,
-                    width: dims.width,
-                    height: dims.height,
-                  }));
-                }}
-              >
-                {USPS_PACKAGE_TYPES.map((row) => (
-                  <option key={row.value} value={row.value}>
-                    {row.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1 text-sm">
-              Service
-              {isUspsPriorityFlatRate(form.packageType) ? (
-                <select className="field" value="Priority" disabled>
-                  <option value="Priority">Priority (required for flat rate)</option>
-                </select>
-              ) : (
-                <select
-                  className="field"
-                  value={form.service}
-                  onChange={(e) => setField("service", e.target.value)}
-                >
-                  <option value="GroundAdvantage">Ground Advantage</option>
-                  <option value="Priority">Priority</option>
-                </select>
-              )}
-            </label>
-            {form.packageType === "USPScustom" ? (
-              <label className="grid gap-1 text-sm">
-                Custom size
-                <select
-                  className="field"
-                  value={`${form.length}|${form.width}|${form.height}`}
-                  onChange={(e) => {
-                    const preset = PACKAGE_PRESETS.find(
-                      (row) => `${row.length}|${row.width}|${row.height}` === e.target.value,
-                    );
-                    if (!preset) return;
-                    setForm((current) => ({
-                      ...current,
-                      length: preset.length,
-                      width: preset.width,
-                      height: preset.height,
-                    }));
-                  }}
-                >
-                  {PACKAGE_PRESETS.map((row) => (
-                    <option key={row.key} value={`${row.length}|${row.width}|${row.height}`}>
-                      {row.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-            <label className="grid gap-1 text-sm">
-              Weight lbs
-              <input
-                className="field"
-                value={form.weightLbs}
-                onChange={(e) => setField("weightLbs", e.target.value)}
-              />
-            </label>
-            <label className="grid gap-1 text-sm">
-              Weight oz
-              <input
-                className="field"
-                value={form.weightOz}
-                onChange={(e) => setField("weightOz", e.target.value)}
-              />
-            </label>
-            {form.carrier === "usps" ? (
-              <label className="flex items-center gap-2 text-sm sm:items-end sm:pb-3">
-                <input
+                  className="mt-0.5"
                   type="checkbox"
-                  checked={form.testMode}
-                  onChange={(e) => setField("testMode", e.target.checked)}
+                  checked={sharedFrom}
+                  onChange={(e) => setSharedFrom(e.target.checked)}
                 />
-                Test mode
+                <span>
+                  <strong>Use one common FROM address</strong> for every order in this batch.
+                  {mixedWarehouses ? (
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      Selection includes both warehouses — leave unchecked to use each order&apos;s
+                      own warehouse default sender (recommended).
+                    </span>
+                  ) : (
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      Uncheck to set FROM separately on each order row (same as single-label
+                      creation).
+                    </span>
+                  )}
+                </span>
               </label>
-            ) : null}
-          </div>
+              <label className="flex items-start gap-2 rounded border border-border/50 bg-muted/20 p-3 text-sm">
+                <input
+                  className="mt-0.5"
+                  type="checkbox"
+                  checked={testMode}
+                  onChange={(e) => setTestMode(e.target.checked)}
+                />
+                <span>
+                  <strong>Test mode (USPS)</strong> — applies to every USPS label in this batch.
+                  Unchecked = live labels (credits used).
+                </span>
+              </label>
+            </div>
+          ) : null}
+
+          {!bulk || sharedFrom ? (
+            <div className={`mt-4 grid gap-4 ${bulk ? "" : "md:grid-cols-2"}`}>
+              <fieldset className="grid gap-2">
+                <legend className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  {bulk ? "From (shared)" : "From"}
+                </legend>
+                <SenderSelect
+                  senders={senders}
+                  value={senderId}
+                  onChange={(id, next) => {
+                    setSenderId(id);
+                    if (next) setSender(applySender(emptySender(), next));
+                  }}
+                />
+                <SenderFields
+                  sender={sender}
+                  onChange={(patch) => setSender((current) => ({ ...current, ...patch }))}
+                />
+                {!bulk ? (
+                  <label className="mt-1 flex items-start gap-2 rounded border border-border/50 bg-muted/20 p-3 text-sm">
+                    <input
+                      className="mt-0.5"
+                      type="checkbox"
+                      checked={testMode}
+                      onChange={(e) => setTestMode(e.target.checked)}
+                    />
+                    <span>
+                      <strong>Test mode (USPS)</strong>. Unchecked = live labels (credits used).
+                    </span>
+                  </label>
+                ) : null}
+              </fieldset>
+
+              {!bulk ? (
+                <fieldset className="grid gap-2">
+                  <legend className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    To
+                  </legend>
+                  <RecipientFields
+                    recipient={recipient}
+                    onChange={(patch) => setRecipient((current) => ({ ...current, ...patch }))}
+                  />
+                </fieldset>
+              ) : null}
+            </div>
+          ) : null}
+
+          {!bulk ? (
+            <div className="mt-4">
+              <PackageFields
+                pkg={pkg}
+                onChange={(patch) => setPkg((current) => ({ ...current, ...patch }))}
+              />
+            </div>
+          ) : (
+            <div className="mt-6">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-signal">
+                Each order
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {sharedFrom
+                  ? "Edit recipient and parcel options per order. Shared FROM + USPS test mode apply to all."
+                  : "Each order has its own FROM (warehouse default + dropdown), recipient, and parcel options. USPS test mode still applies to all."}
+              </p>
+              <div className="mt-4 max-h-[55vh] space-y-4 overflow-y-auto pr-1">
+                {orders.map((row) => {
+                  const to = recipientsById[row.id] || emptyRecipient(row);
+                  const rowPkg = packagesById[row.id] || emptyPackage();
+                  const rowFrom = sendersById[row.id] || emptySender();
+                  return (
+                    <div
+                      key={row.id}
+                      className="space-y-3 rounded border border-border/50 bg-muted/10 p-3 sm:p-4"
+                    >
+                      <div className="flex flex-wrap items-baseline gap-2">
+                        <p className="font-mono text-sm font-semibold">{row.orderNumber}</p>
+                        <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                          {warehouseShort(row.warehouse)} · {row.customerName}
+                        </span>
+                      </div>
+                      {!sharedFrom ? (
+                        <div className="space-y-2 rounded border border-border/40 bg-background/60 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-signal">
+                            From ({warehouseShort(row.warehouse)} default)
+                          </p>
+                          <SenderSelect
+                            compact
+                            senders={senders}
+                            value={senderIdsById[row.id] || ""}
+                            onChange={(id, next) => {
+                              setSenderIdsById((current) => ({ ...current, [row.id]: id }));
+                              if (next) {
+                                setSendersById((current) => ({
+                                  ...current,
+                                  [row.id]: applySender(emptySender(), next),
+                                }));
+                              }
+                            }}
+                          />
+                          <SenderFields
+                            compact
+                            sender={rowFrom}
+                            onChange={(patch) => updateBulkSender(row.id, patch)}
+                          />
+                        </div>
+                      ) : null}
+                      <div>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                          To
+                        </p>
+                        <RecipientFields
+                          compact
+                          recipient={to}
+                          onChange={(patch) => updateBulkRecipient(row.id, patch)}
+                        />
+                      </div>
+                      <div className="border-t border-border/40 pt-3">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-signal">
+                          Parcel &amp; service (this order)
+                        </p>
+                        <PackageFields
+                          compact
+                          pkg={rowPkg}
+                          onChange={(patch) => updateBulkPackage(row.id, patch)}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {error ? <p className="mt-3 text-sm text-brand-red">{error}</p> : null}
           {progress ? (
             <p className="mt-3 text-sm text-muted-foreground">Creating {progress}…</p>

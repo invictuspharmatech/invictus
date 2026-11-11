@@ -536,15 +536,25 @@ export function OrdersBoard({
                           {(order.splitCount ?? 1) > 1 ? (
                             <span
                               className="rounded border border-signal/40 bg-signal/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-signal"
-                              title="Same checkout / one payment — split across warehouses"
+                              title={
+                                order.linkedOrders?.length
+                                  ? `Same checkout / one payment — ${order.linkedOrders
+                                      .map(
+                                        (row) =>
+                                          `${row.orderNumber} (${warehouseShort(row.warehouse)} ${row.splitIndex}/${order.splitCount})`,
+                                      )
+                                      .join(" · ")}`
+                                  : "Same checkout / one payment — split across warehouses"
+                              }
                             >
-                              Split {order.splitIndex}/{order.splitCount}
+                              Split {order.splitIndex}/{order.splitCount} ·{" "}
+                              {warehouseShort(order.warehouse)}
                             </span>
                           ) : null}
                         </div>
                         {(order.linkedOrders?.length ?? 0) > 1 ? (
                           <p className="mt-1 text-[11px] text-muted-foreground">
-                            Also:{" "}
+                            Linked:{" "}
                             {order.linkedOrders
                               ?.filter((row) => row.id !== order.id)
                               .map((row, index, rows) => (
@@ -556,6 +566,11 @@ export function OrdersBoard({
                                   >
                                     {row.orderNumber}
                                   </Link>
+                                  <span className="text-muted-foreground">
+                                    {" "}
+                                    ({warehouseShort(row.warehouse)} {row.splitIndex}/
+                                    {order.splitCount})
+                                  </span>
                                   {index < rows.length - 1 ? ", " : ""}
                                 </span>
                               ))}

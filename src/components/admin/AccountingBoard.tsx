@@ -15,26 +15,34 @@ import {
 } from "@/lib/accounting";
 import type { RevenueSplit } from "@/lib/api-types";
 
+type CalcMode = "manual" | "auto";
+
 function calculatorStorageKey(period: AccountingPeriod, warehouse: AccountingWarehouse) {
   return `accounting-payout-calc:${period}:${warehouse}`;
 }
 
-function readStoredTotal(period: AccountingPeriod, warehouse: AccountingWarehouse): number | null {
-  if (typeof window === "undefined") return null;
+function readStoredCalc(
+  period: AccountingPeriod,
+  warehouse: AccountingWarehouse,
+): { mode: CalcMode; total: number | null } {
+  if (typeof window === "undefined") return { mode: "manual", total: null };
   try {
     const raw = window.sessionStorage.getItem(calculatorStorageKey(period, warehouse));
-    if (!raw) return null;
-    const parsed = Number(JSON.parse(raw)?.accumulatedUsd);
-    if (!Number.isFinite(parsed) || parsed <= 0) return null;
-    return parsed;
+    if (!raw) return { mode: "manual", total: null };
+    const parsed = JSON.parse(raw) as { accumulatedUsd?: number; mode?: string };
+    const mode: CalcMode = parsed.mode === "auto" ? "auto" : "manual";
+    const total = Number(parsed.accumulatedUsd);
+    if (!Number.isFinite(total) || total <= 0) return { mode, total: null };
+    return { mode, total };
   } catch {
-    return null;
+    return { mode: "manual", total: null };
   }
 }
 
-function writeStoredTotal(
+function writeStoredCalc(
   period: AccountingPeriod,
   warehouse: AccountingWarehouse,
+  mode: CalcMode,
   total: number | null,
 ) {
   if (typeof window === "undefined") return;
@@ -43,7 +51,7 @@ function writeStoredTotal(
     window.sessionStorage.removeItem(key);
     return;
   }
-  window.sessionStorage.setItem(key, JSON.stringify({ accumulatedUsd: total }));
+  window.sessionStorage.setItem(key, JSON.stringify({ mode, accumulatedUsd: total }));
 }
 
 function Amount({
@@ -86,11 +94,16 @@ export function AccountingBoard({
 }) {
   const router = useRouter();
   const [resetting, setResetting] = useState(false);
+  const [calcMode, setCalcMode] = useState<CalcMode>("manual");
   const [actualUsd, setActualUsd] = useState("");
   const [appliedUsd, setAppliedUsd] = useState<number | null>(null);
 
+  const orderMerchandise = Number(summary.proceeds) || 0;
+
   useEffect(() => {
-    setAppliedUsd(readStoredTotal(period, warehouse));
+    const stored = readStoredCalc(period, warehouse);
+    setCalcMode(stored.mode);
+    setAppliedUsd(stored.total);
     setActualUsd("");
   }, [period, warehouse]);
 
@@ -100,18 +113,34 @@ export function AccountingBoard({
   }, [appliedUsd, summary.w1Share, warehouse, split]);
 
   const pendingUsd = parseMoneyInput(actualUsd);
-  const canCalculate = pendingUsd != null && pendingUsd > 0;
+  const canCalculateManual = pendingUsd != null && pendingUsd > 0;
+  const canCalculateAuto = orderMerchandise > 0;
 
   const adminRateLabel = useMemo(() => {
     const sample = allocateForWarehouse(100, summary.w1Share, warehouse, split);
     return sample.admin;
   }, [summary.w1Share, warehouse, split]);
 
-  function calculate() {
+  function calculateManual() {
     if (pendingUsd == null || pendingUsd <= 0) return;
+    setCalcMode("manual");
     setAppliedUsd(pendingUsd);
-    writeStoredTotal(period, warehouse, pendingUsd);
+    writeStoredCalc(period, warehouse, "manual", pendingUsd);
     setActualUsd("");
+  }
+
+  function calculateAuto() {
+    if (orderMerchandise <= 0) return;
+    setCalcMode("auto");
+    setAppliedUsd(orderMerchandise);
+    writeStoredCalc(period, warehouse, "auto", orderMerchandise);
+    setActualUsd("");
+  }
+
+  function clearCalculated() {
+    setAppliedUsd(null);
+    setActualUsd("");
+    writeStoredCalc(period, warehouse, calcMode, null);
   }
 
   async function resetAll() {
@@ -131,7 +160,7 @@ export function AccountingBoard({
       });
       setAppliedUsd(null);
       setActualUsd("");
-      writeStoredTotal(period, warehouse, null);
+      writeStoredCalc(period, warehouse, calcMode, null);
       router.refresh();
     } finally {
       setResetting(false);
@@ -177,51 +206,102 @@ export function AccountingBoard({
         </div>
 
         <article className="tile !p-3">
-          <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                 Payout calculator · Admin ~{adminRateLabel.toFixed(1)}%
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Enter merchandise USD, then Calculate. Each click replaces the total; mix is
-                from orders since last Reset all.
+                Merchandise only for Admin / Party shares. Shipping fees always stay from orders
+                since last Reset all (50/50). W1/W2 mix is also from those orders.
               </p>
-            </div>
-            <label className="grid gap-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-              USD amount
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  className="field !py-2 max-w-[10rem] font-mono text-sm"
-                  inputMode="decimal"
-                  placeholder="1000.00"
-                  value={actualUsd}
-                  onChange={(event) => setActualUsd(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      calculate();
-                    }
-                  }}
-                />
+              <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className="gold-btn !px-3 !py-2"
-                  disabled={!canCalculate}
-                  onClick={calculate}
+                  className={
+                    calcMode === "manual"
+                      ? "gold-btn !px-3 !py-2"
+                      : "ghost-btn !px-3 !py-2"
+                  }
+                  onClick={() => setCalcMode("manual")}
                 >
-                  Calculate
+                  Manual amount
+                </button>
+                <button
+                  type="button"
+                  className={
+                    calcMode === "auto" ? "gold-btn !px-3 !py-2" : "ghost-btn !px-3 !py-2"
+                  }
+                  onClick={() => setCalcMode("auto")}
+                >
+                  Auto from orders
                 </button>
               </div>
-            </label>
+            </div>
+            {calcMode === "manual" ? (
+              <label className="grid gap-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                USD amount
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    className="field !py-2 max-w-[10rem] font-mono text-sm"
+                    inputMode="decimal"
+                    placeholder="1000.00"
+                    value={actualUsd}
+                    onChange={(event) => setActualUsd(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        calculateManual();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="gold-btn !px-3 !py-2"
+                    disabled={!canCalculateManual}
+                    onClick={calculateManual}
+                  >
+                    Calculate
+                  </button>
+                </div>
+              </label>
+            ) : (
+              <div className="grid gap-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                Merchandise since last reset
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="field !py-2 max-w-[10rem] font-mono text-sm tabular-nums">
+                    {formatMoney(orderMerchandise)}
+                  </p>
+                  <button
+                    type="button"
+                    className="gold-btn !px-3 !py-2"
+                    disabled={!canCalculateAuto}
+                    onClick={calculateAuto}
+                  >
+                    Calculate
+                  </button>
+                </div>
+                <p className="normal-case tracking-normal text-muted-foreground">
+                  Pulled from counted orders (shipping excluded).
+                </p>
+              </div>
+            )}
           </div>
           {manualSplit && appliedUsd != null ? (
-            <p className="mt-2 font-mono text-xs text-muted-foreground">
-              {formatMoney(appliedUsd)} → Admin {formatMoney(manualSplit.admin)} · Party 1{" "}
-              {formatMoney(manualSplit.party1)} · Party 2 {formatMoney(manualSplit.party2)}
-            </p>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <p className="font-mono text-xs text-muted-foreground">
+                {calcMode === "auto" ? "Auto · " : "Manual · "}
+                {formatMoney(appliedUsd)} → Admin {formatMoney(manualSplit.admin)} · Party 1{" "}
+                {formatMoney(manualSplit.party1)} · Party 2 {formatMoney(manualSplit.party2)}
+              </p>
+              <button type="button" className="ghost-btn !px-2 !py-1 text-xs" onClick={clearCalculated}>
+                Clear calculated
+              </button>
+            </div>
           ) : (
             <p className="mt-2 text-xs text-muted-foreground">
-              Tiles show tracked order totals until you Calculate.
+              Tiles show tracked order totals until you Calculate. Shipping tile is always from
+              orders.
             </p>
           )}
         </article>

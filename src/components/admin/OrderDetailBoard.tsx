@@ -216,9 +216,36 @@ export function OrderDetailBoard({
             {warehouseLabel(order.warehouse)} · {order.customerName} · {order.customerEmail}
           </p>
           {(order.splitCount ?? 1) > 1 ? (
-            <p className="mt-2 inline-flex items-center rounded border border-signal/40 bg-signal/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-signal">
-              Split {order.splitIndex}/{order.splitCount} · same checkout / one payment
-            </p>
+            <div className="mt-2 space-y-1">
+              <p className="inline-flex items-center rounded border border-signal/40 bg-signal/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-signal">
+                Split {order.splitIndex}/{order.splitCount} · {warehouseShort(order.warehouse)} ·{" "}
+                {order.orderNumber}
+              </p>
+              {(order.linkedOrders?.length ?? 0) > 1 ? (
+                <p className="text-xs text-muted-foreground">
+                  Same checkout / one payment with{" "}
+                  {order.linkedOrders
+                    ?.filter((row) => row.id !== order.id)
+                    .map((row, index, rows) => (
+                      <span key={row.id}>
+                        <Link
+                          href={`/admin/orders/${row.id}`}
+                          className="font-mono text-signal hover:underline"
+                        >
+                          {row.orderNumber}
+                        </Link>
+                        <span>
+                          {" "}
+                          ({warehouseShort(row.warehouse)} {row.splitIndex}/{order.splitCount})
+                        </span>
+                        {index < rows.length - 1 ? ", " : ""}
+                      </span>
+                    ))}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Same checkout / one payment</p>
+              )}
+            </div>
           ) : null}
         </div>
         <div className="text-right">
