@@ -15,8 +15,10 @@ import {
   type CheckoutSettings,
 } from "@/lib/checkout-settings";
 import {
+  couponsCoverShipping,
   couponsFreeShipping,
   couponsTotalDiscount,
+  estimateChargedTotal,
   readSavedCoupons,
   saveCoupons,
   validateCouponCode,
@@ -42,11 +44,15 @@ export default function CheckoutPage() {
   const [appliedCoupons, setAppliedCoupons] = useState<AppliedCoupon[]>([]);
   const [stackDiscount, setStackDiscount] = useState(0);
   const [stackFreeShipping, setStackFreeShipping] = useState(false);
+  const [stackCoversShipping, setStackCoversShipping] = useState(false);
   const appliedCodesKey = appliedCoupons.map((row) => row.code).join(",");
   const [settings, setSettings] = useState<CheckoutSettings | null>(null);
   const [optionId, setOptionId] = useState<string | null>(null);
   const [invoiceLink, setInvoiceLink] = useState<string | null>(null);
   const [placedGroup, setPlacedGroup] = useState("");
+
+  const shippingOption = resolveShippingFee(settings, optionId);
+  const shippingTotal = items.length > 0 ? shippingOption.fee : 0;
 
   useEffect(() => {
     void fetchCheckoutSettings().then((data) => {
@@ -63,6 +69,7 @@ export default function CheckoutPage() {
     if (!appliedCodesKey) {
       setStackDiscount(0);
       setStackFreeShipping(false);
+      setStackCoversShipping(false);
       return;
     }
     let cancelled = false;
@@ -71,9 +78,11 @@ export default function CheckoutPage() {
       const kept: AppliedCoupon[] = [];
       let totalDiscount = 0;
       let freeShip = false;
+      let coversShip = false;
       for (const code of codes) {
         const result = await validateCouponCode(code, merchandiseTotal, {
           existingCodes: kept.map((item) => item.code),
+          shippingTotal,
         });
         if (!result.ok) {
           if (!cancelled) {
@@ -82,33 +91,38 @@ export default function CheckoutPage() {
             saveCoupons(kept);
             setStackDiscount(totalDiscount);
             setStackFreeShipping(freeShip);
+            setStackCoversShipping(coversShip);
           }
           return;
         }
         kept.push(result.coupon);
         totalDiscount = result.totalDiscount;
         freeShip = result.freeShipping;
+        coversShip = result.discountCoversShipping;
       }
       if (cancelled) return;
       setStackDiscount(totalDiscount);
       setStackFreeShipping(freeShip);
+      setStackCoversShipping(coversShip);
       setAppliedCoupons(kept);
       saveCoupons(kept);
     })();
     return () => {
       cancelled = true;
     };
-  }, [merchandiseTotal, appliedCodesKey]);
+  }, [merchandiseTotal, appliedCodesKey, shippingTotal]);
 
-  const shippingOption = resolveShippingFee(settings, optionId);
-  const shippingTotal = items.length > 0 ? shippingOption.fee : 0;
   const minOrder = settings?.minOrderAmount ?? 100;
   const fees = settings?.shippingFees ?? [];
 
   const discount = stackDiscount || couponsTotalDiscount(appliedCoupons);
-  const chargedShipping =
-    stackFreeShipping || couponsFreeShipping(appliedCoupons) ? 0 : shippingTotal;
-  const chargedTotal = Math.max(0, merchandiseTotal - discount) + chargedShipping;
+  const freeShipping = stackFreeShipping || couponsFreeShipping(appliedCoupons);
+  const chargedShipping = freeShipping ? 0 : shippingTotal;
+  const coversShipping = stackCoversShipping || couponsCoverShipping(appliedCoupons);
+  const chargedTotal = estimateChargedTotal(merchandiseTotal, shippingTotal, discount, {
+    freeShipping,
+    coversShipping,
+  });
 
   async function applyCoupon() {
     setCouponError(null);
@@ -120,6 +134,7 @@ export default function CheckoutPage() {
     }
     const result = await validateCouponCode(code, merchandiseTotal, {
       existingCodes: appliedCoupons.map((row) => row.code),
+      shippingTotal,
     });
     if (!result.ok) {
       setCouponError(result.error);
@@ -130,6 +145,7 @@ export default function CheckoutPage() {
     saveCoupons(next);
     setStackDiscount(result.totalDiscount);
     setStackFreeShipping(result.freeShipping);
+    setStackCoversShipping(result.discountCoversShipping);
     setCouponInput("");
   }
 

@@ -69,6 +69,7 @@ from orders.order_numbers import allocate_order_number
 from orders.serializers import (
     FulfillmentRequestSerializer,
     OrderSerializer,
+    attach_linked_orders,
     group_customer_order_payloads,
 )
 from orders.shop_config import checkout_limit_error, resolve_shipping_option
@@ -145,22 +146,25 @@ def checkout_view(request):
             or data.get("coupon_code")
             or []
         )
-        coupons, coupon_discount, coupon_free_shipping, coupon_error = resolve_coupon_stack(
-            coupon_codes,
-            merchandise_total,
-            user=session_user if session_user and not getattr(session_user, "is_anonymous", False) else None,
-            email=email,
-        )
-        if coupon_error:
-            return Response({"error": coupon_error}, status=400)
-        coupon = coupons[0] if coupons else None
-
         shipping_choice = resolve_shipping_option(
             data.get("shippingOptionId") or data.get("shipping_option_id")
         )
         if shipping_choice is None:
             return Response({"error": "Select a valid shipping option."}, status=400)
         shipping_usd = float(shipping_choice["fee"])
+
+        coupons, coupon_discount, coupon_free_shipping, coupon_covers_shipping, coupon_error = (
+            resolve_coupon_stack(
+                coupon_codes,
+                merchandise_total,
+                shipping=shipping_usd,
+                user=session_user if session_user and not getattr(session_user, "is_anonymous", False) else None,
+                email=email,
+            )
+        )
+        if coupon_error:
+            return Response({"error": coupon_error}, status=400)
+        coupon = coupons[0] if coupons else None
 
         referral_code = data.get("referralCode") or request.COOKIES.get("invictus-ref")
         affiliate = None
@@ -181,9 +185,16 @@ def checkout_view(request):
             )
             # Recompute coupon discount on post-affiliate subtotal when affiliate applies.
             if coupons:
-                _, coupon_discount, coupon_free_shipping, coupon_error = resolve_coupon_stack(
+                (
+                    _,
+                    coupon_discount,
+                    coupon_free_shipping,
+                    coupon_covers_shipping,
+                    coupon_error,
+                ) = resolve_coupon_stack(
                     [c.code for c in coupons],
                     after_affiliate,
+                    shipping=shipping_usd,
                     user=session_user if session_user and not getattr(session_user, "is_anonymous", False) else None,
                     email=email,
                 )
@@ -195,6 +206,7 @@ def checkout_view(request):
             coupon_discount=coupon_discount,
             free_shipping=coupon_free_shipping,
             shipping_usd=shipping_usd,
+            coupon_covers_shipping=coupon_covers_shipping,
         )
         limit_error = checkout_limit_error(
             charged_merchandise=float(totals["merchandise"]),
@@ -458,9 +470,10 @@ def admin_orders_view(request):
     elif requested_warehouse in (Order.Warehouse.WAREHOUSE_1, Order.Warehouse.WAREHOUSE_2):
         base = base.filter(warehouse=requested_warehouse)
     counts = tab_counts(base)
+    orders = list(qs[:300])
     return Response(
         {
-            "orders": OrderSerializer(qs[:300], many=True).data,
+            "orders": attach_linked_orders(orders),
             "counts": counts,
             "trashed": trashed,
         }
@@ -484,7 +497,7 @@ def admin_order_detail_view(request, pk):
     order = _staff_order(request, pk)
     if isinstance(order, Response):
         return order
-    return Response(OrderSerializer(order).data)
+    return Response(attach_linked_orders([order])[0])
 
 
 @api_view(["PATCH", "PUT"])

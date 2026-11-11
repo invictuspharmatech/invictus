@@ -108,6 +108,22 @@ function applySender(form: LabelForm, sender: ApiPostageSender): LabelForm {
   };
 }
 
+/** Prefer the default (or any) sender for the order's warehouse; fall back globally. */
+function pickDefaultSender(
+  senders: ApiPostageSender[],
+  warehouse: string | null | undefined,
+): ApiPostageSender | undefined {
+  if (!senders.length) return undefined;
+  const code = (warehouse || "").trim().toUpperCase();
+  if (code) {
+    const forWh = senders.filter((row) => (row.warehouse || "").trim().toUpperCase() === code);
+    const preferred =
+      forWh.find((row) => row.isDefault) || forWh[0];
+    if (preferred) return preferred;
+  }
+  return senders.find((row) => row.isDefault) || senders[0];
+}
+
 function recipientAddress(order: ApiOrder) {
   return {
     toName: order.customerName,
@@ -188,7 +204,7 @@ export function PostageLabelModal({
       const data = (await response.json().catch(() => [])) as ApiPostageSender[];
       if (cancelled || !Array.isArray(data)) return;
       setSenders(data);
-      const chosen = data.find((row) => row.isDefault) || data[0];
+      const chosen = pickDefaultSender(data, first?.warehouse);
       if (chosen) {
         setSenderId(chosen.id);
         setForm((current) => applySender(current, chosen));
@@ -197,7 +213,7 @@ export function PostageLabelModal({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [first?.warehouse]);
 
   const requiredFrom = useMemo(
     () => ["fromName", "fromStreet", "fromCity", "fromState", "fromZip"] as const,
@@ -335,6 +351,14 @@ export function PostageLabelModal({
                 {senders.map((row) => (
                   <option key={row.id} value={row.id}>
                     {row.fromName} · {row.fromCity}
+                    {row.warehouse === "WAREHOUSE_1"
+                      ? " · WH1"
+                      : row.warehouse === "WAREHOUSE_2"
+                        ? " · WH2"
+                        : row.warehouse
+                          ? ` · ${row.warehouse}`
+                          : ""}
+                    {row.isDefault ? " (default)" : ""}
                   </option>
                 ))}
               </select>

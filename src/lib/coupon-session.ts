@@ -4,6 +4,7 @@ export type AppliedCoupon = {
   discount: number;
   freeShipping: boolean;
   stackableWithOtherCoupons?: boolean;
+  includeShippingInDiscount?: boolean;
 };
 
 const COUPON_KEY = "invictus-coupons";
@@ -24,6 +25,7 @@ export function readSavedCoupons(): AppliedCoupon[] {
           discount: Number(row.discount) || 0,
           freeShipping: Boolean(row.freeShipping),
           stackableWithOtherCoupons: Boolean(row.stackableWithOtherCoupons),
+          includeShippingInDiscount: Boolean(row.includeShippingInDiscount),
         }));
     }
     // Migrate single-coupon key from earlier cart work.
@@ -37,6 +39,7 @@ export function readSavedCoupons(): AppliedCoupon[] {
         name: String(one.name || one.code),
         discount: Number(one.discount) || 0,
         freeShipping: Boolean(one.freeShipping),
+        includeShippingInDiscount: Boolean(one.includeShippingInDiscount),
       },
     ];
     saveCoupons(migrated);
@@ -75,10 +78,29 @@ export function couponsFreeShipping(coupons: AppliedCoupon[]): boolean {
   return coupons.some((row) => row.freeShipping);
 }
 
+export function couponsCoverShipping(coupons: AppliedCoupon[]): boolean {
+  return coupons.some((row) => row.includeShippingInDiscount && !row.freeShipping);
+}
+
+/** Estimate charged total when coupon discount may cover shipping. */
+export function estimateChargedTotal(
+  merchandiseTotal: number,
+  shipping: number,
+  discount: number,
+  options: { freeShipping: boolean; coversShipping: boolean },
+): number {
+  const ship = options.freeShipping ? 0 : Math.max(0, shipping);
+  const off = Math.max(0, discount);
+  if (options.coversShipping && !options.freeShipping) {
+    return Math.max(0, merchandiseTotal + ship - off);
+  }
+  return Math.max(0, merchandiseTotal - off) + ship;
+}
+
 export async function validateCouponCode(
   code: string,
   merchandiseTotal: number,
-  options?: { existingCodes?: string[]; email?: string },
+  options?: { existingCodes?: string[]; email?: string; shippingTotal?: number },
 ): Promise<
   | {
       ok: true;
@@ -86,6 +108,7 @@ export async function validateCouponCode(
       appliedCodes: string[];
       totalDiscount: number;
       freeShipping: boolean;
+      discountCoversShipping: boolean;
     }
   | { ok: false; error: string }
 > {
@@ -95,6 +118,7 @@ export async function validateCouponCode(
     body: JSON.stringify({
       code,
       merchandiseTotal,
+      shippingTotal: options?.shippingTotal ?? 0,
       existingCodes: options?.existingCodes || [],
       email: options?.email || undefined,
     }),
@@ -104,6 +128,8 @@ export async function validateCouponCode(
     appliedCodes?: string[];
     totalDiscount?: number;
     stackableWithOtherCoupons?: boolean;
+    includeShippingInDiscount?: boolean;
+    discountCoversShipping?: boolean;
   };
   if (!response.ok) {
     return { ok: false, error: data.error || "This coupon is not valid." };
@@ -116,9 +142,11 @@ export async function validateCouponCode(
       discount: Number(data.discount) || 0,
       freeShipping: Boolean(data.freeShipping),
       stackableWithOtherCoupons: Boolean(data.stackableWithOtherCoupons),
+      includeShippingInDiscount: Boolean(data.includeShippingInDiscount),
     },
     appliedCodes: Array.isArray(data.appliedCodes) ? data.appliedCodes : [data.code],
     totalDiscount: Number(data.totalDiscount ?? data.discount) || 0,
     freeShipping: Boolean(data.freeShipping),
+    discountCoversShipping: Boolean(data.discountCoversShipping),
   };
 }

@@ -36,6 +36,7 @@ def serialize_coupon(coupon: Coupon) -> dict:
         "stackableWithOtherCoupons": bool(coupon.stackable_with_other_coupons),
         "stackableCouponIds": partner_ids,
         "stackablePartners": partners,
+        "includeShippingInDiscount": bool(coupon.include_shipping_in_discount),
         "startsAt": coupon.starts_at.isoformat() if coupon.starts_at else None,
         "expiresAt": coupon.expires_at.isoformat() if coupon.expires_at else None,
         "isActive": coupon.is_active,
@@ -73,13 +74,20 @@ def parse_optional_datetime(value):
     return dt
 
 
-def discount_for(coupon: Coupon, merchandise: float) -> float:
+def discount_for(coupon: Coupon, merchandise: float, shipping: float = 0.0) -> float:
+    """
+    Compute monetary discount for one coupon.
+    When include_shipping_in_discount is set, percent/fixed use merchandise + shipping.
+    """
     kind = coupon.discount_type
     merch = max(0.0, float(merchandise))
+    ship = max(0.0, float(shipping or 0))
+    include_ship = bool(getattr(coupon, "include_shipping_in_discount", False))
+    base = merch + ship if include_ship else merch
     if kind == Coupon.DiscountType.PERCENT:
-        return round(min(merch, merch * (float(coupon.amount) / 100.0)), 2)
+        return round(min(base, base * (float(coupon.amount) / 100.0)), 2)
     if kind == Coupon.DiscountType.FIXED:
-        return round(min(merch, float(coupon.amount or 0)), 2)
+        return round(min(base, float(coupon.amount or 0)), 2)
     if kind == Coupon.DiscountType.FREE_SHIPPING:
         return 0.0
     raise ValueError(f"Unknown coupon type: {kind}")
@@ -87,6 +95,14 @@ def discount_for(coupon: Coupon, merchandise: float) -> float:
 
 def is_free_shipping(coupon: Coupon | None) -> bool:
     return bool(coupon and coupon.discount_type == Coupon.DiscountType.FREE_SHIPPING)
+
+
+def applies_discount_to_shipping(coupon: Coupon | None) -> bool:
+    return bool(
+        coupon
+        and coupon.discount_type != Coupon.DiscountType.FREE_SHIPPING
+        and getattr(coupon, "include_shipping_in_discount", False)
+    )
 
 
 def order_uses_coupon_q(coupon: Coupon) -> Q:
@@ -204,16 +220,17 @@ def resolve_coupon_stack(
     codes,
     merchandise: float,
     *,
+    shipping: float = 0.0,
     user=None,
     email: str | None = None,
-) -> tuple[list[Coupon], float, bool, str | None]:
+) -> tuple[list[Coupon], float, bool, bool, str | None]:
     """
     Resolve one or more coupon codes with GreatLife-style stacking.
-    Returns (coupons, total_discount, free_shipping, error).
+    Returns (coupons, total_discount, free_shipping, discount_covers_shipping, error).
     """
     cleaned = normalize_codes(codes)
     if not cleaned:
-        return [], 0.0, False, None
+        return [], 0.0, False, False, None
 
     coupons: list[Coupon] = []
     for code in cleaned:
@@ -225,19 +242,32 @@ def resolve_coupon_stack(
             other_coupons=coupons,
         )
         if error or not coupon:
-            return [], 0.0, False, error or "This coupon is not valid."
+            return [], 0.0, False, False, error or "This coupon is not valid."
         coupons.append(coupon)
 
-    remaining = max(0.0, float(merchandise))
+    remaining_merch = max(0.0, float(merchandise))
+    remaining_ship = max(0.0, float(shipping or 0))
     total_discount = 0.0
     free_ship = False
+    covers_shipping = False
     for coupon in coupons:
-        disc = discount_for(coupon, remaining)
-        total_discount = round(total_discount + disc, 2)
-        remaining = max(0.0, round(remaining - disc, 2))
         if is_free_shipping(coupon):
             free_ship = True
-    return coupons, total_discount, free_ship, None
+            remaining_ship = 0.0
+            continue
+        include_ship = applies_discount_to_shipping(coupon)
+        if include_ship:
+            covers_shipping = True
+        ship_for_coupon = remaining_ship if include_ship else 0.0
+        disc = discount_for(coupon, remaining_merch, ship_for_coupon)
+        # Apply to merchandise first, then shipping when included.
+        merch_part = min(remaining_merch, disc)
+        ship_part = min(remaining_ship, max(0.0, round(disc - merch_part, 2))) if include_ship else 0.0
+        remaining_merch = max(0.0, round(remaining_merch - merch_part, 2))
+        if include_ship:
+            remaining_ship = max(0.0, round(remaining_ship - ship_part, 2))
+        total_discount = round(total_discount + merch_part + ship_part, 2)
+    return coupons, total_discount, free_ship, covers_shipping, None
 
 
 def codes_joined(coupons: list[Coupon]) -> str:
@@ -299,6 +329,12 @@ def apply_coupon_fields(coupon: Coupon, data: dict) -> str | None:
     stackable = data.get("stackableWithOtherCoupons")
     if stackable is None:
         stackable = data.get("stackable_with_other_coupons", False)
+    include_shipping = data.get("includeShippingInDiscount")
+    if include_shipping is None:
+        include_shipping = data.get("include_shipping_in_discount", False)
+    # Free-shipping type already waives shipping; the flag only applies to percent/fixed.
+    if discount_type == Coupon.DiscountType.FREE_SHIPPING:
+        include_shipping = False
     partner_raw = data.get("stackableCouponIds", data.get("stackable_coupon_ids"))
     partner_ids = normalized_id_list(partner_raw)
     if partner_ids:
@@ -317,6 +353,7 @@ def apply_coupon_fields(coupon: Coupon, data: dict) -> str | None:
     coupon.usage_limit_per_user = usage_limit_per_user
     coupon.stackable_with_other_coupons = bool(stackable)
     coupon.stackable_coupon_ids = partner_ids if bool(stackable) else []
+    coupon.include_shipping_in_discount = bool(include_shipping)
     coupon.starts_at = starts_at
     coupon.expires_at = expires_at
     coupon.is_active = bool(is_active)

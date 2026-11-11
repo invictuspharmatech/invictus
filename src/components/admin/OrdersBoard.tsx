@@ -525,13 +525,42 @@ export function OrdersBoard({
                         </div>
                       </td>
                       <td className="px-3 py-2 align-middle">
-                        <Link
-                          href={`/admin/orders/${order.id}`}
-                          className="font-mono text-xs font-semibold text-signal hover:underline"
-                          title="Open full order"
-                        >
-                          {order.orderNumber}
-                        </Link>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Link
+                            href={`/admin/orders/${order.id}`}
+                            className="font-mono text-xs font-semibold text-signal hover:underline"
+                            title="Open full order"
+                          >
+                            {order.orderNumber}
+                          </Link>
+                          {(order.splitCount ?? 1) > 1 ? (
+                            <span
+                              className="rounded border border-signal/40 bg-signal/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-signal"
+                              title="Same checkout / one payment — split across warehouses"
+                            >
+                              Split {order.splitIndex}/{order.splitCount}
+                            </span>
+                          ) : null}
+                        </div>
+                        {(order.linkedOrders?.length ?? 0) > 1 ? (
+                          <p className="mt-1 text-[11px] text-muted-foreground">
+                            Also:{" "}
+                            {order.linkedOrders
+                              ?.filter((row) => row.id !== order.id)
+                              .map((row, index, rows) => (
+                                <span key={row.id}>
+                                  <Link
+                                    href={`/admin/orders/${row.id}`}
+                                    className="font-mono text-signal hover:underline"
+                                    title={`${warehouseLabel(row.warehouse)} · ${row.status}`}
+                                  >
+                                    {row.orderNumber}
+                                  </Link>
+                                  {index < rows.length - 1 ? ", " : ""}
+                                </span>
+                              ))}
+                          </p>
+                        ) : null}
                         <p className="mt-1 text-xs text-muted-foreground">{order.customerName}</p>
                         <p className="text-xs text-muted-foreground">{order.customerEmail}</p>
                       </td>

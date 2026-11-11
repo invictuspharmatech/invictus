@@ -166,34 +166,43 @@ def _plan(data: dict) -> dict:
         or _text(data, "couponCode", "coupon_code")
         or []
     )
-    coupons, coupon_discount, coupon_free_shipping, coupon_error = resolve_coupon_stack(
-        coupon_codes,
-        merchandise_total,
-        user=user,
-        email=email or None,
+    waive = bool(data.get("waiveShipping") or data.get("waive_shipping"))
+    shipping_override = data.get("shippingAmount")
+    if shipping_override in (None, ""):
+        shipping_override = data.get("shipping_amount")
+    # Resolve shipping fee first so percent coupons can include it when configured.
+    if waive:
+        provisional_shipping = 0.0
+    elif shipping_override not in (None, ""):
+        provisional_shipping = max(0.0, _float(shipping_override))
+    else:
+        provisional_shipping = get_default_shipping_usd()
+
+    coupons, coupon_discount, coupon_free_shipping, coupon_covers_shipping, coupon_error = (
+        resolve_coupon_stack(
+            coupon_codes,
+            merchandise_total,
+            shipping=provisional_shipping,
+            user=user,
+            email=email or None,
+        )
     )
     if coupon_error:
         raise AdminCreateError(coupon_error)
     coupon = coupons[0] if coupons else None
 
-    waive = bool(data.get("waiveShipping") or data.get("waive_shipping"))
-    shipping_override = data.get("shippingAmount")
-    if shipping_override in (None, ""):
-        shipping_override = data.get("shipping_amount")
     if waive or coupon_free_shipping or is_free_shipping(coupon):
         shipping_usd = 0.0
         free_shipping = True
-    elif shipping_override not in (None, ""):
-        shipping_usd = max(0.0, _float(shipping_override))
-        free_shipping = shipping_usd == 0
     else:
-        shipping_usd = get_default_shipping_usd()
-        free_shipping = False
+        shipping_usd = provisional_shipping
+        free_shipping = shipping_usd == 0
     totals = customer_checkout_totals(
         merchandise_total,
         coupon_discount=coupon_discount,
         free_shipping=free_shipping,
         shipping_usd=shipping_usd,
+        coupon_covers_shipping=coupon_covers_shipping,
     )
     return {
         "lines": lines,

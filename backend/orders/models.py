@@ -38,6 +38,10 @@ class Coupon(models.Model):
         blank=True,
         help_text="Partner coupon IDs this code may stack with. Empty = any other stackable coupon.",
     )
+    include_shipping_in_discount = models.BooleanField(
+        default=False,
+        help_text="If enabled, percent/fixed discounts apply to merchandise + shipping (not merchandise only).",
+    )
     starts_at = models.DateTimeField(null=True, blank=True)
     expires_at = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)

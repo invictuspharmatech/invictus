@@ -31,7 +31,7 @@ function warehouseStaffAllowed(pathname: string): boolean {
   if (pathname === "/admin/orders") return true;
   if (!pathname.startsWith("/admin/orders/")) return false;
   if (pathname.startsWith("/admin/orders/create")) return false;
-  if (pathname.startsWith("/admin/orders/summary")) return false;
+  // Order summary + individual order pages are allowed; create is not.
   return true;
 }
 

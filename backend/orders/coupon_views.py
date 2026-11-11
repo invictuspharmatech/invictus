@@ -25,6 +25,15 @@ def validate_coupon_view(request):
         merch = float(request.data.get("merchandiseTotal") or 0)
     except (TypeError, ValueError):
         merch = 0
+    try:
+        shipping = float(
+            request.data.get("shippingTotal")
+            or request.data.get("shipping")
+            or request.data.get("shippingFee")
+            or 0
+        )
+    except (TypeError, ValueError):
+        shipping = 0
     email = (request.data.get("email") or "").strip() or None
     existing = normalize_codes(
         request.data.get("existingCodes")
@@ -60,9 +69,10 @@ def validate_coupon_view(request):
         return Response({"error": error or "This coupon is not valid."}, status=400)
 
     stacked = other_coupons + [coupon]
-    _, total_discount, free_shipping, stack_error = resolve_coupon_stack(
+    _, total_discount, free_shipping, covers_shipping, stack_error = resolve_coupon_stack(
         [c.code for c in stacked],
         merch,
+        shipping=shipping,
         user=request.user if request.user.is_authenticated else None,
         email=email,
     )
@@ -79,6 +89,8 @@ def validate_coupon_view(request):
             "discount": total_discount,
             "lineDiscount": None,
             "freeShipping": free_shipping,
+            "includeShippingInDiscount": bool(coupon.include_shipping_in_discount),
+            "discountCoversShipping": covers_shipping,
             "stackableWithOtherCoupons": bool(coupon.stackable_with_other_coupons),
             "appliedCodes": [c.code for c in stacked],
             "totalDiscount": total_discount,

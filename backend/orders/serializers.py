@@ -1,7 +1,57 @@
+from collections import defaultdict
+
 from rest_framework import serializers
 
 from orders.btcpay import serialize_invoice
 from orders.models import ContactMessage, FulfillmentRequest, Order, OrderItem
+
+
+def linked_order_summary(order: Order) -> dict:
+    return {
+        "id": str(order.id),
+        "orderNumber": order.order_number,
+        "warehouse": order.warehouse,
+        "splitIndex": order.split_index,
+        "status": order.status,
+        "grandTotal": float(order.grand_total),
+    }
+
+
+def attach_linked_orders(orders: list[Order]) -> list[dict]:
+    """Annotate serialized orders with same-checkout siblings (shared groupId)."""
+    if not orders:
+        return []
+    group_ids = {order.group_id for order in orders if order.group_id}
+    siblings = list(
+        Order.objects.filter(group_id__in=group_ids).only(
+            "id",
+            "order_number",
+            "warehouse",
+            "split_index",
+            "status",
+            "group_id",
+            "grand_total",
+        )
+    )
+    by_group: dict[str, list[Order]] = defaultdict(list)
+    for row in siblings:
+        by_group[row.group_id].append(row)
+
+    payload = []
+    for order in orders:
+        data = OrderSerializer(order).data
+        links = sorted(
+            by_group.get(order.group_id) or [],
+            key=lambda row: (row.split_index, str(row.id)),
+        )
+        if len(links) > 1:
+            data["splitCount"] = len(links)
+            data["linkedOrders"] = [linked_order_summary(row) for row in links]
+        else:
+            data["splitCount"] = 1
+            data["linkedOrders"] = []
+        payload.append(data)
+    return payload
 
 
 class OrderItemSerializer(serializers.ModelSerializer):

@@ -34,6 +34,9 @@ export function CouponForm({
     asCouponType(coupon?.discountType || CouponType.PERCENT),
   );
   const [stackable, setStackable] = useState(Boolean(coupon?.stackableWithOtherCoupons));
+  const [includeShipping, setIncludeShipping] = useState(
+    Boolean(coupon?.includeShippingInDiscount),
+  );
   const [partnerIds, setPartnerIds] = useState<string[]>(coupon?.stackableCouponIds ?? []);
 
   const partnerOptions = useMemo(
@@ -58,6 +61,8 @@ export function CouponForm({
           usageLimitPerUser: String(form.get("usageLimitPerUser") || "").trim() || null,
           stackableWithOtherCoupons: stackable,
           stackableCouponIds: stackable ? partnerIds : [],
+          includeShippingInDiscount:
+            discountType === CouponType.FREE_SHIPPING ? false : includeShipping,
           startsAt: String(form.get("startsAt") || "").trim() || null,
           expiresAt: String(form.get("expiresAt") || "").trim() || null,
           isActive: form.get("isActive") === "on",
@@ -163,6 +168,23 @@ export function CouponForm({
           e.g. 1 = one-time use per customer (account or email). Leave blank to allow reuse.
         </span>
       </label>
+      {discountType === CouponType.FREE_SHIPPING ? null : (
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            className="mt-1"
+            type="checkbox"
+            checked={includeShipping}
+            onChange={(event) => setIncludeShipping(event.target.checked)}
+          />
+          <span>
+            Include shipping fees in discount
+            <span className="mt-0.5 block text-xs text-muted-foreground">
+              When on, percent/fixed discounts apply to merchandise + shipping. When off,
+              shipping is charged in full after the merchandise discount.
+            </span>
+          </span>
+        </label>
+      )}
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"

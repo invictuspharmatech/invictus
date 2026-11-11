@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { formatMoney } from "@/lib/constants";
 import { isFullAdmin } from "@/lib/roles";
-import { warehouseLabel } from "@/lib/warehouse";
+import { warehouseLabel, warehouseShort } from "@/lib/warehouse";
 import { OrderStatusSelect } from "@/components/admin/OrderStatusSelect";
+import { OrderStatusBadge } from "@/components/admin/OrderStatusBadge";
 import { OrderFulfillmentControls } from "@/components/admin/OrderFulfillmentControls";
 import { PostageLabelModal } from "@/components/admin/PostageLabelModal";
 import { ShippingLabelActions } from "@/components/admin/ShippingLabelActions";
@@ -32,6 +33,15 @@ function shippingFromOrder(order: ApiOrder): ShippingDraft {
     shippingState: order.shippingState || "",
     shippingPostal: order.shippingPostal || "",
     shippingCountry: order.shippingCountry || "US",
+  };
+}
+
+function mergeOrder(previous: ApiOrder, next: ApiOrder): ApiOrder {
+  return {
+    ...previous,
+    ...next,
+    linkedOrders: next.linkedOrders ?? previous.linkedOrders,
+    splitCount: next.splitCount ?? previous.splitCount,
   };
 }
 
@@ -69,7 +79,7 @@ export function OrderDetailBoard({
     const response = await fetch(`/api/admin/orders/${order.id}`);
     const next = (await response.json().catch(() => null)) as ApiOrder | { error?: string } | null;
     if (response.ok && next && "orderNumber" in next) {
-      setOrder(next);
+      setOrder((previous) => mergeOrder(previous, next));
       setTracking(next.trackingNumber || "");
       setShippingDraft(shippingFromOrder(next));
       setQtyDraft(Object.fromEntries(next.items.map((item) => [item.id, item.quantity])));
@@ -111,7 +121,7 @@ export function OrderDetailBoard({
         setError(data.error || "Could not save shipping address.");
         return;
       }
-      setOrder(data);
+      setOrder((previous) => mergeOrder(previous, data));
       setShippingDraft(shippingFromOrder(data));
     } finally {
       setShippingSaving(false);
@@ -138,7 +148,7 @@ export function OrderDetailBoard({
         setError(data.error || "Could not update line items.");
         return;
       }
-      setOrder(data);
+      setOrder((previous) => mergeOrder(previous, data));
       setQtyDraft(Object.fromEntries(data.items.map((item) => [item.id, item.quantity])));
     } finally {
       setItemsSaving(false);
@@ -171,7 +181,7 @@ export function OrderDetailBoard({
         setError(data.error || "Could not add product.");
         return;
       }
-      setOrder(data);
+      setOrder((previous) => mergeOrder(previous, data));
       setQtyDraft(Object.fromEntries(data.items.map((item) => [item.id, item.quantity])));
       setProductQuery("");
       setProductHits([]);
@@ -205,7 +215,11 @@ export function OrderDetailBoard({
           <p className="mt-2 text-sm text-muted-foreground">
             {warehouseLabel(order.warehouse)} · {order.customerName} · {order.customerEmail}
           </p>
-          <p className="text-xs text-muted-foreground">Group {order.groupId}</p>
+          {(order.splitCount ?? 1) > 1 ? (
+            <p className="mt-2 inline-flex items-center rounded border border-signal/40 bg-signal/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-signal">
+              Split {order.splitIndex}/{order.splitCount} · same checkout / one payment
+            </p>
+          ) : null}
         </div>
         <div className="text-right">
           <p>{formatMoney(order.grandTotal)}</p>
@@ -233,6 +247,67 @@ export function OrderDetailBoard({
       ) : null}
 
       {error ? <p className="mt-4 text-sm text-brand-red">{error}</p> : null}
+
+      {(order.linkedOrders?.length ?? 0) > 1 ? (
+        <section className="tile mt-6 border-signal/30">
+          <h2 className="text-lg">Linked orders</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Placed together in one checkout and share one payment. Different order numbers are for
+            each warehouse fulfillment slice.
+          </p>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[28rem] text-left text-sm">
+              <thead className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                <tr className="border-b border-border/40">
+                  <th className="px-2 py-2">Order</th>
+                  <th className="px-2 py-2">Warehouse</th>
+                  <th className="px-2 py-2">Status</th>
+                  <th className="px-2 py-2 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {order.linkedOrders?.map((row) => {
+                  const current = row.id === order.id;
+                  return (
+                    <tr
+                      key={row.id}
+                      className={`border-b border-border/30 ${current ? "bg-signal/10" : ""}`}
+                    >
+                      <td className="px-2 py-2">
+                        {current ? (
+                          <span className="font-mono text-xs font-semibold">
+                            {row.orderNumber}{" "}
+                            <span className="text-muted-foreground">(this order)</span>
+                          </span>
+                        ) : (
+                          <Link
+                            href={`/admin/orders/${row.id}`}
+                            className="font-mono text-xs font-semibold text-signal hover:underline"
+                          >
+                            {row.orderNumber}
+                          </Link>
+                        )}
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                          Split {row.splitIndex}/{order.splitCount}
+                        </p>
+                      </td>
+                      <td className="px-2 py-2" title={warehouseLabel(row.warehouse)}>
+                        {warehouseShort(row.warehouse)}
+                      </td>
+                      <td className="px-2 py-2">
+                        <OrderStatusBadge status={row.status} />
+                      </td>
+                      <td className="px-2 py-2 text-right font-medium">
+                        {formatMoney(row.grandTotal)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
 
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
@@ -467,7 +542,7 @@ export function OrderDetailBoard({
                 labels={order.shippingLabels ?? []}
                 onDeleted={(next) => {
                   setLabelError("");
-                  setOrder(next);
+                  setOrder((previous) => mergeOrder(previous, next));
                   setTracking(next.trackingNumber || "");
                 }}
                 onError={setLabelError}
@@ -484,7 +559,7 @@ export function OrderDetailBoard({
           onCreated={(updated) => {
             const next = updated[0];
             if (!next) return;
-            setOrder(next);
+            setOrder((previous) => mergeOrder(previous, next));
             setTracking(next.trackingNumber || "");
             setLabelOpen(false);
           }}

@@ -9,7 +9,7 @@ import { HeaderAccountMenu } from "@/components/site/HeaderAccountMenu";
 import { HeaderSearch } from "@/components/site/HeaderSearch";
 import { MobileSlideOut } from "@/components/site/MobileSlideOut";
 import { PromoTicker, type PromoSlide } from "@/components/site/PromoTicker";
-import { isFullAdmin } from "@/lib/roles";
+import { isFullAdmin, isStaff } from "@/lib/roles";
 import {
   NAV_LINK_CLASS,
   POLICY_LINKS,
@@ -124,6 +124,7 @@ export function SiteHeader({
   const router = useRouter();
   const { count } = useCart();
   const showAdmin = session ? isFullAdmin(session.role) : false;
+  const showManagerDashboard = session ? isStaff(session.role) && !showAdmin : false;
   const [open, setOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
@@ -188,7 +189,11 @@ export function SiteHeader({
               <CartCount count={count} />
             </Link>
             {session ? (
-              <HeaderAccountMenu session={session} showAdmin={showAdmin} />
+              <HeaderAccountMenu
+                session={session}
+                showAdmin={showAdmin}
+                showManagerDashboard={showManagerDashboard}
+              />
             ) : (
               <Link href={accountHref} className={NAV_LINK_CLASS}>
                 My account
@@ -282,6 +287,11 @@ export function SiteHeader({
         {showAdmin ? (
           <Link href="/admin" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
             Admin
+          </Link>
+        ) : null}
+        {showManagerDashboard ? (
+          <Link href="/admin/orders" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
+            Manager dashboard
           </Link>
         ) : null}
         {session ? (

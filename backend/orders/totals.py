@@ -82,14 +82,24 @@ def customer_checkout_totals(
     coupon_discount: float = 0.0,
     free_shipping: bool = False,
     shipping_usd: float = 20.0,
+    coupon_covers_shipping: bool = False,
 ) -> dict[str, float | bool]:
     """One customer total: merchandise after discounts + a single shipping charge."""
     cart = money(subtotal)
     affiliate_off = money(cart * float(affiliate_discount_rate or 0)) if affiliate_discount_rate else 0.0
     after_affiliate = money(max(0, cart - affiliate_off))
-    coupon_off = money(min(after_affiliate, max(0.0, float(coupon_discount or 0))))
-    merchandise = money(max(0, after_affiliate - coupon_off))
     shipping = 0.0 if free_shipping else money(shipping_usd)
+    raw_coupon = money(max(0.0, float(coupon_discount or 0)))
+    if coupon_covers_shipping and not free_shipping:
+        # Discount may reduce merchandise first, then remaining shipping.
+        coupon_off = money(min(after_affiliate + shipping, raw_coupon))
+        merch_cut = money(min(after_affiliate, coupon_off))
+        ship_cut = money(max(0.0, coupon_off - merch_cut))
+        merchandise = money(max(0, after_affiliate - merch_cut))
+        shipping = money(max(0, shipping - ship_cut))
+    else:
+        coupon_off = money(min(after_affiliate, raw_coupon))
+        merchandise = money(max(0, after_affiliate - coupon_off))
     discount_total = money(affiliate_off + coupon_off)
     return {
         "subtotal": cart,

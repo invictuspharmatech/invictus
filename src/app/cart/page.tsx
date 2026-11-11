@@ -15,8 +15,10 @@ import {
   type CheckoutSettings,
 } from "@/lib/checkout-settings";
 import {
+  couponsCoverShipping,
   couponsFreeShipping,
   couponsTotalDiscount,
+  estimateChargedTotal,
   readSavedCoupons,
   saveCoupons,
   validateCouponCode,
@@ -42,9 +44,13 @@ export default function CartPage() {
   const [appliedCoupons, setAppliedCoupons] = useState<AppliedCoupon[]>([]);
   const [stackDiscount, setStackDiscount] = useState(0);
   const [stackFreeShipping, setStackFreeShipping] = useState(false);
+  const [stackCoversShipping, setStackCoversShipping] = useState(false);
   const appliedCodesKey = appliedCoupons.map((row) => row.code).join(",");
   const [stockLines, setStockLines] = useState<Record<string, StockLine>>({});
   const [stockReady, setStockReady] = useState(false);
+
+  const shippingOption = resolveShippingFee(settings, optionId);
+  const shippingEstimate = items.length === 0 ? 0 : shippingOption.fee;
 
   const refreshStock = useCallback(async () => {
     if (!items.length) {
@@ -90,6 +96,7 @@ export default function CartPage() {
     if (!appliedCodesKey) {
       setStackDiscount(0);
       setStackFreeShipping(false);
+      setStackCoversShipping(false);
       return;
     }
     let cancelled = false;
@@ -98,9 +105,11 @@ export default function CartPage() {
       const kept: AppliedCoupon[] = [];
       let totalDiscount = 0;
       let freeShip = false;
+      let coversShip = false;
       for (const code of codes) {
         const result = await validateCouponCode(code, merchandiseTotal, {
           existingCodes: kept.map((item) => item.code),
+          shippingTotal: shippingEstimate,
         });
         if (!result.ok) {
           if (!cancelled) {
@@ -109,29 +118,35 @@ export default function CartPage() {
             saveCoupons(kept);
             setStackDiscount(totalDiscount);
             setStackFreeShipping(freeShip);
+            setStackCoversShipping(coversShip);
           }
           return;
         }
         kept.push(result.coupon);
         totalDiscount = result.totalDiscount;
         freeShip = result.freeShipping;
+        coversShip = result.discountCoversShipping;
       }
       if (cancelled) return;
       setStackDiscount(totalDiscount);
       setStackFreeShipping(freeShip);
+      setStackCoversShipping(coversShip);
       setAppliedCoupons(kept);
       saveCoupons(kept);
     })();
     return () => {
       cancelled = true;
     };
-  }, [merchandiseTotal, appliedCodesKey]);
+  }, [merchandiseTotal, appliedCodesKey, shippingEstimate]);
 
-  const shippingOption = resolveShippingFee(settings, optionId);
-  const shippingEstimate = items.length === 0 ? 0 : shippingOption.fee;
-  const chargedShipping = stackFreeShipping || couponsFreeShipping(appliedCoupons) ? 0 : shippingEstimate;
+  const freeShipping = stackFreeShipping || couponsFreeShipping(appliedCoupons);
+  const chargedShipping = freeShipping ? 0 : shippingEstimate;
   const discount = stackDiscount || couponsTotalDiscount(appliedCoupons);
-  const estimatedTotal = Math.max(0, merchandiseTotal - discount) + chargedShipping;
+  const coversShipping = stackCoversShipping || couponsCoverShipping(appliedCoupons);
+  const estimatedTotal = estimateChargedTotal(merchandiseTotal, shippingEstimate, discount, {
+    freeShipping,
+    coversShipping,
+  });
   const minOrder = settings?.minOrderAmount ?? 100;
   const maxOrder = settings?.maxOrderAmount ?? null;
   const compared = orderLimitAmount(merchandiseTotal, chargedShipping, settings);
@@ -157,6 +172,7 @@ export default function CartPage() {
     }
     const result = await validateCouponCode(code, merchandiseTotal, {
       existingCodes: appliedCoupons.map((row) => row.code),
+      shippingTotal: shippingEstimate,
     });
     if (!result.ok) {
       setCouponError(result.error);
@@ -167,6 +183,7 @@ export default function CartPage() {
     saveCoupons(next);
     setStackDiscount(result.totalDiscount);
     setStackFreeShipping(result.freeShipping);
+    setStackCoversShipping(result.discountCoversShipping);
     setCouponInput("");
   }
 

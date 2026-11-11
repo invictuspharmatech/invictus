@@ -71,11 +71,22 @@ export type ApiShippingLabel = {
   createdAt: string;
 };
 
+export type ApiLinkedOrder = {
+  id: string;
+  orderNumber: string;
+  warehouse: string;
+  splitIndex: number;
+  status: string;
+  grandTotal: number;
+};
+
 export type ApiOrder = {
   id: string;
   orderNumber: string;
   groupId: string;
   splitIndex: number;
+  splitCount?: number;
+  linkedOrders?: ApiLinkedOrder[];
   warehouse: string;
   status: string;
   paymentStatus?: string;
@@ -435,6 +446,7 @@ export type ApiCoupon = {
   stackableWithOtherCoupons?: boolean;
   stackableCouponIds?: string[];
   stackablePartners?: { id: string; code: string; name: string }[];
+  includeShippingInDiscount?: boolean;
   startsAt: string | null;
   expiresAt: string | null;
   isActive: boolean;
