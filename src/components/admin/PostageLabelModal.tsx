@@ -276,7 +276,7 @@ function createPurchaseBody(
     ? flatRateDimensions(pkg.packageType)
     : { length: pkg.length, width: pkg.width, height: pkg.height };
   const service = flat ? "Priority" : pkg.service;
-  return {
+  const payload: Record<string, string | boolean> = {
     carrier: pkg.carrier,
     service,
     label_format: "PDF",
@@ -284,6 +284,7 @@ function createPurchaseBody(
     from_name: sender.fromName,
     from_street: sender.fromStreet,
     from_apt: sender.fromApt,
+    from_street2: sender.fromApt,
     from_city: sender.fromCity,
     from_state: sender.fromState,
     from_zip: sender.fromZip,
@@ -308,9 +309,12 @@ function createPurchaseBody(
     length: dims.length,
     width: dims.width,
     height: dims.height,
-    test_mode: pkg.carrier === "usps" ? testMode : false,
-    testMode: pkg.carrier === "usps" ? testMode : false,
   };
+  // GreatLife / API: only include test_mode when USPS + enabled. Never send false.
+  if (pkg.carrier === "usps" && testMode) {
+    payload.test_mode = true;
+  }
+  return payload;
 }
 
 function PackageFields({

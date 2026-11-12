@@ -206,7 +206,18 @@ def _error_detail(status: int, url: str, body: str) -> str:
 def _truthy(value) -> bool:
     if isinstance(value, bool):
         return value
+    if isinstance(value, (int, float)):
+        return value != 0
     return str(value or "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def _resolve_usps_test_mode(options: dict) -> bool:
+    """Match PurePharma: only honor explicit test_mode / testMode flags for USPS."""
+    if "test_mode" in options:
+        return _truthy(options.get("test_mode"))
+    if "testMode" in options:
+        return _truthy(options.get("testMode"))
+    return False
 
 
 def _parse_json_object(text: str) -> dict | None:
@@ -476,6 +487,11 @@ def create_label(order: Order, options: dict) -> ShippingLabel:
             "Fill the Bitcoin Postage sender address (name, street, city, state, ZIP) before creating a label."
         )
 
+    from_apt = _option(
+        options, "fromApt", "from_apt", "fromStreet2", "from_street2",
+        default=sender.from_apt if sender else "",
+    )
+    # Bitcoin Postage docs + GreatLife plugin use from_street2 (apt/suite), not from_apt.
     form = {
         **_auth_form(creds),
         "order_id": order.order_number or str(order.id),
@@ -484,9 +500,7 @@ def create_label(order: Order, options: dict) -> ShippingLabel:
         "carrier": carrier,
         "from_name": from_name,
         "from_street": from_street,
-        "from_apt": _option(
-            options, "fromApt", "from_apt", default=sender.from_apt if sender else ""
-        ),
+        "from_street2": from_apt,
         "from_city": from_city,
         "from_state": from_state,
         "from_zip": from_zip,
@@ -515,7 +529,9 @@ def create_label(order: Order, options: dict) -> ShippingLabel:
     }
     if carrier == "usps":
         form["packagetype_usps"] = package_type
-        if _truthy(options.get("testMode")) or _truthy(options.get("test_mode")):
+        # USPS only. API: include test_mode=true to skip credit withdrawal; omit when off.
+        # GreatLife/PurePharma send the string "true" (not "1" / not JSON bool on the wire).
+        if _resolve_usps_test_mode(options):
             form["test_mode"] = "true"
     elif carrier == "fedex":
         form["packagetype_fedex"] = package_type
