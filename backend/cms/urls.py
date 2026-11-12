@@ -48,6 +48,10 @@ urlpatterns = [
     path("admin/email/zoho/refresh-folders/", zoho_mail_views.zoho_refresh_folders_view),
     path("admin/email/zoho/inbox/", zoho_mail_views.zoho_inbox_view),
     path("admin/email/zoho/outbox/", zoho_mail_views.zoho_outbox_view),
+    path(
+        "admin/email/zoho/messages/bulk-resolve/",
+        zoho_mail_views.zoho_messages_bulk_resolve_view,
+    ),
     path("admin/email/zoho/messages/<str:message_id>/", zoho_mail_views.zoho_message_detail_view),
     path("admin/email/zoho/messages/<str:message_id>/reply/", zoho_mail_views.zoho_message_reply_view),
     path(

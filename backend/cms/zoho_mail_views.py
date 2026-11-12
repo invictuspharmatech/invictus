@@ -160,3 +160,17 @@ def zoho_message_resolve_view(request, message_id: str):
         return Response(zoho_mail.resolve_message(message_id, folder_id))
     except zoho_mail.ZohoMailError as exc:
         return Response({"error": str(exc)}, status=exc.status)
+
+
+@api_view(["POST"])
+@permission_classes([IsPortalStaff])
+def zoho_messages_bulk_resolve_view(request):
+    denied = _forbid(request)
+    if denied:
+        return denied
+    data = request.data or {}
+    items = data.get("messages") or data.get("items") or []
+    try:
+        return Response(zoho_mail.resolve_messages(items if isinstance(items, list) else []))
+    except zoho_mail.ZohoMailError as exc:
+        return Response({"error": str(exc)}, status=exc.status)

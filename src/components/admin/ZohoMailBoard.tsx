@@ -49,6 +49,7 @@ export function ZohoMailBoard() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const loadStatus = useCallback(async () => {
     const res = await fetch("/api/admin/email/zoho/status");
@@ -111,6 +112,7 @@ export function ZohoMailBoard() {
     const key = `${tab}|${appliedSearch}|${unreadOnly ? "1" : "0"}`;
     if (loadedKey.current === key) return;
     let cancelled = false;
+    setSelectedIds([]);
     void (async () => {
       const next = await loadStatus();
       if (cancelled) return;
@@ -123,6 +125,10 @@ export function ZohoMailBoard() {
     // Fetch once per tab/search/unread change. Status updates must not retrigger this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, appliedSearch, unreadOnly]);
+
+  useEffect(() => {
+    setSelectedIds((prev) => prev.filter((id) => rows.some((row) => row.id === id)));
+  }, [rows]);
 
   async function connect() {
     setBusy(true);
@@ -180,6 +186,19 @@ export function ZohoMailBoard() {
     }
   }
 
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((row) => row !== id) : [...prev, id]));
+  }
+
+  function toggleSelectAll() {
+    if (rows.length === 0) return;
+    if (selectedIds.length === rows.length) {
+      setSelectedIds([]);
+      return;
+    }
+    setSelectedIds(rows.map((row) => row.id));
+  }
+
   async function resolveRow(row: ZohoRow) {
     if (!window.confirm("Move this message to the Resolved folder in Zoho?")) return;
     setBusy(true);
@@ -196,6 +215,58 @@ export function ZohoMailBoard() {
         return;
       }
       setNotice("Message moved to Resolved.");
+      setSelectedIds((prev) => prev.filter((id) => id !== row.id));
+      await loadMessages(tab);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resolveSelected() {
+    if (tab !== "inbox") return;
+    const selected = rows.filter((row) => selectedIds.includes(row.id));
+    if (selected.length === 0) {
+      setError("Select at least one message.");
+      return;
+    }
+    if (
+      !window.confirm(
+        `Move ${selected.length} selected message${selected.length === 1 ? "" : "s"} to the Resolved folder in Zoho?`,
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/email/zoho/messages/bulk-resolve", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          messages: selected.map((row) => ({ id: row.id, folderId: row.folderId })),
+        }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { error?: string; movedCount?: number; failed?: { id: string; error: string }[] }
+        | null;
+      if (!res.ok) {
+        setError(data?.error || "Could not resolve selected messages.");
+        return;
+      }
+      const failed = Array.isArray(data?.failed) ? data.failed : [];
+      const movedCount = data?.movedCount ?? selected.length - failed.length;
+      if (failed.length > 0) {
+        setError(
+          `Moved ${movedCount}. ${failed.length} failed${failed[0]?.error ? `: ${failed[0].error}` : "."}`,
+        );
+      } else {
+        setNotice(
+          movedCount === 1
+            ? "1 message moved to Resolved."
+            : `${movedCount} messages moved to Resolved.`,
+        );
+      }
+      setSelectedIds([]);
       await loadMessages(tab);
     } finally {
       setBusy(false);
@@ -311,6 +382,21 @@ export function ZohoMailBoard() {
             Unread only
           </label>
         ) : null}
+        {tab === "inbox" && selectedIds.length > 0 ? (
+          <button
+            type="button"
+            className="gold-btn"
+            disabled={busy || !status?.resolvedFolderId}
+            onClick={() => void resolveSelected()}
+            title={
+              status?.resolvedFolderId
+                ? undefined
+                : "Set ZOHO_MAIL_RESOLVED_FOLDER_ID before resolving."
+            }
+          >
+            Resolve selected ({selectedIds.length})
+          </button>
+        ) : null}
         <span className="text-xs text-muted-foreground">{total} shown</span>
       </div>
 
@@ -325,6 +411,16 @@ export function ZohoMailBoard() {
           <table className="w-full min-w-[800px] text-left text-sm">
             <thead className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
               <tr>
+                {tab === "inbox" ? (
+                  <th className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all messages"
+                      checked={rows.length > 0 && selectedIds.length === rows.length}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
+                ) : null}
                 <th className="px-3 py-2">From / To</th>
                 <th className="px-3 py-2">Subject</th>
                 <th className="px-3 py-2">Received</th>
@@ -334,6 +430,16 @@ export function ZohoMailBoard() {
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id} className="border-t border-border/40 align-top">
+                  {tab === "inbox" ? (
+                    <td className="px-3 py-3">
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${row.subject || row.id}`}
+                        checked={selectedIds.includes(row.id)}
+                        onChange={() => toggleSelected(row.id)}
+                      />
+                    </td>
+                  ) : null}
                   <td className="px-3 py-3">
                     <p className={row.isUnread ? "font-semibold text-foreground" : ""}>
                       {tab === "inbox" ? row.fromName || row.fromAddress : row.toAddress || "—"}

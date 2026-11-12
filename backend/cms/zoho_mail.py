@@ -513,7 +513,7 @@ def reply_message(
     return get_message(message_id, folder_id or original.get("folderId"))
 
 
-def resolve_message(message_id: str, folder_id: str | None = None) -> dict[str, Any]:
+def _resolved_dest_folder_id() -> str:
     cfg = _cfg()
     dest = (cfg["resolved_folder_id"] or _get_setting(KEY_RESOLVED) or "").strip()
     if not dest:
@@ -521,33 +521,81 @@ def resolve_message(message_id: str, folder_id: str | None = None) -> dict[str, 
             "Set ZOHO_MAIL_RESOLVED_FOLDER_ID to move messages into your Resolved folder.",
             status=422,
         )
+    return dest
+
+
+def _as_zoho_id(value: str) -> Any:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return value
+
+
+def _move_messages_to_resolved(*, message_ids: list[str], folder_id: str | None) -> dict[str, Any]:
+    dest = _resolved_dest_folder_id()
     aid = account_id()
     source = (folder_id or "").strip() or inbox_folder_id()
-    try:
-        mid = int(message_id)
-    except ValueError:
-        mid = message_id
-    try:
-        dest_id: Any = int(dest)
-    except ValueError:
-        dest_id = dest
-    try:
-        source_id: Any = int(source)
-    except ValueError:
-        source_id = source
+    ids = [str(mid).strip() for mid in message_ids if str(mid or "").strip()]
+    if not ids:
+        raise ZohoMailError("Select at least one message.", status=400)
     payload = {
         "mode": "moveMessage",
-        "destfolderId": dest_id,
-        "messageId": [mid],
+        "destfolderId": _as_zoho_id(dest),
+        "messageId": [_as_zoho_id(mid) for mid in ids],
         "isFolderSpecific": True,
-        "folderId": source_id,
+        "folderId": _as_zoho_id(source),
     }
     _api("PUT", f"/api/accounts/{aid}/updatemessage", json_body=payload)
     return {
         "moved": True,
-        "messageIds": [str(message_id)],
+        "messageIds": ids,
         "destFolderId": str(dest),
         "sourceFolderId": str(source),
+    }
+
+
+def resolve_message(message_id: str, folder_id: str | None = None) -> dict[str, Any]:
+    return _move_messages_to_resolved(message_ids=[str(message_id)], folder_id=folder_id)
+
+
+def resolve_messages(items: list[dict[str, Any]]) -> dict[str, Any]:
+    """Move many messages to Resolved, grouped by source folder for Zoho's API."""
+    if not isinstance(items, list) or not items:
+        raise ZohoMailError("Select at least one message.", status=400)
+    grouped: dict[str, list[str]] = {}
+    for raw in items:
+        if not isinstance(raw, dict):
+            continue
+        mid = str(raw.get("id") or raw.get("messageId") or raw.get("message_id") or "").strip()
+        if not mid:
+            continue
+        folder = str(raw.get("folderId") or raw.get("folder_id") or "").strip()
+        grouped.setdefault(folder, [])
+        if mid not in grouped[folder]:
+            grouped[folder].append(mid)
+    if not grouped:
+        raise ZohoMailError("Select at least one message.", status=400)
+
+    moved_ids: list[str] = []
+    errors: list[dict[str, str]] = []
+    for folder_id, message_ids in grouped.items():
+        try:
+            result = _move_messages_to_resolved(
+                message_ids=message_ids,
+                folder_id=folder_id or None,
+            )
+            moved_ids.extend(result["messageIds"])
+        except ZohoMailError as exc:
+            for mid in message_ids:
+                errors.append({"id": mid, "error": str(exc)})
+    if not moved_ids and errors:
+        raise ZohoMailError(errors[0]["error"], status=422)
+    return {
+        "moved": True,
+        "movedCount": len(moved_ids),
+        "messageIds": moved_ids,
+        "failed": errors,
+        "destFolderId": _resolved_dest_folder_id(),
     }
 
 
