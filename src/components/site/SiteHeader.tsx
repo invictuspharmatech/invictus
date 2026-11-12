@@ -129,6 +129,7 @@ export function SiteHeader({
   const [shopOpen, setShopOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const shop = shopLinks.length > 0 ? shopLinks : SHOP_CATEGORIES;
   const accountHref = session ? "/account" : "/login";
 
@@ -137,6 +138,7 @@ export function SiteHeader({
     setShopOpen(false);
     setFaqOpen(false);
     setToolsOpen(false);
+    setAccountOpen(false);
   }, [pathname]);
 
   if (pathname.startsWith("/admin")) {
@@ -266,24 +268,49 @@ export function SiteHeader({
         <Link href="/contact" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
           Contact
         </Link>
-        <Link href={accountHref} className={MOBILE_LINK_CLASS} onClick={closeMenu}>
-          My account
-        </Link>
         {session ? (
-          <Link href="/account/orders" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
-            Orders
+          <MobileAccordion
+            label="My account"
+            open={accountOpen}
+            onToggle={() => setAccountOpen((value) => !value)}
+          >
+            <Link href="/account" className={MOBILE_CHILD_LINK_CLASS} onClick={closeMenu}>
+              Account
+            </Link>
+            <Link href="/account/orders" className={MOBILE_CHILD_LINK_CLASS} onClick={closeMenu}>
+              Orders
+            </Link>
+            <Link href="/account/profile" className={MOBILE_CHILD_LINK_CLASS} onClick={closeMenu}>
+              Profile
+            </Link>
+            {session.isAffiliate ? (
+              <Link
+                href="/account/affiliate"
+                className={MOBILE_CHILD_LINK_CLASS}
+                onClick={closeMenu}
+              >
+                Affiliate tracking
+              </Link>
+            ) : null}
+            <button
+              type="button"
+              className={`w-full text-left ${MOBILE_CHILD_LINK_CLASS}`}
+              onClick={() => {
+                closeMenu();
+                void fetch("/api/auth/logout", { method: "POST" }).then(() => {
+                  router.push("/");
+                  router.refresh();
+                });
+              }}
+            >
+              Sign out
+            </button>
+          </MobileAccordion>
+        ) : (
+          <Link href={accountHref} className={MOBILE_LINK_CLASS} onClick={closeMenu}>
+            My account
           </Link>
-        ) : null}
-        {session ? (
-          <Link href="/account/profile" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
-            Profile
-          </Link>
-        ) : null}
-        {session?.isAffiliate ? (
-          <Link href="/account/affiliate" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
-            Affiliate tracking
-          </Link>
-        ) : null}
+        )}
         {showAdmin ? (
           <Link href="/admin" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
             Admin
@@ -293,21 +320,6 @@ export function SiteHeader({
           <Link href="/admin/orders" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
             Manager dashboard
           </Link>
-        ) : null}
-        {session ? (
-          <button
-            type="button"
-            className={`w-full text-left ${MOBILE_LINK_CLASS}`}
-            onClick={() => {
-              closeMenu();
-              void fetch("/api/auth/logout", { method: "POST" }).then(() => {
-                router.push("/");
-                router.refresh();
-              });
-            }}
-          >
-            Sign out
-          </button>
         ) : null}
         <Link
           href="/cart"

@@ -50,6 +50,16 @@ class CheckoutSettingsTests(TestCase):
         self.assertIsNone(checkout_limit_error(charged_merchandise=80, shipping=20))
         self.assertIsNotNone(checkout_limit_error(charged_merchandise=80, shipping=19))
 
+    def test_checkout_enabled_toggle(self):
+        from orders.shop_config import checkout_is_enabled, get_checkout_limits
+
+        saved = save_checkout_limits({"checkoutEnabled": False, "minOrderAmount": 100})
+        self.assertFalse(saved["checkoutEnabled"])
+        self.assertFalse(checkout_is_enabled())
+        saved = save_checkout_limits({"checkoutEnabled": True, "minOrderAmount": 100})
+        self.assertTrue(saved["checkoutEnabled"])
+        self.assertTrue(get_checkout_limits()["checkoutEnabled"])
+
     def test_shipping_fees_round_trip(self):
         rows = save_shipping_fees(
             [{"name": "Express", "fee": "35.5", "sortOrder": 1}, {"name": "Ground", "fee": 15, "sort_order": 0}]

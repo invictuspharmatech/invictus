@@ -3,6 +3,12 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from accounts.models import AffiliateApplication, User
+from accounts.password_reset import (
+    DEFAULT_TTL_SECONDS,
+    issue_reset_token,
+    reset_url_for,
+    verify_reset_token,
+)
 from accounts.permissions import IsAuthenticatedUser, IsStoreStaff
 from accounts.serializers import (
     AffiliateApplicationSerializer,
@@ -12,6 +18,10 @@ from accounts.serializers import (
 from accounts.tokens import issue_token, session_payload
 from cms.mailer import send_event
 from orders.shop_config import apply_affiliate_defaults
+
+_PASSWORD_RESET_OK = (
+    "If an account exists for that email, a password reset link has been sent."
+)
 
 
 @api_view(["POST"])
@@ -99,6 +109,57 @@ def change_password_view(request):
     user.save(update_fields=["password"])
     token = issue_token(user)
     return Response({"ok": True, "token": token})
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def forgot_password_view(request):
+    email = (request.data.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return Response({"error": "A valid email is required."}, status=400)
+    user = User.objects.filter(email=email, is_active=True).first()
+    if user:
+        token = issue_reset_token(user)
+        expires_hours = max(1, DEFAULT_TTL_SECONDS // 3600)
+        send_event(
+            "password_reset",
+            {
+                "user_name": user.name or user.email,
+                "user_email": user.email,
+                "reset_url": reset_url_for(user, token=token),
+                "expires_hours": expires_hours,
+            },
+            user_email=user.email,
+        )
+    return Response({"ok": True, "message": _PASSWORD_RESET_OK})
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def reset_password_view(request):
+    token = (request.data.get("token") or "").strip()
+    password = request.data.get("password") or ""
+    confirm = (
+        request.data.get("passwordConfirmation")
+        or request.data.get("password_confirmation")
+        or ""
+    )
+    if not token:
+        return Response({"error": "Reset token is required."}, status=400)
+    if password != confirm:
+        return Response({"error": "New passwords do not match."}, status=400)
+    if len(password) < 8:
+        return Response({"error": "An 8+ character password is required."}, status=400)
+    user = verify_reset_token(token)
+    if not user:
+        return Response(
+            {"error": "This reset link is invalid or has expired. Request a new one."},
+            status=400,
+        )
+    user.set_password(password)
+    user.save(update_fields=["password"])
+    session = issue_token(user)
+    return Response({"ok": True, "token": session, "user": session_payload(user)})
 
 
 @api_view(["POST"])

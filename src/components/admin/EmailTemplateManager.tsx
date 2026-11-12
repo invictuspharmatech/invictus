@@ -48,7 +48,8 @@ export function EmailTemplateManager({ items }: { items: ApiEmailTemplate[] }) {
           <code>{"{{status}}"}</code>, <code>{"{{warehouse}}"}</code>,{" "}
           <code>{"{{grand_total}}"}</code>, <code>{"{{items}}"}</code>,{" "}
           <code>{"{{user_email}}"}</code>, <code>{"{{subject}}"}</code>,{" "}
-          <code>{"{{message}}"}</code>, <code>{"{{affiliate_code}}"}</code>.
+          <code>{"{{message}}"}</code>, <code>{"{{affiliate_code}}"}</code>,{" "}
+          <code>{"{{reset_url}}"}</code>, <code>{"{{expires_hours}}"}</code>.
         </p>
       </div>
       {error ? <p className="text-sm text-red-400">{error}</p> : null}

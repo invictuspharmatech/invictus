@@ -58,11 +58,9 @@ export function HeaderAccountMenu({
     router.refresh();
   }
 
+  // Keep the avatar menu short — Orders / Profile / Affiliate live on the account pages.
   const links = [
     { href: "/account", label: "Account" },
-    { href: "/account/orders", label: "Orders" },
-    { href: "/account/profile", label: "Profile" },
-    ...(session.isAffiliate ? [{ href: "/account/affiliate", label: "Affiliate tracking" }] : []),
     ...(showAdmin ? [{ href: "/admin", label: "Admin" }] : []),
     ...(showManagerDashboard
       ? [{ href: "/admin/orders", label: "Manager dashboard" }]

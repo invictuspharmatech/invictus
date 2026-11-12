@@ -97,13 +97,17 @@ export function AccountingBoard({
   const [calcMode, setCalcMode] = useState<CalcMode>("manual");
   const [actualUsd, setActualUsd] = useState("");
   const [appliedUsd, setAppliedUsd] = useState<number | null>(null);
+  /** Gross USD entered for manual mode (before shipping is subtracted). */
+  const [manualGrossUsd, setManualGrossUsd] = useState<number | null>(null);
 
   const orderMerchandise = Number(summary.proceeds) || 0;
+  const orderShipping = Math.max(0, Number(summary.shipping) || 0);
 
   useEffect(() => {
     const stored = readStoredCalc(period, warehouse);
     setCalcMode(stored.mode);
     setAppliedUsd(stored.total);
+    setManualGrossUsd(null);
     setActualUsd("");
   }, [period, warehouse]);
 
@@ -113,6 +117,10 @@ export function AccountingBoard({
   }, [appliedUsd, summary.w1Share, warehouse, split]);
 
   const pendingUsd = parseMoneyInput(actualUsd);
+  const pendingMerchandise =
+    pendingUsd != null && pendingUsd > 0
+      ? Math.max(0, Math.round((pendingUsd - orderShipping) * 100) / 100)
+      : null;
   const canCalculateManual = pendingUsd != null && pendingUsd > 0;
   const canCalculateAuto = orderMerchandise > 0;
 
@@ -123,15 +131,18 @@ export function AccountingBoard({
 
   function calculateManual() {
     if (pendingUsd == null || pendingUsd <= 0) return;
+    const merchandise = Math.max(0, Math.round((pendingUsd - orderShipping) * 100) / 100);
     setCalcMode("manual");
-    setAppliedUsd(pendingUsd);
-    writeStoredCalc(period, warehouse, "manual", pendingUsd);
+    setManualGrossUsd(pendingUsd);
+    setAppliedUsd(merchandise);
+    writeStoredCalc(period, warehouse, "manual", merchandise);
     setActualUsd("");
   }
 
   function calculateAuto() {
     if (orderMerchandise <= 0) return;
     setCalcMode("auto");
+    setManualGrossUsd(null);
     setAppliedUsd(orderMerchandise);
     writeStoredCalc(period, warehouse, "auto", orderMerchandise);
     setActualUsd("");
@@ -139,6 +150,7 @@ export function AccountingBoard({
 
   function clearCalculated() {
     setAppliedUsd(null);
+    setManualGrossUsd(null);
     setActualUsd("");
     writeStoredCalc(period, warehouse, calcMode, null);
   }
@@ -159,6 +171,7 @@ export function AccountingBoard({
         body: JSON.stringify({ resetAll: true, period, warehouse }),
       });
       setAppliedUsd(null);
+      setManualGrossUsd(null);
       setActualUsd("");
       writeStoredCalc(period, warehouse, calcMode, null);
       router.refresh();
@@ -212,8 +225,9 @@ export function AccountingBoard({
                 Payout calculator · Admin ~{adminRateLabel.toFixed(1)}%
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Merchandise only for Admin / Party shares. Shipping fees always stay from orders
-                since last Reset all (50/50). W1/W2 mix is also from those orders.
+                Admin / Party shares use merchandise only. Manual: enter total received — shipping
+                since last Reset is subtracted first, then shares are calculated. Auto: uses order
+                merchandise (shipping already excluded). Shipping tile always stays from orders.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
@@ -240,7 +254,7 @@ export function AccountingBoard({
             </div>
             {calcMode === "manual" ? (
               <label className="grid gap-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                USD amount
+                Total USD received
                 <div className="flex flex-wrap items-center gap-2">
                   <input
                     className="field !py-2 max-w-[10rem] font-mono text-sm"
@@ -264,6 +278,15 @@ export function AccountingBoard({
                     Calculate
                   </button>
                 </div>
+                <p className="normal-case tracking-normal text-muted-foreground">
+                  Shipping since reset: {formatMoney(orderShipping)}
+                  {pendingMerchandise != null ? (
+                    <>
+                      {" "}
+                      · Merch for shares: {formatMoney(pendingMerchandise)}
+                    </>
+                  ) : null}
+                </p>
               </label>
             ) : (
               <div className="grid gap-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
@@ -290,8 +313,22 @@ export function AccountingBoard({
           {manualSplit && appliedUsd != null ? (
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
               <p className="font-mono text-xs text-muted-foreground">
-                {calcMode === "auto" ? "Auto · " : "Manual · "}
-                {formatMoney(appliedUsd)} → Admin {formatMoney(manualSplit.admin)} · Party 1{" "}
+                {calcMode === "auto" ? (
+                  <>Auto · merch {formatMoney(appliedUsd)}</>
+                ) : (
+                  <>
+                    Manual ·{" "}
+                    {manualGrossUsd != null ? (
+                      <>
+                        {formatMoney(manualGrossUsd)} − ship {formatMoney(orderShipping)} = merch{" "}
+                        {formatMoney(appliedUsd)}
+                      </>
+                    ) : (
+                      <>merch {formatMoney(appliedUsd)}</>
+                    )}
+                  </>
+                )}{" "}
+                → Admin {formatMoney(manualSplit.admin)} · Party 1{" "}
                 {formatMoney(manualSplit.party1)} · Party 2 {formatMoney(manualSplit.party2)}
               </p>
               <button type="button" className="ghost-btn !px-2 !py-1 text-xs" onClick={clearCalculated}>

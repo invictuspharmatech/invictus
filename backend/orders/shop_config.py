@@ -16,6 +16,14 @@ DEFAULT_SHIPPING_FEES = [
 ]
 
 
+def _checkout_enabled_flag(raw: dict, *, default: bool = False) -> bool:
+    if "checkoutEnabled" in raw:
+        return bool(raw.get("checkoutEnabled"))
+    if "checkout_enabled" in raw:
+        return bool(raw.get("checkout_enabled"))
+    return default
+
+
 def get_checkout_limits() -> dict:
     raw = get_json(CHECKOUT_KEY, None)
     if not isinstance(raw, dict):
@@ -23,7 +31,9 @@ def get_checkout_limits() -> dict:
     min_amount = _optional_money(raw.get("minOrderAmount", raw.get("min_order_amount", settings.MIN_ORDER_USD)))
     if min_amount is None and not has_key(CHECKOUT_KEY):
         min_amount = float(settings.MIN_ORDER_USD)
+    # Default off until explicitly enabled in Admin → CMS → Ops → Checkout.
     return {
+        "checkoutEnabled": _checkout_enabled_flag(raw, default=False),
         "minOrderAmount": min_amount,
         "maxOrderAmount": _optional_money(raw.get("maxOrderAmount", raw.get("max_order_amount"))),
         "includeShippingInOrderLimit": bool(
@@ -34,7 +44,13 @@ def get_checkout_limits() -> dict:
 
 def save_checkout_limits(payload: dict) -> dict:
     data = payload or {}
+    existing = get_checkout_limits()
+    if "checkoutEnabled" in data or "checkout_enabled" in data:
+        enabled = _checkout_enabled_flag(data, default=False)
+    else:
+        enabled = bool(existing.get("checkoutEnabled", False))
     saved = {
+        "checkoutEnabled": enabled,
         "minOrderAmount": _optional_money(data.get("minOrderAmount", data.get("min_order_amount"))),
         "maxOrderAmount": _optional_money(data.get("maxOrderAmount", data.get("max_order_amount"))),
         "includeShippingInOrderLimit": bool(
@@ -43,6 +59,10 @@ def save_checkout_limits(payload: dict) -> dict:
     }
     save_json(CHECKOUT_KEY, saved, "Checkout order limits", "checkout")
     return saved
+
+
+def checkout_is_enabled() -> bool:
+    return bool(get_checkout_limits().get("checkoutEnabled", False))
 
 
 def get_shipping_fees() -> list[dict]:

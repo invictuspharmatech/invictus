@@ -72,6 +72,11 @@ function LoginForm() {
         Sign in
       </button>
       <p className="text-center text-sm text-muted-foreground">
+        <Link href="/forgot-password" className="text-foreground">
+          Forgot password?
+        </Link>
+      </p>
+      <p className="text-center text-sm text-muted-foreground">
         New here?{" "}
         <Link href="/register" className="text-foreground">
           Create an account

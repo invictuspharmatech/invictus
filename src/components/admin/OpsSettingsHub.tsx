@@ -14,6 +14,7 @@ type ShippingFeeRow = {
 
 type OpsSettings = {
   checkout: {
+    checkoutEnabled: boolean;
     minOrderAmount: number | null;
     maxOrderAmount: number | null;
     includeShippingInOrderLimit: boolean;
@@ -50,6 +51,7 @@ export function OpsSettingsHub() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [checkout, setCheckout] = useState({
+    checkoutEnabled: false,
     minOrderAmount: "100",
     maxOrderAmount: "",
     includeShippingInOrderLimit: false,
@@ -80,6 +82,7 @@ export function OpsSettingsHub() {
         return;
       }
       setCheckout({
+        checkoutEnabled: data.checkout.checkoutEnabled === true,
         minOrderAmount: moneyInput(data.checkout.minOrderAmount),
         maxOrderAmount: moneyInput(data.checkout.maxOrderAmount),
         includeShippingInOrderLimit: data.checkout.includeShippingInOrderLimit,
@@ -117,6 +120,7 @@ export function OpsSettingsHub() {
     if (data.shipping?.fees) setFees(data.shipping.fees);
     if (data.checkout) {
       setCheckout({
+        checkoutEnabled: data.checkout.checkoutEnabled === true,
         minOrderAmount: moneyInput(data.checkout.minOrderAmount),
         maxOrderAmount: moneyInput(data.checkout.maxOrderAmount),
         includeShippingInOrderLimit: data.checkout.includeShippingInOrderLimit,
@@ -135,6 +139,7 @@ export function OpsSettingsHub() {
   function onCheckout(event: FormEvent) {
     event.preventDefault();
     void save("checkout", {
+      checkoutEnabled: checkout.checkoutEnabled,
       minOrderAmount: checkout.minOrderAmount,
       maxOrderAmount: checkout.maxOrderAmount,
       includeShippingInOrderLimit: checkout.includeShippingInOrderLimit,
@@ -175,7 +180,28 @@ export function OpsSettingsHub() {
 
       {tab === "checkout" ? (
         <form onSubmit={onCheckout} className="tile mt-6 max-w-2xl space-y-4">
-          <h2 className="text-lg">Checkout order amount</h2>
+          <h2 className="text-lg">Checkout</h2>
+          <label className="flex items-start gap-2 rounded border border-border/50 bg-muted/20 p-3 text-sm">
+            <input
+              className="mt-0.5"
+              type="checkbox"
+              checked={checkout.checkoutEnabled}
+              onChange={(event) =>
+                setCheckout((prev) => ({
+                  ...prev,
+                  checkoutEnabled: event.target.checked,
+                }))
+              }
+            />
+            <span>
+              <strong>Enable checkout</strong>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                When off, the cart Checkout button is disabled and anyone who opens /checkout is
+                sent back to the cart. Turn on when you are ready to take orders.
+              </span>
+            </span>
+          </label>
+          <h3 className="text-base font-medium">Order amount limits</h3>
           <p className="text-sm text-muted-foreground">
             Customers are blocked on cart and checkout unless the charged merchandise (after
             discounts) stays in range. Shipping can be included below.

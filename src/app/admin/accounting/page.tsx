@@ -51,8 +51,9 @@ export default async function AccountingPage() {
     <div>
       <h1 className="display-font text-2xl sm:text-3xl">Accounting</h1>
       <p className="mt-1 max-w-3xl text-xs text-muted-foreground sm:text-sm">
-        Merchandise splits exclude shipping. Use the calculator for actual USD received; Reset
-        all clears Admin, Party 1, Party 2, and Shipping for the next pay period.
+        Merchandise splits exclude shipping. Manual total received has shipping-since-reset
+        subtracted before shares; Auto uses order merchandise. Reset all clears tiles for the
+        next pay period.
       </p>
       <AccountingBoard
         tiles={tiles}

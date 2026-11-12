@@ -147,13 +147,14 @@ export default function CartPage() {
     freeShipping,
     coversShipping,
   });
+  const checkoutEnabled = settings?.checkoutEnabled === true;
   const minOrder = settings?.minOrderAmount ?? 100;
   const maxOrder = settings?.maxOrderAmount ?? null;
   const compared = orderLimitAmount(merchandiseTotal, chargedShipping, settings);
   const belowMin = merchandiseTotal > 0 && minOrder != null && compared < minOrder;
   const aboveMax = merchandiseTotal > 0 && maxOrder != null && compared > maxOrder;
   const stockBlocked = items.some((item) => stockLines[item.productId]?.ok === false);
-  const blocked = belowMin || aboveMax || stockBlocked || !stockReady;
+  const blocked = !checkoutEnabled || belowMin || aboveMax || stockBlocked || !stockReady;
   const remaining = minOrder != null ? Math.max(0, minOrder - compared) : 0;
   const fees = settings?.shippingFees ?? [];
 
@@ -350,6 +351,11 @@ export default function CartPage() {
                 <dd>{formatMoney(estimatedTotal)}</dd>
               </div>
             </dl>
+            {settings && !checkoutEnabled ? (
+              <p className="mt-4 text-sm text-signal">
+                Checkout is temporarily closed. Please check back soon.
+              </p>
+            ) : null}
             {minCopy ? <p className="mt-4 text-sm text-signal">{minCopy}</p> : null}
             {aboveMax && maxOrder != null ? (
               <p className="mt-4 text-sm text-signal">{formatMoney(maxOrder)} maximum order.</p>

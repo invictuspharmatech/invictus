@@ -57,13 +57,17 @@ export default function CheckoutPage() {
   useEffect(() => {
     void fetchCheckoutSettings().then((data) => {
       setSettings(data);
+      if (data.checkoutEnabled === false) {
+        router.replace("/cart");
+        return;
+      }
       const saved = readSavedShippingOptionId();
       const resolved = resolveShippingFee(data, saved);
       setOptionId(resolved.id);
       saveShippingOptionId(resolved.id);
     });
     setAppliedCoupons(readSavedCoupons());
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (!appliedCodesKey) {
@@ -158,6 +162,10 @@ export default function CheckoutPage() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (settings?.checkoutEnabled === false) {
+      router.replace("/cart");
+      return;
+    }
     setError(null);
     setPending(true);
     const form = new FormData(event.currentTarget);
@@ -216,6 +224,19 @@ export default function CheckoutPage() {
     setInvoiceLink(null);
     router.push(`/checkout/complete?group=${encodeURIComponent(group)}`);
   }, [placedGroup, router]);
+
+  if (!settings || settings.checkoutEnabled === false) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-20 text-center">
+        <h1 className="display-font text-3xl">
+          {settings?.checkoutEnabled === false ? "Checkout closed" : "Checkout"}
+        </h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          {settings?.checkoutEnabled === false ? "Redirecting to your cart…" : "Loading…"}
+        </p>
+      </div>
+    );
+  }
 
   if (invoiceLink) {
     return (

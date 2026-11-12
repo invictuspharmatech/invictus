@@ -164,6 +164,21 @@ DEFAULT_TEMPLATES = [
         "sort_order": 70,
     },
     {
+        "event_key": "password_reset",
+        "name": "Password reset",
+        "description": "Sent to the account owner when they request a password reset link.",
+        "subject": "Reset your {{site_name}} password",
+        "body": """<p>Hi {{user_name}},</p>
+<p>We received a request to reset the password for <strong>{{user_email}}</strong>.</p>
+<p><a href="{{reset_url}}">Reset your password</a></p>
+<p>This link expires in {{expires_hours}} hour(s). If you did not request a reset, you can ignore this email.</p>
+<p>— {{site_name}}</p>""",
+        "notify_admin": False,
+        "notify_user": True,
+        "notify_warehouse_manager": False,
+        "sort_order": 75,
+    },
+    {
         "event_key": "affiliate_applied",
         "name": "Affiliate application",
         "description": "Sent when a customer applies to the affiliate program.",

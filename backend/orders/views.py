@@ -72,7 +72,7 @@ from orders.serializers import (
     attach_linked_orders,
     group_customer_order_payloads,
 )
-from orders.shop_config import checkout_limit_error, resolve_shipping_option
+from orders.shop_config import checkout_is_enabled, checkout_limit_error, resolve_shipping_option
 from orders.btcpay import BtcPayError, create_invoice, is_configured, serialize_invoice
 from orders.pay_token import checkout_url
 from orders.accounting import TILE_KEYS, accounting_response, parse_accounting_warehouse, resolve_warehouse
@@ -94,6 +94,11 @@ def checkout_view(request):
     items = data.get("items") or []
     if not items:
         return Response({"error": "Cart is empty."}, status=400)
+    if not checkout_is_enabled():
+        return Response(
+            {"error": "Checkout is temporarily closed. Please try again later."},
+            status=403,
+        )
     required = ["name", "email", "line1", "city", "state", "postal"]
     if any(not data.get(field) for field in required):
         return Response({"error": "Shipping details are required."}, status=400)

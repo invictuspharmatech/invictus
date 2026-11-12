@@ -6,6 +6,7 @@ export type ShippingFeeOption = {
 };
 
 export type CheckoutSettings = {
+  checkoutEnabled: boolean;
   minOrderAmount: number | null;
   maxOrderAmount: number | null;
   includeShippingInOrderLimit: boolean;
@@ -14,17 +15,26 @@ export type CheckoutSettings = {
 
 export const SHIPPING_OPTION_KEY = "invictus-shipping-option";
 
+const DEFAULT_CHECKOUT_SETTINGS: CheckoutSettings = {
+  checkoutEnabled: false,
+  minOrderAmount: 100,
+  maxOrderAmount: null,
+  includeShippingInOrderLimit: false,
+  shippingFees: [{ id: "standard", name: "Standard", fee: 20, sortOrder: 0 }],
+};
+
 export async function fetchCheckoutSettings(): Promise<CheckoutSettings> {
   const response = await fetch("/api/checkout-settings", { cache: "no-store" });
   if (!response.ok) {
-    return {
-      minOrderAmount: 100,
-      maxOrderAmount: null,
-      includeShippingInOrderLimit: false,
-      shippingFees: [{ id: "standard", name: "Standard", fee: 20, sortOrder: 0 }],
-    };
+    return { ...DEFAULT_CHECKOUT_SETTINGS };
   }
-  return (await response.json()) as CheckoutSettings;
+  const data = (await response.json()) as Partial<CheckoutSettings>;
+  return {
+    ...DEFAULT_CHECKOUT_SETTINGS,
+    ...data,
+    checkoutEnabled: data.checkoutEnabled === true,
+    shippingFees: Array.isArray(data.shippingFees) ? data.shippingFees : DEFAULT_CHECKOUT_SETTINGS.shippingFees,
+  };
 }
 
 export function readSavedShippingOptionId(): string | null {
