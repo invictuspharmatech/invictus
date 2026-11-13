@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PromoTicker, type PromoSlide } from "@/components/site/PromoTicker";
+import { bannerBgColor, bannerTextColor } from "@/lib/feature-banners";
 import type { ComingSoonPublic } from "@/lib/coming-soon";
 import type { BannerBgMode, BannerTextMode } from "@/lib/api-types";
 import "./coming-soon.css";
@@ -46,7 +47,15 @@ function Countdown({ targetMs }: { targetMs: number | null }) {
   );
 }
 
-function NotifyPanel({ signedIn }: { signedIn: boolean }) {
+function NotifyPanel({
+  signedIn,
+  buttonBg,
+  buttonColor,
+}: {
+  signedIn: boolean;
+  buttonBg: string;
+  buttonColor: string;
+}) {
   const router = useRouter();
   const params = useSearchParams();
   const [message, setMessage] = useState<string | null>(null);
@@ -54,6 +63,7 @@ function NotifyPanel({ signedIn }: { signedIn: boolean }) {
   const [pending, setPending] = useState(false);
   const autoTried = useRef(false);
   const wantNotify = params.get("notify") === "1";
+  const buttonStyle = { backgroundColor: buttonBg, color: buttonColor };
 
   async function optIn() {
     setPending(true);
@@ -95,7 +105,7 @@ function NotifyPanel({ signedIn }: { signedIn: boolean }) {
     <div>
       <form className="cs-notify" onSubmit={onNotify}>
         {signedIn ? (
-          <button type="submit" disabled={pending}>
+          <button type="submit" disabled={pending} style={buttonStyle}>
             {pending ? "Saving…" : "Notify me at launch"}
           </button>
         ) : (
@@ -103,7 +113,7 @@ function NotifyPanel({ signedIn }: { signedIn: boolean }) {
             <p className="cs-auth-note">
               Create an account or sign in first — launch notices only go to registered users.
             </p>
-            <button type="submit" disabled={pending}>
+            <button type="submit" disabled={pending} style={buttonStyle}>
               Create account to get notified
             </button>
             <Link className="cs-signin" href={`/login?next=${encodeURIComponent("/?notify=1")}`}>
@@ -133,6 +143,8 @@ export function ComingSoonLanding({
   bannerDisplayMode?: "marquee" | "slider";
 }) {
   const launched = Boolean(config.launchAtMs && Date.now() >= config.launchAtMs);
+  const accentBg = bannerBgColor(bannerBgMode);
+  const accentFg = bannerTextColor(bannerTextMode);
   const promoItems: PromoSlide[] = [
     {
       id: "coming-soon-banner",
@@ -204,7 +216,7 @@ export function ComingSoonLanding({
             />
             <Countdown targetMs={config.launchAtMs} />
             <Suspense fallback={null}>
-              <NotifyPanel signedIn={signedIn} />
+              <NotifyPanel signedIn={signedIn} buttonBg={accentBg} buttonColor={accentFg} />
             </Suspense>
             <Link className="cs-catalog" href="/products">
               Browse the Catalog
