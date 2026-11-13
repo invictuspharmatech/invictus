@@ -15,7 +15,7 @@ from accounts import hs256
 from accounts.models import User
 
 PURPOSE = "password_reset"
-DEFAULT_TTL_SECONDS = 60 * 60
+DEFAULT_TTL_SECONDS = 15 * 60
 
 
 def _fingerprint(user: User) -> str:

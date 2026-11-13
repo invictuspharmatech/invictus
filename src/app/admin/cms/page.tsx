@@ -33,6 +33,11 @@ const CARDS = [
     copy: "Homepage headline and other store copy.",
   },
   {
+    href: "/admin/cms/coming-soon",
+    title: "Coming soon",
+    copy: "Enable the launch landing page, countdown (Eastern time), and notify list.",
+  },
+  {
     href: "/admin/cms/email",
     title: "Email settings & templates",
     copy: "SMTP, notification templates, and who receives each store email.",

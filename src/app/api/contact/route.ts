@@ -6,6 +6,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     const data = await djangoJson("/api/contact/", {
       method: "POST",
+      headers: {
+        "x-forwarded-for": request.headers.get("x-forwarded-for") || "",
+        "x-real-ip": request.headers.get("x-real-ip") || "",
+        "cf-connecting-ip": request.headers.get("cf-connecting-ip") || "",
+      },
       body: JSON.stringify(body),
     });
     return NextResponse.json(data);

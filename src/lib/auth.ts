@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 import { Role } from "@/lib/enums";
 import type { SessionUser } from "@/lib/types";
@@ -47,12 +47,24 @@ export async function createSessionToken(user: SessionUser): Promise<string> {
     .sign(secretKey());
 }
 
+const IDLE_SECONDS = 15 * 60;
+
 export async function readSession(): Promise<SessionUser | null> {
+  const headerToken = (await headers()).get("x-invictus-session");
   const jar = await cookies();
-  const token = jar.get(COOKIE)?.value;
+  const token = headerToken || jar.get(COOKIE)?.value;
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secretKey());
+    const acted =
+      typeof payload.act === "number"
+        ? payload.act
+        : typeof payload.iat === "number"
+          ? payload.iat
+          : 0;
+    if (!acted || Date.now() / 1000 - acted > IDLE_SECONDS) {
+      return null;
+    }
     if (
       typeof payload.id !== "string" ||
       typeof payload.email !== "string" ||

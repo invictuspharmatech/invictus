@@ -401,3 +401,14 @@ class ShippingLabel(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+
+class ContactIpBlock(models.Model):
+    ip_address = models.CharField(max_length=45, unique=True)
+    rejected_count = models.PositiveSmallIntegerField(default=0)
+    blocked_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-blocked_at"]

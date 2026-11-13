@@ -121,7 +121,19 @@ def visible_users(actor: User):
 def collect_recipients(actor: User, data: dict) -> list[dict[str, str]]:
     bucket: dict[str, dict[str, str]] = {}
     select_all = bool(data.get("selectAllUsers") or data.get("select_all_users"))
+    launch_notify = bool(
+        data.get("includeLaunchNotify")
+        or data.get("include_launch_notify")
+        or data.get("launchNotifyOnly")
+        or data.get("launch_notify_only")
+    )
     search = (data.get("userSearch") or data.get("user_search") or "").strip()
+    if launch_notify:
+        qs = visible_users(actor).filter(launch_notify=True)
+        if search:
+            qs = qs.filter(Q(name__icontains=search) | Q(email__icontains=search))
+        for user in qs.only("email", "name"):
+            add_recipient(bucket, user.email, user.name)
     if select_all:
         qs = visible_users(actor)
         if search:

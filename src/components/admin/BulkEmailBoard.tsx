@@ -50,6 +50,7 @@ export function BulkEmailBoard() {
   const [usersPage, setUsersPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [selectAllDb, setSelectAllDb] = useState(false);
+  const [includeLaunchNotify, setIncludeLaunchNotify] = useState(false);
   const [manualEmails, setManualEmails] = useState("");
   const [csvText, setCsvText] = useState("");
   const [subject, setSubject] = useState(DEFAULT_BULK_SUBJECT);
@@ -91,6 +92,7 @@ export function BulkEmailBoard() {
     (includeContent: boolean, scheduledAt?: string | null) => ({
       userIds: Object.keys(selectedIds).filter((id) => selectedIds[id]),
       selectAllUsers: selectAllDb,
+      includeLaunchNotify,
       userSearch: search.trim(),
       manualEmails,
       csvText,
@@ -105,7 +107,19 @@ export function BulkEmailBoard() {
           }
         : {}),
     }),
-    [selectedIds, selectAllDb, search, manualEmails, csvText, subject, title, bodyHtml, chunkSize, chunkGapMinutes],
+    [
+      selectedIds,
+      selectAllDb,
+      includeLaunchNotify,
+      search,
+      manualEmails,
+      csvText,
+      subject,
+      title,
+      bodyHtml,
+      chunkSize,
+      chunkGapMinutes,
+    ],
   );
 
   const loadUsers = useCallback(async () => {
@@ -408,6 +422,20 @@ export function BulkEmailBoard() {
               Clear
             </button>
           </div>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              className="mt-0.5"
+              type="checkbox"
+              checked={includeLaunchNotify}
+              onChange={(event) => setIncludeLaunchNotify(event.target.checked)}
+            />
+            <span>
+              Launch notify subscribers
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Include every active account that opted in on the coming-soon page.
+              </span>
+            </span>
+          </label>
           {selectAllDb ? (
             <p className="text-sm text-muted-foreground">
               All matching users in the database will be included ({filteredUsers.length} visible matches).

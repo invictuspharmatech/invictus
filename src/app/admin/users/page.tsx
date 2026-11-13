@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { SignOutAllUsers, SignOutUserButton } from "@/components/admin/UserSessionActions";
 import { requireStaff, visibleUsers } from "@/lib/auth";
-import { roleLabel } from "@/lib/roles";
+import { isSuperuser, roleLabel } from "@/lib/roles";
 
 export default async function AdminUsersPage() {
   const staff = await requireStaff();
@@ -16,9 +17,12 @@ export default async function AdminUsersPage() {
             Create store and warehouse accounts, then assign a type.
           </p>
         </div>
-        <Link href="/admin/users/new" className="gold-btn">
-          Add user
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          {isSuperuser(staff.role) ? <SignOutAllUsers /> : null}
+          <Link href="/admin/users/new" className="gold-btn">
+            Add user
+          </Link>
+        </div>
       </div>
       <div className="tile mt-6 overflow-x-auto">
         <table className="w-full text-left text-sm">
@@ -41,9 +45,14 @@ export default async function AdminUsersPage() {
                 <td>{user.isActive ? "Active" : "Disabled"}</td>
                 <td>{user.isAffiliate ? user.affiliateCode : "—"}</td>
                 <td>
-                  <Link href={`/admin/users/${user.id}`} className="text-sm text-signal">
-                    Edit
-                  </Link>
+                  <span className="flex items-center gap-3">
+                    {isSuperuser(staff.role) ? (
+                      <SignOutUserButton id={user.id} label={user.name || user.email} />
+                    ) : null}
+                    <Link href={`/admin/users/${user.id}`} className="text-sm text-signal">
+                      Edit
+                    </Link>
+                  </span>
                 </td>
               </tr>
             ))}

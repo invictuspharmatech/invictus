@@ -171,7 +171,7 @@ DEFAULT_TEMPLATES = [
         "body": """<p>Hi {{user_name}},</p>
 <p>We received a request to reset the password for <strong>{{user_email}}</strong>.</p>
 <p><a href="{{reset_url}}">Reset your password</a></p>
-<p>This link expires in {{expires_hours}} hour(s). If you did not request a reset, you can ignore this email.</p>
+<p>This link expires in 15 minutes. If you did not request a reset, you can ignore this email.</p>
 <p>— {{site_name}}</p>""",
         "notify_admin": False,
         "notify_user": True,
@@ -214,5 +214,20 @@ DEFAULT_TEMPLATES = [
         "notify_user": True,
         "notify_warehouse_manager": False,
         "sort_order": 100,
+    },
+    {
+        "event_key": "email_verification",
+        "name": "Email verification",
+        "description": "Sent when a new account is created. The link expires in 15 minutes. A second missed link asks them to contact an admin.",
+        "subject": "Verify your {{site_name}} account",
+        "body": """<p>Hi {{user_name}},</p>
+<p>Open this link to activate <strong>{{user_email}}</strong>. It expires in {{expires_minutes}} minutes.</p>
+<p><a href="{{verification_url}}">Verify email</a></p>
+<p>If you did not create this account, you can ignore this email.</p>
+<p>— {{site_name}}</p>""",
+        "notify_admin": False,
+        "notify_user": True,
+        "notify_warehouse_manager": False,
+        "sort_order": 76,
     },
 ]

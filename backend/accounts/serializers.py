@@ -6,10 +6,11 @@ from accounts.models import AffiliateApplication, User
 class SessionUserSerializer(serializers.ModelSerializer):
     isAffiliate = serializers.BooleanField(source="is_affiliate")
     affiliateCode = serializers.CharField(source="affiliate_code", allow_null=True)
+    launchNotify = serializers.BooleanField(source="launch_notify")
 
     class Meta:
         model = User
-        fields = ["id", "email", "name", "role", "isAffiliate", "affiliateCode"]
+        fields = ["id", "email", "name", "role", "isAffiliate", "affiliateCode", "launchNotify"]
 
 
 class UserAdminSerializer(serializers.ModelSerializer):
@@ -17,6 +18,8 @@ class UserAdminSerializer(serializers.ModelSerializer):
     affiliateCode = serializers.CharField(source="affiliate_code", allow_null=True)
     isActive = serializers.BooleanField(source="is_active")
     createdAt = serializers.DateTimeField(source="created_at")
+    launchNotify = serializers.BooleanField(source="launch_notify")
+    launchNotifyAt = serializers.DateTimeField(source="launch_notify_at", allow_null=True)
 
     class Meta:
         model = User
@@ -29,6 +32,8 @@ class UserAdminSerializer(serializers.ModelSerializer):
             "affiliateCode",
             "isActive",
             "createdAt",
+            "launchNotify",
+            "launchNotifyAt",
         ]
 
 

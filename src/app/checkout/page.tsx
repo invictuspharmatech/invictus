@@ -50,6 +50,7 @@ export default function CheckoutPage() {
   const [optionId, setOptionId] = useState<string | null>(null);
   const [invoiceLink, setInvoiceLink] = useState<string | null>(null);
   const [placedGroup, setPlacedGroup] = useState("");
+  const [accountEmail, setAccountEmail] = useState("");
 
   const shippingOption = resolveShippingFee(settings, optionId);
   const shippingTotal = items.length > 0 ? shippingOption.fee : 0;
@@ -67,6 +68,12 @@ export default function CheckoutPage() {
       saveShippingOptionId(resolved.id);
     });
     setAppliedCoupons(readSavedCoupons());
+    void fetch("/api/auth/me", { credentials: "same-origin" })
+      .then(async (response) => (response.ok ? response.json() : null))
+      .then((data: { email?: string } | null) => {
+        if (data?.email) setAccountEmail(data.email);
+      })
+      .catch(() => undefined);
   }, [router]);
 
   useEffect(() => {
@@ -171,7 +178,7 @@ export default function CheckoutPage() {
     const form = new FormData(event.currentTarget);
     const payload = {
       name: String(form.get("name") || ""),
-      email: String(form.get("email") || ""),
+      email: accountEmail || String(form.get("email") || ""),
       line1: String(form.get("line1") || ""),
       line2: String(form.get("line2") || ""),
       city: String(form.get("city") || ""),
@@ -276,8 +283,25 @@ export default function CheckoutPage() {
       <form onSubmit={onSubmit} className="grid gap-8 lg:grid-cols-2">
         <div className="tile space-y-4">
           <h2 className="text-lg">Shipping</h2>
-          <input className="field" name="name" placeholder="Full name" required />
-          <input className="field" name="email" type="email" placeholder="Email" required />
+          <input
+            className="field"
+            name="name"
+            placeholder="Full name"
+            required
+            onInput={(event) => {
+              event.currentTarget.value = event.currentTarget.value.replace(/[^A-Za-z ]/g, "").replace(/ {2,}/g, " ");
+            }}
+          />
+          <input
+            className="field"
+            name="email"
+            type="email"
+            placeholder="Email"
+            required
+            defaultValue={accountEmail}
+            readOnly={Boolean(accountEmail)}
+            key={accountEmail || "guest-email"}
+          />
           <input className="field" name="line1" placeholder="Address" required />
           <input className="field" name="line2" placeholder="Apartment, suite (optional)" />
           <div className="grid grid-cols-2 gap-3">

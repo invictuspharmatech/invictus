@@ -13,7 +13,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from accounts.guards import address_email_rejection, markup_error, person_name_error
 from accounts.models import User
+from orders.contact_blocks import BLOCK_MESSAGE, is_blocked, note_rejection
 from accounts.permissions import (
     IsAuthenticatedUser,
     IsPortalStaff,
@@ -144,6 +146,28 @@ def checkout_view(request):
 
         email = data["email"].strip().lower()
         session_user = request.user if request.user.is_authenticated else None
+        if session_user and getattr(session_user, "is_anonymous", False):
+            session_user = None
+        account = session_user
+        email_error = address_email_rejection(email, account)
+        if email_error:
+            return Response({"error": email_error}, status=400)
+        if account:
+            email = account.email.strip().lower()
+        name = str(data.get("name") or "").strip()
+        name_error = person_name_error(name)
+        if name_error:
+            return Response({"error": name_error}, status=400)
+        text_error = markup_error(
+            str(data.get("line1") or ""),
+            str(data.get("line2") or ""),
+            str(data.get("city") or ""),
+            str(data.get("state") or ""),
+            str(data.get("postal") or ""),
+            str(data.get("notes") or ""),
+        )
+        if text_error:
+            return Response({"error": text_error}, status=400)
         coupon_codes = normalize_codes(
             data.get("couponCodes")
             or data.get("coupon_codes")
@@ -267,7 +291,7 @@ def checkout_view(request):
                 merchandise_total=merch_after,
                 shipping_total=0,
                 grand_total=merch_after,
-                customer_name=data["name"],
+                customer_name=name,
                 customer_email=email,
                 shipping_line1=data["line1"],
                 shipping_line2=data.get("line2") or "",
@@ -351,6 +375,17 @@ def contact_view(request):
     required = ["name", "email", "subject", "message"]
     if any(not request.data.get(field) for field in required):
         return Response({"error": "All fields are required."}, status=400)
+    if is_blocked(request):
+        return Response({"error": BLOCK_MESSAGE}, status=403)
+    text_error = markup_error(
+        str(request.data.get("name") or ""),
+        str(request.data.get("email") or ""),
+        str(request.data.get("subject") or ""),
+        str(request.data.get("message") or ""),
+    )
+    if text_error:
+        note_rejection(request)
+        return Response({"error": text_error}, status=400)
     ContactMessage.objects.create(
         name=request.data["name"],
         email=request.data["email"],
@@ -536,11 +571,19 @@ def admin_order_shipping_view(request, pk):
     if data.get("customerName") is not None or data.get("customer_name") is not None:
         name = str(data.get("customerName") or data.get("customer_name") or "").strip()
         if name:
+            name_error = person_name_error(name)
+            if name_error:
+                return Response({"error": name_error}, status=400)
             order.customer_name = name[:255]
     if data.get("customerEmail") is not None or data.get("customer_email") is not None:
         email = str(data.get("customerEmail") or data.get("customer_email") or "").strip()
-        if email:
-            order.customer_email = email[:254]
+        email_error = address_email_rejection(email, order.user)
+        if email_error:
+            return Response({"error": email_error}, status=400)
+        order.customer_email = (order.user.email if order.user else email)[:254]
+    text_error = markup_error(line1, str(data.get("shippingLine2") or data.get("shipping_line2") or ""), city, state, postal)
+    if text_error:
+        return Response({"error": text_error}, status=400)
     order.save()
     refreshed = Order.objects.prefetch_related("items", "btc_invoices", "shipping_labels").get(pk=order.pk)
     return Response(OrderSerializer(refreshed).data)

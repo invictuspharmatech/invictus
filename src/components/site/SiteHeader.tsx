@@ -113,12 +113,15 @@ export function SiteHeader({
   promoItems,
   promoEnabled = true,
   promoDisplayMode = "slider",
+  hideOnComingSoonHome = false,
 }: {
   session: SessionUser | null;
   shopLinks: { href: string; label: string }[];
   promoItems: PromoSlide[];
   promoEnabled?: boolean;
   promoDisplayMode?: "marquee" | "slider";
+  /** When coming-soon mode is on, hide chrome only on `/` — other pages keep the menu. */
+  hideOnComingSoonHome?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -142,6 +145,9 @@ export function SiteHeader({
   }, [pathname]);
 
   if (pathname.startsWith("/admin")) {
+    return null;
+  }
+  if (hideOnComingSoonHome && pathname === "/") {
     return null;
   }
 

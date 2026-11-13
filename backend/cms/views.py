@@ -110,6 +110,51 @@ def public_settings(request):
     return Response(SettingSerializer(SiteSetting.objects.all(), many=True).data)
 
 
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def public_coming_soon(request):
+    from cms.coming_soon import public_coming_soon as payload
+
+    return Response(payload())
+
+
+@api_view(["GET", "PUT"])
+@permission_classes([IsStoreStaff])
+def admin_coming_soon(request):
+    from cms.coming_soon import get_coming_soon, save_coming_soon
+
+    if not is_full_admin(request.user):
+        return Response({"error": "Not allowed."}, status=403)
+    if request.method == "PUT":
+        try:
+            return Response(save_coming_soon(request.data if isinstance(request.data, dict) else {}))
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=400)
+    return Response(get_coming_soon())
+
+
+@api_view(["GET"])
+@permission_classes([IsStoreStaff])
+def admin_coming_soon_subscribers(request):
+    from accounts.models import User
+
+    if not is_full_admin(request.user):
+        return Response({"error": "Not allowed."}, status=403)
+    qs = User.objects.filter(launch_notify=True).order_by("-launch_notify_at", "-created_at")
+    rows = [
+        {
+            "id": str(user.id),
+            "email": user.email,
+            "name": user.name,
+            "isActive": user.is_active,
+            "launchNotifyAt": user.launch_notify_at.isoformat() if user.launch_notify_at else None,
+            "createdAt": user.created_at.isoformat() if user.created_at else None,
+        }
+        for user in qs[:2000]
+    ]
+    return Response({"count": qs.count(), "items": rows})
+
+
 def _crud(model, serializer_cls, request, pk=None, create_map=None):
     if pk:
         obj = model.objects.filter(pk=pk).first()

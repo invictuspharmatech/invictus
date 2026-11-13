@@ -5,6 +5,7 @@ from collections import defaultdict
 from django.db import transaction
 from django.db.models import Q
 
+from accounts.guards import address_email_rejection, markup_error, person_name_error
 from accounts.models import User
 from catalog.models import Product
 from orders.btcpay import BtcPayError, create_invoice, is_configured, serialize_invoice
@@ -260,8 +261,25 @@ def create(data: dict, actor: User | None = None) -> dict:
         discount_shares = allocate_weighted(float(totals["discount_total"]), weights)
         created = []
         group_id = ""
-        email = _text(shipping, "email").lower()
+        posted_email = _text(shipping, "email").lower()
+        email_error = address_email_rejection(posted_email, plan["user"])
+        if email_error:
+            raise AdminCreateError(email_error)
+        email = (plan["user"].email if plan["user"] else posted_email).lower()
         name = _text(shipping, "name")
+        name_error = person_name_error(name)
+        if name_error:
+            raise AdminCreateError(name_error)
+        text_error = markup_error(
+            _text(shipping, "line1"),
+            _text(shipping, "line2"),
+            _text(shipping, "city"),
+            _text(shipping, "state"),
+            _text(shipping, "postal"),
+            notes,
+        )
+        if text_error:
+            raise AdminCreateError(text_error)
         for index, (warehouse, group_lines) in enumerate(warehouse_groups):
             merch_after = merch_shares[index]
             try:

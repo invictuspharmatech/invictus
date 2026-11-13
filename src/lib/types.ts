@@ -7,4 +7,5 @@ export type SessionUser = {
   role: Role;
   isAffiliate: boolean;
   affiliateCode: string | null;
+  launchNotify?: boolean;
 };

@@ -48,11 +48,19 @@ export function UserForm({
         event.preventDefault();
         setError("");
         const form = new FormData(event.currentTarget);
+        const password = String(form.get("password") || "");
+        const passwordConfirmation = String(form.get("passwordConfirmation") || "");
+        if (password || passwordConfirmation) {
+          if (password !== passwordConfirmation) {
+            setError("Passwords do not match.");
+            return;
+          }
+        }
         const payload = {
           name: String(form.get("name") || ""),
           email: String(form.get("email") || ""),
           role: String(form.get("role") || Role.CUSTOMER),
-          password: String(form.get("password") || ""),
+          password,
           isActive: form.get("isActive") === "on",
           isAffiliate: form.get("isAffiliate") === "on",
         };
@@ -99,6 +107,18 @@ export function UserForm({
           className="field"
           name="password"
           type="password"
+          autoComplete="new-password"
+          minLength={user ? undefined : 8}
+          required={!user}
+        />
+      </label>
+      <label className="grid gap-1 text-sm">
+        {user ? "Confirm new password" : "Confirm password"}
+        <input
+          className="field"
+          name="passwordConfirmation"
+          type="password"
+          autoComplete="new-password"
           minLength={user ? undefined : 8}
           required={!user}
         />

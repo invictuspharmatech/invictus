@@ -13,12 +13,17 @@ function safeReturnPath(raw: string | null): string {
   return raw;
 }
 
+type VerifyCode = "email_unverified" | "email_unverified_pending" | "verification_locked";
+
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const [error, setError] = useState<string | null>(
-    params.get("error") ? "Invalid email or password." : null,
+    params.get("error") ? "Invalid email or password." : params.get("signed_out") ? "You were signed out. Sign in again." : params.get("session") === "expired" ? "You were signed out after 15 minutes without activity. Sign in again." : null,
   );
+  const [verifyCode, setVerifyCode] = useState<VerifyCode | null>(null);
+  const [credentials, setCredentials] = useState({ email: "", password: "" });
+  const [resending, setResending] = useState(false);
   const next = safeReturnPath(params.get("next"));
 
   useEffect(() => {
@@ -40,13 +45,70 @@ function LoginForm() {
         password: form.get("password"),
       }),
     });
-    const data = (await response.json()) as { error?: string; redirect?: string };
+    const data = (await response.json()) as { error?: string; redirect?: string; code?: VerifyCode };
     if (!response.ok) {
+      if (
+        data.code === "email_unverified" ||
+        data.code === "email_unverified_pending" ||
+        data.code === "verification_locked"
+      ) {
+        setVerifyCode(data.code);
+        setCredentials({
+          email: String(form.get("email") || ""),
+          password: String(form.get("password") || ""),
+        });
+        setError(data.error || null);
+        return;
+      }
+      setVerifyCode(null);
       setError(data.error || "Sign in failed.");
       return;
     }
     router.push(data.redirect || next);
     router.refresh();
+  }
+
+  async function resend() {
+    setResending(true);
+    setError(null);
+    const response = await fetch("/api/auth/resend-verification", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(credentials),
+    });
+    const data = (await response.json()) as { error?: string; message?: string; code?: VerifyCode };
+    setResending(false);
+    if (data.code === "verification_locked" || data.code === "email_unverified_pending") {
+      setVerifyCode(data.code);
+    }
+    setError(data.error || data.message || null);
+  }
+
+  if (verifyCode === "verification_locked") {
+    return (
+      <div className="tile mx-auto max-w-md space-y-3 text-sm">
+        <p>Contact admin for account activation.</p>
+      </div>
+    );
+  }
+
+  if (verifyCode === "email_unverified_pending") {
+    return (
+      <div className="tile mx-auto max-w-md space-y-3 text-sm">
+        <p>{error || "Check your email. The verification link is still valid and expires in 15 minutes."}</p>
+      </div>
+    );
+  }
+
+  if (verifyCode === "email_unverified") {
+    return (
+      <div className="tile mx-auto max-w-md space-y-3">
+        <button className="gold-btn w-full" type="button" disabled={resending} onClick={() => void resend()}>
+          {resending ? "Sending…" : "Send a verification token again"}
+        </button>
+        {error ? <p className="text-sm text-brand-red">{error}</p> : null}
+      </div>
+    );
   }
 
   return (

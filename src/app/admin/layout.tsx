@@ -112,6 +112,7 @@ const ADMIN_NAV: AdminNavItem[] = [
       { href: "/admin/cms/media", label: "Media library" },
       { href: "/admin/cms/email", label: "Email settings & templates" },
       { href: "/admin/cms/settings", label: "Site settings" },
+      { href: "/admin/cms/coming-soon", label: "Coming soon" },
       { href: "/admin/cms/test-results", label: "Test results" },
     ],
   },

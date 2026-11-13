@@ -36,7 +36,7 @@ export default function ForgotPasswordPage() {
     <div className="px-4 pb-20">
       <PageHeader
         title="Forgot password"
-        lede="Enter the email on your account and we will send a reset link if it matches."
+        lede="Enter the email on your account. The reset link expires in 15 minutes."
       />
       <form onSubmit={onSubmit} className="tile mx-auto max-w-md space-y-4">
         <input

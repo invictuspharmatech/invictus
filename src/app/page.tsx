@@ -2,6 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 import { djangoJsonSafe } from "@/lib/django";
+import { readSession } from "@/lib/auth";
+import { ComingSoonLanding } from "@/components/site/ComingSoonLanding";
 import { FeaturedProductCard } from "@/components/shop/FeaturedProductCard";
 import { CategoryCarousel, type CategorySlide } from "@/components/shop/CategoryCarousel";
 import {
@@ -9,6 +11,8 @@ import {
   CATEGORY_IMAGES,
   mediaUrl,
 } from "@/lib/constants";
+import { COMING_SOON_FALLBACK, type ComingSoonPublic } from "@/lib/coming-soon";
+import { asBannerRuntime } from "@/lib/feature-banners";
 import type { ApiCategory, ApiProduct, ApiSetting } from "@/lib/api-types";
 
 const MARQUEE = [
@@ -41,6 +45,32 @@ function toSlides(categories: ApiCategory[]): CategorySlide[] {
 }
 
 export default async function HomePage() {
+  const comingSoon = await djangoJsonSafe<ComingSoonPublic>(
+    "/api/cms/coming-soon/",
+    COMING_SOON_FALLBACK,
+  );
+  if (comingSoon.enabled) {
+    const [session, bannerPayload] = await Promise.all([
+      readSession(),
+      djangoJsonSafe("/api/cms/banners/", {
+        items: [],
+        enabled: true,
+        displayMode: "slider" as const,
+      }),
+    ]);
+    const banners = asBannerRuntime(bannerPayload);
+    const active = banners.items.find((item) => item.isActive) || banners.items[0];
+    return (
+      <ComingSoonLanding
+        config={comingSoon}
+        signedIn={Boolean(session)}
+        bannerBgMode={active?.bgColorMode || "brand-orange"}
+        bannerTextMode={active?.textColorMode || "light"}
+        bannerDisplayMode={banners.displayMode}
+      />
+    );
+  }
+
   const [categories, featured, arrivals, settings] = await Promise.all([
     djangoJsonSafe<ApiCategory[]>("/api/categories/?featured=1", []),
     djangoJsonSafe<ApiProduct[]>("/api/products/?featured=1&limit=4", []),

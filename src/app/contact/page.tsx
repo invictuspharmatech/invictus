@@ -19,7 +19,12 @@ export default function ContactPage() {
         message: form.get("message"),
       }),
     });
-    setStatus(response.ok ? "Message received. We typically reply within 24–48 hours." : "Could not send. Try again.");
+    const data = (await response.json().catch(() => null)) as { error?: string } | null;
+    setStatus(
+      response.ok
+        ? "Message received. We typically reply within 24–48 hours."
+        : data?.error || "Could not send. Try again.",
+    );
     if (response.ok) event.currentTarget.reset();
   }
 

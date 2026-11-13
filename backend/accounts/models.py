@@ -69,6 +69,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    email_verified_at = models.DateTimeField(null=True, blank=True)
+    email_verification_sends = models.PositiveSmallIntegerField(default=0)
+    session_version = models.PositiveIntegerField(default=0)
+    launch_notify = models.BooleanField(
+        default=False,
+        help_text="Opted in for coming-soon / launch notification email.",
+    )
+    launch_notify_at = models.DateTimeField(null=True, blank=True)
     date_joined = models.DateTimeField(auto_now_add=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -133,3 +141,16 @@ class AffiliateApplication(models.Model):
 
     def __str__(self):
         return f"{self.user.email} · {self.status}"
+
+
+class EmailVerificationToken(models.Model):
+    email = models.EmailField(unique=True)
+    token_hash = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class SessionEpoch(models.Model):
+    """Raising this version signs every account out."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1)
+    version = models.PositiveIntegerField(default=0)

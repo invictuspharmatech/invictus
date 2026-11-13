@@ -4,6 +4,7 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { Suspense } from "react";
 import { headers } from "next/headers";
+import { SessionIdle } from "@/components/auth/SessionIdle";
 import { CartProvider } from "@/components/shop/CartProvider";
 import { ReferralCapture } from "@/components/shop/ReferralCapture";
 import { SiteHeader } from "@/components/site/SiteHeader";
@@ -13,6 +14,7 @@ import { djangoJsonSafe } from "@/lib/django";
 import { SHOP_CATEGORIES } from "@/lib/storefront-nav";
 import type { ApiCategory } from "@/lib/api-types";
 import { asBannerRuntime } from "@/lib/feature-banners";
+import { COMING_SOON_FALLBACK, type ComingSoonPublic } from "@/lib/coming-soon";
 import "./globals.css";
 
 // Self-hosted fonts — next/font/google can crash Docker/CI builds when Google
@@ -53,7 +55,12 @@ export default async function RootLayout({
   const headerList = await headers();
   const pathname = headerList.get("x-invictus-pathname") || "";
   const isAdminApp = pathname.startsWith("/admin");
+  const comingSoon = isAdminApp
+    ? COMING_SOON_FALLBACK
+    : await djangoJsonSafe<ComingSoonPublic>("/api/cms/coming-soon/", COMING_SOON_FALLBACK);
   const session = isAdminApp ? null : await readSession();
+  // Always load storefront chrome data when coming-soon is on — only `/` hides
+  // the menu; other routes must keep working with the normal header/footer.
   const [categories, bannerPayload] = (
     isAdminApp
       ? [[], { items: [], enabled: true, displayMode: "marquee" }]
@@ -90,6 +97,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <CartProvider>
+          <SessionIdle signedIn={Boolean(session)} />
           <Suspense fallback={null}>
             <ReferralCapture />
           </Suspense>
@@ -99,9 +107,10 @@ export default async function RootLayout({
             promoItems={promoItems}
             promoEnabled={banners.enabled}
             promoDisplayMode={banners.displayMode}
+            hideOnComingSoonHome={comingSoon.enabled}
           />
           <main className="flex-1">{children}</main>
-          <ConditionalFooter />
+          <ConditionalFooter hideOnComingSoonHome={comingSoon.enabled} />
         </CartProvider>
       </body>
     </html>

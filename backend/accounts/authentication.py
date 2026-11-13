@@ -4,6 +4,7 @@ from rest_framework.exceptions import AuthenticationFailed
 
 from accounts import hs256
 from accounts.models import User
+from accounts.tokens import session_rejected
 
 
 class InvictusJWTAuthentication(BaseAuthentication):
@@ -21,6 +22,8 @@ class InvictusJWTAuthentication(BaseAuthentication):
         user = User.objects.filter(pk=user_id, is_active=True).first()
         if not user:
             raise AuthenticationFailed("User not found.")
+        if session_rejected(payload, user):
+            raise AuthenticationFailed("Session expired.")
         return (user, token)
 
 
