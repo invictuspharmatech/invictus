@@ -41,6 +41,11 @@ export async function POST(request: Request) {
       redirect: string;
     }>("/api/auth/login/", {
       method: "POST",
+      headers: {
+        "x-forwarded-for": request.headers.get("x-forwarded-for") || "",
+        "x-real-ip": request.headers.get("x-real-ip") || "",
+        "cf-connecting-ip": request.headers.get("cf-connecting-ip") || "",
+      },
       body: JSON.stringify({
         email: fields.email,
         password: fields.password,

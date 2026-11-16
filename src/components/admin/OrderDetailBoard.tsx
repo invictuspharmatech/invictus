@@ -10,6 +10,7 @@ import { OrderStatusBadge } from "@/components/admin/OrderStatusBadge";
 import { OrderFulfillmentControls } from "@/components/admin/OrderFulfillmentControls";
 import { PostageLabelModal } from "@/components/admin/PostageLabelModal";
 import { ShippingLabelActions } from "@/components/admin/ShippingLabelActions";
+import { OrderIpPanel, type OrderWithIp } from "@/components/admin/IpTrackingPanels";
 import type { ApiOrder, ApiProduct, ApiWarehouseSettings } from "@/lib/api-types";
 
 type ShippingDraft = {
@@ -258,6 +259,14 @@ export function OrderDetailBoard({
           </p>
         </div>
       </div>
+
+      {"ipTrackingEnabled" in order ? (
+        <OrderIpPanel
+          customerIp={(order as ApiOrder & OrderWithIp).customerIp ?? null}
+          enabled={Boolean((order as ApiOrder & OrderWithIp).ipTrackingEnabled)}
+          recordCount={(order as ApiOrder & OrderWithIp).orderIpRecordCount ?? 0}
+        />
+      ) : null}
 
       {editMode ? (
         <div className="tile mt-4 border-signal/30 bg-signal/5 p-4 text-sm text-muted-foreground">

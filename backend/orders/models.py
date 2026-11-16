@@ -413,3 +413,10 @@ class ContactIpBlock(models.Model):
 
     class Meta:
         ordering = ["-blocked_at"]
+
+
+class OrderIpRecord(models.Model):
+    order_number = models.CharField(max_length=64, unique=True)
+    ip_address = models.CharField(max_length=45)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

@@ -14,7 +14,8 @@ from accounts.password_reset import (
     reset_url_for,
     verify_reset_token,
 )
-from accounts.permissions import IsAuthenticatedUser, IsStoreStaff, IsSuperuser
+from accounts.ip_tracking import count as login_ip_count, enabled as login_ip_enabled, for_user as login_ips_for_user, record as record_login_ip, set_enabled as set_login_ip_enabled, wash as wash_login_ips
+from accounts.permissions import IsAuthenticatedUser, IsStoreStaff, IsSuperuser, is_superuser
 from accounts.tokens import issue_token, session_payload
 from accounts.verification import EXPIRES_MINUTES, consume, login_gate, send as send_verification
 from accounts.serializers import (
@@ -76,6 +77,7 @@ def login_view(request):
     if not user.is_active:
         return Response({"error": "This account is inactive. Contact support."}, status=403)
     token = issue_token(user)
+    record_login_ip(user, request)
     redirect = "/admin" if user.is_portal_staff else "/account"
     return Response({"ok": True, "token": token, "user": session_payload(user), "redirect": redirect})
 
@@ -380,7 +382,14 @@ def admin_user_detail_view(request, pk):
     if not _can_manage_user(request.user, user):
         return Response({"error": "Not found."}, status=404)
     if request.method == "GET":
-        return Response(UserAdminSerializer(user).data)
+        data = UserAdminSerializer(user).data
+        if is_superuser(request.user):
+            login_ips = login_ips_for_user(user.id)
+            data["loginIps"] = login_ips["records"]
+            data["loginIpTotal"] = login_ips["total"]
+            data["loginIpTrackingEnabled"] = login_ip_enabled()
+            data["loginIpRecordCount"] = login_ip_count()
+        return Response(data)
     error = _apply_user_fields(user, request.data, request.user, creating=False)
     if error:
         return Response({"error": error}, status=400)
@@ -668,3 +677,16 @@ def cloudflare_ip_block_setting_view(request):
     elif enabled_value and not was_enabled and ready:
         message = "Saved. Current blocked IPs will be sent from the server."
     return Response({"ok": True, "message": message, "data": status_payload()})
+
+
+@api_view(["PUT", "DELETE"])
+@permission_classes([IsSuperuser])
+def login_ip_tracking_view(request):
+    if request.method == "DELETE":
+        wash_login_ips()
+        return Response({"ok": True, "enabled": login_ip_enabled(), "count": 0})
+    enabled = request.data.get("enabled")
+    if not isinstance(enabled, bool):
+        return Response({"error": "enabled must be true or false."}, status=400)
+    set_login_ip_enabled(enabled)
+    return Response({"ok": True, "enabled": enabled, "count": login_ip_count()})

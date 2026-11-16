@@ -10,6 +10,11 @@ export async function POST(request: Request) {
     const data = await djangoJson("/api/checkout/", {
       method: "POST",
       token: await sessionToken(),
+      headers: {
+        "x-forwarded-for": request.headers.get("x-forwarded-for") || "",
+        "x-real-ip": request.headers.get("x-real-ip") || "",
+        "cf-connecting-ip": request.headers.get("cf-connecting-ip") || "",
+      },
       body: JSON.stringify({ ...body, referralCode: referral }),
     });
     return NextResponse.json(data);

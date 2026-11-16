@@ -173,3 +173,15 @@ class PasswordResetIpBlock(models.Model):
     blocked_at = models.DateTimeField(null=True, blank=True)
     cloudflare_rule_id = models.CharField(max_length=64, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class UserLoginIpRecord(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="login_ip_records")
+    email = models.CharField(max_length=255)
+    ip_address = models.CharField(max_length=45)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "-created_at"], name="login_ip_user_created_idx"),
+        ]

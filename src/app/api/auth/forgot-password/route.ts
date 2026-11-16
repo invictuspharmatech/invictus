@@ -6,6 +6,11 @@ export async function POST(request: Request) {
   try {
     const data = await djangoJson<{ ok: boolean; message?: string }>("/api/auth/forgot-password/", {
       method: "POST",
+      headers: {
+        "x-forwarded-for": request.headers.get("x-forwarded-for") || "",
+        "x-real-ip": request.headers.get("x-real-ip") || "",
+        "cf-connecting-ip": request.headers.get("cf-connecting-ip") || "",
+      },
       body: JSON.stringify({ email: body.email }),
     });
     return NextResponse.json(data);

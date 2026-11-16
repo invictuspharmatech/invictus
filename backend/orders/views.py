@@ -20,6 +20,7 @@ from accounts.permissions import (
     IsAuthenticatedUser,
     IsPortalStaff,
     IsStoreStaff,
+    IsSuperuser,
     is_full_admin,
     is_superuser,
     managed_warehouse,
@@ -67,6 +68,7 @@ from orders.coupons import (
     resolve_coupon_stack,
 )
 from orders.models import AccountingReset, ContactMessage, Coupon, FulfillmentRequest, Order, OrderItem
+from orders.order_ip import count as order_ip_count, enabled as order_ip_enabled, ip_for, record as record_order_ip, set_enabled as set_order_ip_enabled, wash as wash_order_ips
 from orders.order_numbers import allocate_order_number
 from orders.serializers import (
     FulfillmentRequestSerializer,
@@ -317,6 +319,7 @@ def checkout_view(request):
                     line_total=line["line_total"],
                     warehouse=line["warehouse"],
                 )
+            record_order_ip(order.order_number, request)
             created.append(order)
 
         if coupons:
@@ -537,7 +540,12 @@ def admin_order_detail_view(request, pk):
     order = _staff_order(request, pk)
     if isinstance(order, Response):
         return order
-    return Response(attach_linked_orders([order])[0])
+    payload = attach_linked_orders([order])[0]
+    if is_superuser(request.user):
+        payload["customerIp"] = ip_for(order.order_number)
+        payload["ipTrackingEnabled"] = order_ip_enabled()
+        payload["orderIpRecordCount"] = order_ip_count()
+    return Response(payload)
 
 
 @api_view(["PATCH", "PUT"])
@@ -1198,3 +1206,16 @@ def admin_order_summary_pdf(request):
     response = HttpResponse(summary_pdf_bytes(payload), content_type="application/pdf")
     response["Content-Disposition"] = 'attachment; filename="order-summary.pdf"'
     return response
+
+
+@api_view(["PUT", "DELETE"])
+@permission_classes([IsSuperuser])
+def admin_order_ip_tracking_view(request):
+    if request.method == "DELETE":
+        wash_order_ips()
+        return Response({"ok": True, "enabled": order_ip_enabled(), "count": 0})
+    enabled = request.data.get("enabled")
+    if not isinstance(enabled, bool):
+        return Response({"error": "enabled must be true or false."}, status=400)
+    set_order_ip_enabled(enabled)
+    return Response({"ok": True, "enabled": enabled, "count": order_ip_count()})

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { djangoAuthed } from "@/lib/django";
 import { requireFullAdmin } from "@/lib/auth";
 import { UserForm } from "@/components/admin/UserForm";
+import { LoginIpPanel, type LoginIpInfo } from "@/components/admin/IpTrackingPanels";
 import type { ApiAdminUser } from "@/lib/api-types";
 
 export default async function EditAdminUserPage({
@@ -12,12 +13,20 @@ export default async function EditAdminUserPage({
   const staff = await requireFullAdmin();
   if (!staff) return null;
   const { id } = await params;
-  const user = await djangoAuthed<ApiAdminUser>(`/api/admin/users/${id}/`).catch(() => null);
+  const user = await djangoAuthed<ApiAdminUser & LoginIpInfo>(`/api/admin/users/${id}/`).catch(() => null);
   if (!user) notFound();
   return (
     <div>
       <h1 className="display-font text-3xl">Edit user</h1>
       <p className="mt-2 text-sm text-muted-foreground">{user.email}</p>
+      {typeof user.loginIpTrackingEnabled === "boolean" ? (
+        <LoginIpPanel
+          records={user.loginIps ?? []}
+          total={user.loginIpTotal ?? 0}
+          enabled={user.loginIpTrackingEnabled}
+          recordCount={user.loginIpRecordCount ?? 0}
+        />
+      ) : null}
       <UserForm user={user} viewerRole={staff.role} />
     </div>
   );
