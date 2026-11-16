@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireFullAdmin } from "@/lib/auth";
 import { OpsSettingsHub } from "@/components/admin/OpsSettingsHub";
+import { SiteWideIpBlockCard } from "@/components/admin/SiteWideIpBlockCard";
 import { isSuperuser } from "@/lib/roles";
 
 export default async function AdminSettingsPage() {
@@ -32,6 +33,7 @@ export default async function AdminSettingsPage() {
           </span>
         </p>
       ) : null}
+      {isSuperuser(staff.role) ? <SiteWideIpBlockCard /> : null}
       <OpsSettingsHub />
     </div>
   );

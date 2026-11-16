@@ -1,31 +1,49 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/site/PageHeader";
 
+type Account = { name: string; email: string };
+
 export default function ContactPage() {
+  const [account, setAccount] = useState<Account | null>(null);
+  const [ready, setReady] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    void fetch("/api/auth/me", { credentials: "same-origin" })
+      .then(async (response) => (response.ok ? response.json() : null))
+      .then((data: { name?: string; email?: string } | null) => {
+        if (data?.email) {
+          setAccount({ name: data.name || "", email: data.email });
+          setName(data.name || "");
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => setReady(true));
+  }, []);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    setStatus(null);
     const response = await fetch("/api/contact", {
       method: "POST",
+      credentials: "same-origin",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: form.get("name"),
-        email: form.get("email"),
-        subject: form.get("subject"),
-        message: form.get("message"),
-      }),
+      body: JSON.stringify({ name, subject, message }),
     });
     const data = (await response.json().catch(() => null)) as { error?: string } | null;
-    setStatus(
-      response.ok
-        ? "Message received. We typically reply within 24–48 hours."
-        : data?.error || "Could not send. Try again.",
-    );
-    if (response.ok) event.currentTarget.reset();
+    if (!response.ok) {
+      setStatus(data?.error || "Could not send. Try again.");
+      return;
+    }
+    setSubject("");
+    setMessage("");
+    setStatus("Message received. We typically reply within 24–48 hours.");
   }
 
   return (
@@ -35,17 +53,54 @@ export default function ContactPage() {
         lede="Have questions or need assistance? Our team is here to help with products, orders, and protocols."
       />
       <div className="grid gap-8 lg:grid-cols-2">
-        <form onSubmit={onSubmit} className="tile space-y-4">
-          <h2 className="text-lg">Send us a message</h2>
-          <input className="field" name="name" placeholder="Name" required />
-          <input className="field" name="email" type="email" placeholder="Email" required />
-          <input className="field" name="subject" placeholder="Subject" required />
-          <textarea className="field min-h-36" name="message" placeholder="Message" required />
-          <button className="gold-btn" type="submit">
-            Send message
-          </button>
-          {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
-        </form>
+        {!ready ? (
+          <div className="tile text-sm text-muted-foreground">Loading…</div>
+        ) : !account ? (
+          <div className="tile space-y-4">
+            <h2 className="text-lg">Sign in to send a message</h2>
+            <p className="text-sm leading-7 text-muted-foreground">
+              The contact form is available to registered accounts. The message is sent from the email on your account.
+            </p>
+            <Link href="/login?next=/contact" className="gold-btn inline-flex">
+              Sign in
+            </Link>
+          </div>
+        ) : (
+          <form onSubmit={onSubmit} className="tile space-y-4">
+            <h2 className="text-lg">Send us a message</h2>
+            <input
+              className="field"
+              name="name"
+              placeholder="Name"
+              required
+              value={name}
+              onChange={(event) =>
+                setName(event.target.value.replace(/[^A-Za-z ]/g, "").replace(/ {2,}/g, " "))
+              }
+            />
+            <input className="field" value={account.email} readOnly aria-label="Account email" />
+            <input
+              className="field"
+              name="subject"
+              placeholder="Subject"
+              required
+              value={subject}
+              onChange={(event) => setSubject(event.target.value)}
+            />
+            <textarea
+              className="field min-h-36"
+              name="message"
+              placeholder="Message"
+              required
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+            />
+            <button className="gold-btn" type="submit">
+              Send message
+            </button>
+            {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
+          </form>
+        )}
         <div className="tile">
           <h2 className="text-lg">Dedicated support</h2>
           <p className="mt-3 text-sm leading-7 text-muted-foreground">

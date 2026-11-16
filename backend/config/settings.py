@@ -44,6 +44,8 @@ for docker_host in ("backend", "frontend", "nginx"):
         ALLOWED_HOSTS.append(docker_host)
 DJANGO_ADMIN_PATH = os.environ.get("DJANGO_ADMIN_PATH", "admin").strip("/") + "/"
 PUBLIC_SITE_URL = os.environ.get("PUBLIC_SITE_URL", "http://localhost:3000").rstrip("/")
+CLOUDFLARE_API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN", "")
+CLOUDFLARE_ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
 
 INSTALLED_APPS = [
     "django.contrib.admin",

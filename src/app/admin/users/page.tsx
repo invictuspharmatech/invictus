@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { SignOutAllUsers, SignOutUserButton } from "@/components/admin/UserSessionActions";
 import { requireStaff, visibleUsers } from "@/lib/auth";
-import { isSuperuser, roleLabel } from "@/lib/roles";
+import { isFullAdmin, isSuperuser, roleLabel } from "@/lib/roles";
 
 export default async function AdminUsersPage() {
   const staff = await requireStaff();
@@ -19,6 +19,11 @@ export default async function AdminUsersPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {isSuperuser(staff.role) ? <SignOutAllUsers /> : null}
+          {isFullAdmin(staff.role) ? (
+            <Link href="/admin/users/blocked-domains" className="ghost-btn">
+              Blocked domains
+            </Link>
+          ) : null}
           <Link href="/admin/users/new" className="gold-btn">
             Add user
           </Link>

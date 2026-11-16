@@ -3,8 +3,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from accounts.blocked_domains import blocks, normalize
+from accounts.cloudflare_blocks import queue_lift, queue_enforce_current, save_enabled, status_payload, enabled as cloudflare_enabled, configured as cloudflare_configured
+from accounts.password_reset_blocks import BLOCK_MESSAGE, block, is_blocked, protects
 from accounts.guards import person_name_error
-from accounts.models import AffiliateApplication, SessionEpoch, User
+from accounts.models import AffiliateApplication, BlockedEmailDomain, PasswordResetIpBlock, SessionEpoch, User
 from orders.models import ContactIpBlock
 from accounts.password_reset import (
     issue_reset_token,
@@ -38,6 +41,17 @@ def login_view(request):
     if not user or not user.check_password(password):
         return Response({"error": "Invalid credentials."}, status=401)
     if not user.is_active and user.email_verified_at is None:
+        if blocks(user.email):
+            return Response(
+                {
+                    "error": (
+                        "Check your email. The verification link is still valid and expires in "
+                        f"{EXPIRES_MINUTES} minutes."
+                    ),
+                    "code": "email_unverified_pending",
+                },
+                status=422,
+            )
         gate = login_gate(user)
         if gate == "locked":
             return Response(
@@ -208,6 +222,10 @@ def forgot_password_view(request):
     email = (request.data.get("email") or "").strip().lower()
     if not email or "@" not in email:
         return Response({"error": "A valid email is required."}, status=400)
+    if is_blocked(request) or protects(email):
+        if protects(email):
+            block(request, email)
+        return Response({"error": BLOCK_MESSAGE}, status=403)
     user = User.objects.filter(email=email, is_active=True).first()
     if user:
         token = issue_reset_token(user)
@@ -241,7 +259,7 @@ def reset_password_view(request):
     if len(password) < 8:
         return Response({"error": "An 8+ character password is required."}, status=400)
     user = verify_reset_token(token)
-    if not user:
+    if not user or protects(user.email):
         return Response(
             {"error": "This reset link is invalid or has expired. Request a new one."},
             status=400,
@@ -452,6 +470,13 @@ def resend_verification_view(request):
         return Response({"error": "This account is already verified. Sign in."}, status=400)
     if user.email_verified_at and not user.is_active:
         return Response({"error": "This account is inactive. Contact support."}, status=403)
+    if blocks(user.email):
+        return Response(
+            {
+                "ok": True,
+                "message": f"A new verification link was sent. It expires in {EXPIRES_MINUTES} minutes.",
+            }
+        )
     gate = login_gate(user)
     if gate == "locked":
         return Response({"error": "Contact admin for account activation.", "code": "verification_locked"}, status=422)
@@ -541,7 +566,10 @@ def contact_ip_block_delete_view(request, pk):
     row = ContactIpBlock.objects.filter(pk=pk, blocked_at__isnull=False).first()
     if not row:
         return Response({"error": "Not found."}, status=404)
+    ip = row.ip_address
+    rule_id = row.cloudflare_rule_id
     row.delete()
+    queue_lift(ip, rule_id if isinstance(rule_id, str) else None)
     return Response({"ok": True, "message": "Contact form block removed."})
 
 
@@ -549,3 +577,94 @@ def uuid_code():
     import secrets
 
     return secrets.token_hex(3).upper()
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsStoreStaff])
+def blocked_domains_view(request):
+    if request.method == "GET":
+        rows = BlockedEmailDomain.objects.order_by("domain")
+        return Response(
+            {
+                "data": [
+                    {"id": row.id, "domain": row.domain, "created_at": row.created_at.isoformat()}
+                    for row in rows
+                ]
+            }
+        )
+    domain = normalize(str(request.data.get("domain") or ""))
+    if domain is None:
+        return Response({"error": "Enter a domain such as fldubai.com."}, status=400)
+    if BlockedEmailDomain.objects.filter(domain=domain).exists():
+        return Response({"error": "This domain is already on the list."}, status=400)
+    try:
+        row = BlockedEmailDomain.objects.create(domain=domain)
+    except Exception:
+        return Response({"error": "This domain is already on the list."}, status=400)
+    return Response(
+        {"ok": True, "data": {"id": row.id, "domain": row.domain, "created_at": row.created_at.isoformat()}},
+        status=201,
+    )
+
+
+@api_view(["DELETE"])
+@permission_classes([IsStoreStaff])
+def blocked_domain_delete_view(request, pk):
+    row = BlockedEmailDomain.objects.filter(pk=pk).first()
+    if not row:
+        return Response({"error": "Domain not found."}, status=404)
+    row.delete()
+    return Response({"ok": True})
+
+
+@api_view(["GET"])
+@permission_classes([IsStoreStaff])
+def password_reset_ip_blocks_view(request):
+    rows = PasswordResetIpBlock.objects.filter(blocked_at__isnull=False).order_by("-blocked_at")
+    return Response(
+        {
+            "data": [
+                {
+                    "id": row.id,
+                    "ip_address": row.ip_address,
+                    "attempted_email": row.attempted_email,
+                    "blocked_at": row.blocked_at.isoformat() if row.blocked_at else None,
+                }
+                for row in rows
+            ]
+        }
+    )
+
+
+@api_view(["DELETE"])
+@permission_classes([IsStoreStaff])
+def password_reset_ip_block_delete_view(request, pk):
+    row = PasswordResetIpBlock.objects.filter(pk=pk, blocked_at__isnull=False).first()
+    if not row:
+        return Response({"error": "Block not found."}, status=404)
+    ip = row.ip_address
+    rule_id = row.cloudflare_rule_id
+    row.delete()
+    queue_lift(ip, rule_id if isinstance(rule_id, str) else None)
+    return Response({"ok": True})
+
+
+@api_view(["GET", "PUT"])
+@permission_classes([IsSuperuser])
+def cloudflare_ip_block_setting_view(request):
+    if request.method == "GET":
+        return Response({"data": status_payload()})
+    enabled_value = request.data.get("enabled")
+    if not isinstance(enabled_value, bool):
+        return Response({"error": "enabled must be true or false."}, status=400)
+    was_enabled = cloudflare_enabled()
+    save_enabled(enabled_value)
+    ready = cloudflare_configured()
+    if enabled_value and not was_enabled and ready:
+        queue_enforce_current()
+    message = "Site-wide IP block saved."
+    if enabled_value and not ready:
+        message = "Saved. Add the account id and API token in the server env file before blocked IPs can be sent."
+    elif enabled_value and not was_enabled and ready:
+        message = "Saved. Current blocked IPs will be sent from the server."
+    return Response({"ok": True, "message": message, "data": status_payload()})

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { djangoJson, DjangoError } from "@/lib/django";
+import { djangoJson, DjangoError, sessionToken } from "@/lib/django";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const data = await djangoJson("/api/contact/", {
       method: "POST",
+      token: await sessionToken(),
       headers: {
         "x-forwarded-for": request.headers.get("x-forwarded-for") || "",
         "x-real-ip": request.headers.get("x-real-ip") || "",

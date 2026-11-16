@@ -284,6 +284,7 @@ def _deliver(
     to: list[str],
     subject: str,
     html_body: str,
+    reply_to: str | None = None,
 ) -> int:
     from_email = profile.from_email or profile.username
     if not from_email:
@@ -296,6 +297,7 @@ def _deliver(
         body=text_body,
         from_email=sender,
         to=to,
+        reply_to=[reply_to] if reply_to else None,
         connection=smtp_connection(profile),
     )
     message.attach_alternative(wrapped, "text/html")
@@ -309,6 +311,7 @@ def send_message(
     subject: str,
     html_body: str,
     channel: SmtpChannel = "transactional",
+    reply_to: str | None = None,
 ) -> int:
     if not to:
         return 0
@@ -319,7 +322,14 @@ def send_message(
             last_error = ValueError("SMTP host is required.")
             continue
         try:
-            return _deliver(settings, profile, to=to, subject=subject, html_body=html_body)
+            return _deliver(
+                settings,
+                profile,
+                to=to,
+                subject=subject,
+                html_body=html_body,
+                reply_to=reply_to,
+            )
         except Exception as exc:
             last_error = exc
             if index < len(profiles) - 1:
@@ -338,6 +348,7 @@ def send_event(
     *,
     user_email: str | None = None,
     warehouse: str | None = None,
+    reply_to: str | None = None,
 ) -> None:
     context = {"site_name": SITE_NAME, **(context or {})}
     try:
@@ -364,6 +375,7 @@ def send_event(
             subject=subject,
             html_body=body,
             channel="transactional",
+            reply_to=reply_to,
         )
     except Exception:
         logger.exception("Failed to send %s email", event_key)

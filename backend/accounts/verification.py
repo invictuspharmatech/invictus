@@ -9,6 +9,7 @@ from datetime import timedelta
 
 from django.utils import timezone
 
+from accounts.blocked_domains import blocks
 from accounts.models import EmailVerificationToken, User
 
 logger = logging.getLogger(__name__)
@@ -75,6 +76,8 @@ def _deliver(user: User, url: str) -> bool:
 def send(user: User) -> bool:
     from django.conf import settings
 
+    if blocks(user.email):
+        return True
     if int(user.email_verification_sends or 0) >= MAX_SENDS:
         return False
     record = EmailVerificationToken.objects.filter(email__iexact=user.email).first()
@@ -101,6 +104,8 @@ def consume(token: str, email: str) -> str:
     user = User.objects.filter(email__iexact=email).first()
     if user and user.email_verified_at and user.is_active:
         return "verified"
+    if user and blocks(email):
+        return "invalid"
     if user and user.email_verified_at and not user.is_active:
         return "inactive"
     if not record or not token or _hash(token) != record.token_hash:

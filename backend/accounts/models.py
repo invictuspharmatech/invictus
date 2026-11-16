@@ -154,3 +154,22 @@ class SessionEpoch(models.Model):
 
     id = models.PositiveSmallIntegerField(primary_key=True, default=1)
     version = models.PositiveIntegerField(default=0)
+
+
+class BlockedEmailDomain(models.Model):
+    domain = models.CharField(max_length=255, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["domain"]
+
+    def __str__(self):
+        return self.domain
+
+
+class PasswordResetIpBlock(models.Model):
+    ip_address = models.CharField(max_length=45, unique=True)
+    attempted_email = models.CharField(max_length=255, blank=True)
+    blocked_at = models.DateTimeField(null=True, blank=True)
+    cloudflare_rule_id = models.CharField(max_length=64, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)

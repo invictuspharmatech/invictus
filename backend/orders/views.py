@@ -370,37 +370,37 @@ def checkout_view(request):
 
 
 @api_view(["POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticatedUser])
 def contact_view(request):
-    required = ["name", "email", "subject", "message"]
-    if any(not request.data.get(field) for field in required):
-        return Response({"error": "All fields are required."}, status=400)
+    user = request.user
+    email = (user.email or "").strip().lower()
+    name = str(request.data.get("name") or user.name or "").strip()
+    subject = str(request.data.get("subject") or "").strip()
+    message = str(request.data.get("message") or "").strip()
+    if not email or not name or not subject or not message:
+        return Response({"error": "Name, subject, and message are required."}, status=400)
     if is_blocked(request):
         return Response({"error": BLOCK_MESSAGE}, status=403)
-    text_error = markup_error(
-        str(request.data.get("name") or ""),
-        str(request.data.get("email") or ""),
-        str(request.data.get("subject") or ""),
-        str(request.data.get("message") or ""),
-    )
+    text_error = markup_error(name, subject, message)
     if text_error:
         note_rejection(request)
         return Response({"error": text_error}, status=400)
     ContactMessage.objects.create(
-        name=request.data["name"],
-        email=request.data["email"],
-        subject=request.data["subject"],
-        message=request.data["message"],
+        name=name,
+        email=email,
+        subject=subject,
+        message=message,
     )
     send_event(
         "contact_received",
         {
-            "user_name": request.data["name"],
-            "user_email": request.data["email"],
-            "subject": request.data["subject"],
-            "message": request.data["message"],
+            "user_name": name,
+            "user_email": email,
+            "subject": subject,
+            "message": message,
         },
-        user_email=request.data["email"],
+        user_email=email,
+        reply_to=email,
     )
     return Response({"ok": True})
 

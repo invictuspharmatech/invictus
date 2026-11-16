@@ -63,6 +63,7 @@ const ADMIN_NAV: AdminNavItem[] = [
     label: "Users",
     children: [
       { href: "/admin/users", label: "User list" },
+      { href: "/admin/users/blocked-domains", label: "Blocked domains" },
       { href: "/admin/users/new", label: "Add user" },
     ],
   },

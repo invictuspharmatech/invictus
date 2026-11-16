@@ -6,6 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from accounts.client_ip import client_ip
+from accounts.cloudflare_blocks import queue_enforce
 from orders.models import ContactIpBlock
 
 STRIKES_BEFORE_BLOCK = 2
@@ -23,6 +24,7 @@ def note_rejection(request) -> None:
     ip = client_ip(request)
     if not ip:
         return
+    already_blocked = ContactIpBlock.objects.filter(ip_address=ip, blocked_at__isnull=False).exists()
     with transaction.atomic():
         row = ContactIpBlock.objects.select_for_update().filter(ip_address=ip).first()
         if row is None:
@@ -34,3 +36,5 @@ def note_rejection(request) -> None:
         if row.rejected_count >= STRIKES_BEFORE_BLOCK:
             row.blocked_at = timezone.now()
         row.save(update_fields=["rejected_count", "blocked_at", "updated_at"])
+    if not already_blocked and is_blocked(request):
+        queue_enforce(ip)

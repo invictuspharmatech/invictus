@@ -28,7 +28,7 @@ export function ContactIpBlocks() {
     <section className="tile mb-6">
       <h2 className="text-lg">Blocked contact IPs</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        A public IP is listed here after 2 contact messages are rejected for unsafe text. Removing a block lets that network use the contact form again.
+        A public IP is listed here after 2 contact messages are rejected for unsafe text. Removing a block lets that network use the contact form again. When the site-wide block is on, Remove also lifts that block if this IP is not still blocked from password reset.
       </p>
       {loading ? <p className="mt-3 text-sm text-muted-foreground">Loading blocks…</p> : null}
       {!loading && rows.length === 0 ? (
