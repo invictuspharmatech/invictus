@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import urllib.parse
 
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny
@@ -11,12 +12,15 @@ from accounts.permissions import IsAuthenticatedUser, IsSuperuser
 from orders.btcpay import (
     BtcPayError,
     admin_payload,
+    api_key_instructions,
     checkout_window_closed,
+    complete_authorize,
     create_invoice,
     handle_webhook,
     save_admin_settings,
     serialize_invoice,
     setup_webhook,
+    start_authorize,
     test_connection,
     update_invoice_status,
 )
@@ -226,4 +230,65 @@ def admin_btcpay_webhook_view(request):
         return Response(setup_webhook())
     except BtcPayError as exc:
         return invoice_error(exc, 400)
+
+
+@api_view(["POST"])
+@permission_classes([IsSuperuser])
+def admin_btcpay_authorize_view(request):
+    data = request.data if isinstance(request.data, dict) else {}
+    server_url = str(data.get("serverUrl") or data.get("server_url") or "").strip()
+    try:
+        return Response(start_authorize(server_url))
+    except BtcPayError as exc:
+        return invoice_error(exc, 422)
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsSuperuser])
+def admin_btcpay_instructions_view(request):
+    data = request.data if isinstance(request.data, dict) else {}
+    server_url = str(
+        data.get("serverUrl")
+        or data.get("server_url")
+        or request.GET.get("serverUrl")
+        or request.GET.get("server_url")
+        or ""
+    ).strip()
+    try:
+        return Response(api_key_instructions(server_url or None))
+    except BtcPayError as exc:
+        return invoice_error(exc, 422)
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def admin_btcpay_callback_view(request):
+    """
+    BTCPay posts here after Authorize app (no admin cookie on cross-site POST).
+    State query param binds the session started by Connect with BTCPay.
+    """
+    state = str(request.GET.get("state") or request.query_params.get("state") or "").strip()
+    payload = request.data if isinstance(request.data, dict) else {}
+    api_key = str(payload.get("apiKey") or payload.get("api_key") or "").strip()
+    permissions = payload.get("permissions") or payload.get("permissions[]") or []
+    if isinstance(permissions, str):
+        permissions = [permissions]
+    if not isinstance(permissions, list):
+        permissions = []
+    # Some BTCPay versions send form-urlencoded repeated permissions.
+    if not permissions and hasattr(request, "POST"):
+        permissions = list(request.POST.getlist("permissions") or request.POST.getlist("permissions[]"))
+    try:
+        result = complete_authorize(api_key, [str(p) for p in permissions], state)
+        return Response({**result, "ok": True, "redirect": "/admin/settings/btcpay?connected=1"})
+    except BtcPayError as exc:
+        return Response(
+            {
+                "ok": False,
+                "error": str(exc),
+                "redirect": f"/admin/settings/btcpay?btcpay_error={urllib.parse.quote(str(exc)[:180])}",
+            },
+            status=400,
+        )
 

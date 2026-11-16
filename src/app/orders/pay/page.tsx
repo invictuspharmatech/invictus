@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/site/PageHeader";
@@ -28,6 +28,28 @@ function OrderPayInner() {
   const [invoice, setInvoice] = useState<ApiBtcInvoice | null>(null);
   const [busy, setBusy] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const autoOpened = useRef(false);
+
+  const createInvoice = useCallback(async (payToken: string) => {
+    setBusy(true);
+    setError(null);
+    const response = await fetch("/api/orders/pay/invoice", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ t: payToken }),
+    });
+    const data = (await response.json()) as ApiBtcInvoice & { error?: string };
+    setBusy(false);
+    if (!response.ok) {
+      setError(data.error || "Could not create a Bitcoin invoice.");
+      return null;
+    }
+    setInvoice(data);
+    if (data.checkoutLink && !data.checkoutClosed) {
+      setInvoiceOpen(true);
+    }
+    return data;
+  }, []);
 
   const load = useCallback(async () => {
     if (!token) {
@@ -48,37 +70,34 @@ function OrderPayInner() {
     setInfo(data);
     setInvoice(data.invoice);
     setLoading(false);
-  }, [token]);
+
+    const paid =
+      data.paymentStatus === "PAID" ||
+      data.invoice?.status === "complete" ||
+      data.invoice?.status === "paid";
+    const existingLink =
+      data.invoice && !data.invoice.checkoutClosed ? data.invoice.checkoutLink : null;
+
+    // GreatLife-style: open the invoice popup immediately — never leave the shopper on a
+    // "Create Bitcoin invoice" interstitial as the primary path.
+    if (!paid && data.canPay && !data.checkoutWindowClosed && !autoOpened.current) {
+      autoOpened.current = true;
+      if (existingLink) {
+        setInvoiceOpen(true);
+      } else {
+        await createInvoice(token);
+      }
+    }
+  }, [token, createInvoice]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  async function createInvoice() {
-    if (!token) return;
-    setBusy(true);
-    setError(null);
-    const response = await fetch("/api/orders/pay/invoice", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ t: token }),
-    });
-    const data = (await response.json()) as ApiBtcInvoice & { error?: string };
-    setBusy(false);
-    if (!response.ok) {
-      setError(data.error || "Could not create a Bitcoin invoice.");
-      return;
-    }
-    setInvoice(data);
-    if (data.checkoutLink) {
-      setInvoiceOpen(true);
-    }
-  }
-
   if (loading) {
     return (
       <div className="mx-auto max-w-xl px-4 py-20 text-center text-sm text-muted-foreground">
-        Checking your payment link…
+        Opening Bitcoin payment…
       </div>
     );
   }
@@ -125,8 +144,13 @@ function OrderPayInner() {
             Open Bitcoin invoice
           </button>
         ) : (
-          <button className="gold-btn" type="button" disabled={busy} onClick={() => void createInvoice()}>
-            {busy ? "Creating invoice…" : "Create Bitcoin invoice"}
+          <button
+            className="gold-btn"
+            type="button"
+            disabled={busy}
+            onClick={() => void createInvoice(token)}
+          >
+            {busy ? "Opening invoice…" : "Open Bitcoin invoice"}
           </button>
         )}
         {error ? <p className="text-sm text-brand-red">{error}</p> : null}
@@ -143,7 +167,7 @@ export default function OrderPayPage() {
     <Suspense
       fallback={
         <div className="mx-auto max-w-xl px-4 py-20 text-center text-sm text-muted-foreground">
-          Loading…
+          Opening Bitcoin payment…
         </div>
       }
     >

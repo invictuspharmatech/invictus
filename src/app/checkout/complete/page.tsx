@@ -24,7 +24,12 @@ export default function CheckoutCompletePage() {
       const raw = window.sessionStorage.getItem("invictus-checkout-pay");
       if (!raw) return;
       const parsed = JSON.parse(raw) as PayOrder[];
-      if (Array.isArray(parsed)) setOrders(parsed);
+      if (Array.isArray(parsed)) {
+        setOrders(parsed);
+        if (parsed.some((order) => order.checkoutLink)) {
+          setInvoiceOpen(true);
+        }
+      }
     } catch {
       setOrders([]);
     }

@@ -195,6 +195,8 @@ export type ApiBtcPaySettings = {
     message: string;
     webhookId?: string;
   };
+  requiredPermissions?: Record<string, string>;
+  apiKeysUrl?: string;
 };
 
 export type ApiPage = {

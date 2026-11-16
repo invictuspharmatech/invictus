@@ -14,8 +14,9 @@ export default async function BtcPaySettingsPage() {
     <div>
       <h1 className="display-font text-3xl">BTCPay / Bitcoin</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-        Super user only. Checkout creates a Bitcoin invoice from these credentials and opens it in a
-        popup. Settled webhooks mark the order paid.
+        Super user only. Use Connect with BTCPay to authorize this store (same wizard style as
+        GreatLife). Checkout then creates Bitcoin invoices in a popup; settled webhooks mark orders
+        paid.
       </p>
       <div className="mt-8">
         <BtcPaySettingsForm settings={settings} />

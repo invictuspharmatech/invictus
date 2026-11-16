@@ -206,22 +206,66 @@ export default function CheckoutPage() {
       checkoutLink?: string | null;
       orders?: CheckoutOrder[];
     };
-    setPending(false);
     if (!response.ok) {
+      setPending(false);
       setError(data.error || "Checkout failed.");
       return;
     }
-    const orders = data.orders || [];
+    let orders = data.orders || [];
+    let checkoutLink =
+      data.checkoutLink || orders.find((order) => order.checkoutLink)?.checkoutLink || null;
+    let invoiceError = data.error || null;
+
+    // Match GreatLife: if checkout did not return a link, create via pay-token (works for guests), then open popup.
+    if (!checkoutLink) {
+      const payUrl = orders.find((order) => order.payUrl)?.payUrl || null;
+      let payToken = "";
+      if (payUrl) {
+        try {
+          payToken = new URL(payUrl, window.location.origin).searchParams.get("t") || "";
+        } catch {
+          payToken = "";
+        }
+      }
+      if (payToken) {
+        try {
+          const invoiceRes = await fetch("/api/orders/pay/invoice", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ t: payToken }),
+          });
+          const invoiceData = (await invoiceRes.json().catch(() => null)) as {
+            checkoutLink?: string | null;
+            checkoutClosed?: boolean;
+            error?: string;
+          } | null;
+          if (invoiceRes.ok && invoiceData?.checkoutLink && !invoiceData.checkoutClosed) {
+            checkoutLink = invoiceData.checkoutLink;
+            orders = orders.map((order) => ({ ...order, checkoutLink }));
+          } else if (!invoiceError && invoiceData?.error) {
+            invoiceError = invoiceData.error;
+          }
+        } catch {
+          // Fall through to summary / pay link.
+        }
+      }
+    }
+
     if (typeof window !== "undefined") {
       window.sessionStorage.setItem("invictus-checkout-pay", JSON.stringify(orders));
     }
-    const checkoutLink = data.checkoutLink || orders.find((order) => order.checkoutLink)?.checkoutLink || null;
     setPlacedGroup(data.groupId || "");
     clear();
     saveCoupons([]);
+    setPending(false);
     if (checkoutLink) {
       setInvoiceLink(checkoutLink);
       return;
+    }
+    if (invoiceError) {
+      setError(
+        `${invoiceError} Your order was placed — open Pay now from the confirmation email if needed.`,
+      );
     }
     router.push(`/checkout/complete?group=${encodeURIComponent(data.groupId || "")}`);
   }
@@ -245,6 +289,7 @@ export default function CheckoutPage() {
     );
   }
 
+  // Stay on /checkout and open the invoice popup (GreatLife-style) — do not navigate away first.
   if (invoiceLink) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-20 text-center">

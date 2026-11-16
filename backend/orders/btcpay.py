@@ -5,8 +5,10 @@ import hmac
 import json
 import logging
 import re
+import secrets
 import ssl
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import timedelta
 from typing import Any
@@ -37,7 +39,27 @@ SETTING_KEYS = {
     "webhook_url": "btcpay.webhook_url",
     "invoice_expiration_minutes": "btcpay.invoice_expiration_minutes",
     "default_customer_message": "btcpay.default_customer_message",
+    "authorize_state": "btcpay.authorize_state",
+    "authorize_server_url": "btcpay.authorize_server_url",
 }
+
+# Same set GreatLife/WooCommerce requests via /api-keys/authorize (webhook included).
+AUTHORIZE_PERMISSIONS = [
+    "btcpay.store.canviewinvoices",
+    "btcpay.store.cancreateinvoice",
+    "btcpay.store.canviewstoresettings",
+    "btcpay.store.canmodifyinvoices",
+    "btcpay.store.webhooks.canmodifywebhooks",
+    "btcpay.store.cancreatenonapprovedpullpayments",
+]
+
+REQUIRED_AUTHORIZE_PERMISSIONS = [
+    "btcpay.store.canviewinvoices",
+    "btcpay.store.cancreateinvoice",
+    "btcpay.store.canviewstoresettings",
+    "btcpay.store.canmodifyinvoices",
+    "btcpay.store.webhooks.canmodifywebhooks",
+]
 
 WEBHOOK_EVENTS = [
     "InvoiceReceivedPayment",
@@ -620,9 +642,22 @@ def webhook_status() -> dict:
     expected = webhook_public_url()
     status, data = _request("GET", f"/api/v1/stores/{cfg['store_id']}/webhooks", None, cfg)
     if status >= 400:
-        message = data.get("message") if isinstance(data, dict) else "Could not list webhooks."
+        message = ""
+        missing = ""
+        if isinstance(data, dict):
+            message = str(data.get("message") or data.get("error") or "").strip()
+            missing = str(data.get("missingPermission") or "").strip()
         if status in (401, 403):
-            return {"configured": False, "message": message or "API key cannot view webhooks."}
+            # BTCPay rejected listing webhooks — almost always missing canviewwebhooks on the API key.
+            detail = message or "API key cannot view webhooks."
+            if missing:
+                detail = f"{detail} Missing permission: {missing}."
+            elif not message:
+                detail = (
+                    "API key cannot view webhooks (BTCPay returned "
+                    f"{status}). Create a new key with view/modify webhooks for this store."
+                )
+            return {"configured": False, "message": detail, "httpStatus": status}
         return {"configured": False, "message": "No webhook setup, yet."}
     webhooks = data if isinstance(data, list) else []
     path = "/api/btc/webhook"
@@ -704,6 +739,157 @@ def admin_payload() -> dict:
             SETTING_KEYS["default_customer_message"],
             "You will be redirected to BTC Payment Server.",
         ),
+        "requiredPermissions": {
+            "btcpay.store.canviewstoresettings": "Store: Can view and modify store settings",
+            "btcpay.store.canmodifyinvoices": "Store: Can create, view, update and delete invoices",
+            "btcpay.store.webhooks.canmodifywebhooks": "Store: Can modify webhooks",
+            "btcpay.store.canviewinvoices": "Store: Can view invoices",
+            "btcpay.store.cancreateinvoice": "Store: Can create invoices",
+        },
+        "apiKeysUrl": f"{cfg['server_url']}/account/apikeys" if cfg["server_url"] else "",
+    }
+
+
+def authorize_callback_url(state: str) -> str:
+    base = settings.PUBLIC_SITE_URL.rstrip("/")
+    return f"{base}/api/admin/btcpay/callback?state={urllib.parse.quote(state)}"
+
+
+def build_authorize_url(server_url: str, state: str) -> str:
+    host = clean_server_url(server_url)
+    if not host:
+        raise BtcPayError("Enter your BTCPay Server URL first (https://…).")
+    if not host.startswith(("https://", "http://")):
+        raise BtcPayError("BTCPay Server URL must start with https://")
+    query: list[tuple[str, str]] = [
+        ("applicationName", "Invictus Pharma"),
+        ("applicationIdentifier", "invictuspharma"),
+        ("strict", "true"),
+        ("selectiveStores", "true"),
+        ("redirect", authorize_callback_url(state)),
+    ]
+    for permission in AUTHORIZE_PERMISSIONS:
+        query.append(("permissions", permission))
+    return f"{host}/api-keys/authorize?{urllib.parse.urlencode(query)}"
+
+
+def start_authorize(server_url: str) -> dict:
+    host = clean_server_url(server_url)
+    if not host:
+        raise BtcPayError("Enter your BTCPay Server URL first.")
+    state = secrets.token_urlsafe(24)
+    setting_set(SETTING_KEYS["authorize_state"], state, "BTCPay authorize state")
+    setting_set(SETTING_KEYS["authorize_server_url"], host, "BTCPay authorize server URL")
+    # Persist server URL early so reconnects keep the host even if authorize is abandoned.
+    setting_set(SETTING_KEYS["server_url"], host, "BTCPay server URL")
+    return {
+        "authorizeUrl": build_authorize_url(host, state),
+        "serverUrl": host,
+        "message": "Redirecting to BTCPay Server to authorize Invictus Pharma.",
+    }
+
+
+def _permission_bases(permissions: list[str]) -> list[str]:
+    bases: list[str] = []
+    for item in permissions:
+        if not isinstance(item, str) or not item.strip():
+            continue
+        bases.append(item.split(":", 1)[0].strip())
+    return bases
+
+
+def _store_id_from_permissions(permissions: list[str]) -> str:
+    store_id = ""
+    for item in permissions:
+        if not isinstance(item, str) or ":" not in item:
+            continue
+        _perm, sid = item.split(":", 1)
+        sid = sid.strip()
+        if not sid:
+            continue
+        if store_id and store_id != sid:
+            raise BtcPayError("Select exactly one store on the BTCPay authorization page.")
+        store_id = sid
+    if not store_id:
+        raise BtcPayError("BTCPay did not return a store-scoped API key. Select one store and try again.")
+    return store_id
+
+
+def complete_authorize(api_key: str, permissions: list[str], state: str | None = None) -> dict:
+    expected = setting_get(SETTING_KEYS["authorize_state"])
+    pending_server = setting_get(SETTING_KEYS["authorize_server_url"]) or setting_get(SETTING_KEYS["server_url"])
+    state_ok = bool(expected and state and len(expected) == len(state) and secrets.compare_digest(expected, state))
+    if not state_ok:
+        raise BtcPayError("Authorize session expired or invalid. Start Connect with BTCPay again.")
+    if not pending_server:
+        raise BtcPayError("Missing BTCPay Server URL for this authorize session.")
+    key = clean_api_key(api_key)
+    if len(key) < 20:
+        raise BtcPayError("BTCPay did not return a valid API key.")
+    bases = _permission_bases(permissions)
+    missing = [perm for perm in REQUIRED_AUTHORIZE_PERMISSIONS if perm not in bases]
+    if missing:
+        raise BtcPayError(
+            "BTCPay key is missing required permissions: "
+            + ", ".join(missing)
+            + ". Authorize again and leave all requested permissions checked."
+        )
+    store_id = _store_id_from_permissions(permissions)
+
+    # Verify the key talks to the same server we started with.
+    status, _ = _request(
+        "GET",
+        f"/api/v1/stores/{store_id}",
+        None,
+        {"server_url": pending_server, "api_key": key, "store_id": store_id},
+    )
+    if status >= 400:
+        raise BtcPayError("Could not verify the API key against the BTCPay Server URL.")
+
+    setting_set(SETTING_KEYS["server_url"], pending_server, "BTCPay server URL")
+    setting_set(SETTING_KEYS["api_key"], key, "BTCPay API key")
+    setting_set(SETTING_KEYS["store_id"], store_id, "BTCPay store ID")
+    setting_set(SETTING_KEYS["authorize_state"], "", "BTCPay authorize state")
+    setting_set(SETTING_KEYS["authorize_server_url"], "", "BTCPay authorize server URL")
+
+    webhook_result = None
+    try:
+        webhook_result = setup_webhook()
+    except BtcPayError as exc:
+        logger.warning("Authorize succeeded but webhook setup failed: %s", exc)
+        webhook_result = {"configured": False, "message": str(exc)}
+
+    payload = admin_payload()
+    payload["message"] = "Connected to BTCPay Server."
+    payload["webhookStatus"] = webhook_result or payload.get("webhookStatus")
+    return payload
+
+
+def api_key_instructions(server_url: str | None = None) -> dict:
+    host = clean_server_url(server_url or setting_get(SETTING_KEYS["server_url"]))
+    if not host:
+        raise BtcPayError("Please set BTCPay Server URL first")
+    return {
+        "instructions": [
+            "1. Log in to your BTCPay Server",
+            "2. Go to Account Settings → Manage Account → API Keys",
+            "3. Click Create API Key (or use Connect with BTCPay for automatic setup)",
+            "4. Select your store and grant ALL of these permissions:",
+            "   ✓ Store: Can view and modify store settings",
+            "   ✓ Store: Can create, view, update and delete invoices",
+            "   ✓ Store: Can modify webhooks (required)",
+            "   ✓ Store: Can view invoices / create invoices",
+            "5. Click Save / Generate, copy the key, paste it under Advanced settings, then Save",
+            "6. Click Test connection, then Create webhook",
+        ],
+        "apiKeyUrl": f"{host}/account/apikeys",
+        "requiredPermissions": {
+            "btcpay.store.canviewstoresettings": "Store: Can view and modify store settings",
+            "btcpay.store.canmodifyinvoices": "Store: Can create, view, update and delete invoices",
+            "btcpay.store.webhooks.canmodifywebhooks": "Store: Can modify webhooks",
+            "btcpay.store.canviewinvoices": "Store: Can view invoices",
+            "btcpay.store.cancreateinvoice": "Store: Can create invoices",
+        },
     }
 
 

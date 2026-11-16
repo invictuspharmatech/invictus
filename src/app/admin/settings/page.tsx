@@ -29,7 +29,7 @@ export default async function AdminSettingsPage() {
           </Link>
           <span className="text-muted-foreground">
             {" "}
-            — server URL, API key, and webhook (super user only).
+            — Connect with BTCPay, webhook, and manual API key (super user only).
           </span>
         </p>
       ) : null}
