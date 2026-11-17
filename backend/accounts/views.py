@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -305,6 +306,31 @@ def _visible_users(actor):
     return qs
 
 
+def _filtered_users(actor, params):
+    """GreatLife-style list filters: search, role, active status."""
+    qs = _visible_users(actor).order_by("-created_at", "email")
+    search = str(params.get("search") or "").strip()
+    if search:
+        qs = qs.filter(Q(name__icontains=search) | Q(email__icontains=search))
+    role = str(params.get("role") or "").strip().upper()
+    if role:
+        if role not in {choice[0] for choice in User.Role.choices}:
+            return qs.none()
+        if role == User.Role.SUPERUSER and actor.role != User.Role.SUPERUSER:
+            return qs.none()
+        qs = qs.filter(role=role)
+    active_raw = params.get("isActive")
+    if active_raw is None or active_raw == "":
+        active_raw = params.get("is_active")
+    if active_raw is not None and str(active_raw).strip() != "":
+        value = str(active_raw).strip().lower()
+        if value in ("1", "true", "yes"):
+            qs = qs.filter(is_active=True)
+        elif value in ("0", "false", "no"):
+            qs = qs.filter(is_active=False)
+    return qs
+
+
 def _can_manage_user(actor, target) -> bool:
     if target.role == User.Role.SUPERUSER and actor.role != User.Role.SUPERUSER:
         return False
@@ -370,7 +396,8 @@ def admin_users_view(request):
         if error:
             return Response({"error": error}, status=400)
         return Response(UserAdminSerializer(user).data, status=201)
-    return Response(UserAdminSerializer(_visible_users(request.user), many=True).data)
+    users = _filtered_users(request.user, request.query_params)
+    return Response(UserAdminSerializer(users, many=True).data)
 
 
 @api_view(["GET", "PUT", "PATCH"])

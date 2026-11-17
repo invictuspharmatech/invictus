@@ -1,7 +1,9 @@
 import { proxyDjango } from "@/lib/proxy-django";
 
-export async function GET() {
-  return proxyDjango("/api/admin/users/");
+export async function GET(request: Request) {
+  const incoming = new URL(request.url);
+  const path = `/api/admin/users/${incoming.search}`;
+  return proxyDjango(path);
 }
 
 export async function POST(request: Request) {

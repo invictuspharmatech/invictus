@@ -143,20 +143,36 @@ def checkout_window_closed(order: Order) -> bool:
     return order.created_at <= timezone.now() - timedelta(hours=24)
 
 
+def _store_path(store_id: str, suffix: str = "") -> str:
+    """Match GreatLife/Greenfield SDK: URL-encode store id in API paths."""
+    encoded = urllib.parse.quote(str(store_id or "").strip(), safe="")
+    return f"/api/v1/stores/{encoded}{suffix}"
+
+
+def _normalize_webhook_rows(data: Any) -> list[dict]:
+    """BTCPay may return a bare list or a wrapped object depending on version."""
+    if isinstance(data, list):
+        return [row for row in data if isinstance(row, dict)]
+    if isinstance(data, dict):
+        for key in ("webhooks", "result", "data"):
+            nested = data.get(key)
+            if isinstance(nested, list):
+                return [row for row in nested if isinstance(row, dict)]
+    return []
+
+
 def _request(method: str, path: str, payload: dict | None = None, config: dict | None = None) -> tuple[int, Any]:
     cfg = config or get_config()
     url = cfg["server_url"].rstrip("/") + path
     body = None if payload is None else json.dumps(payload).encode()
-    req = urllib.request.Request(
-        url,
-        data=body,
-        method=method,
-        headers={
-            "Authorization": f"token {cfg['api_key']}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        },
-    )
+    headers = {
+        # Greenfield / GreatLife: Authorization: token <apiKey>
+        "Authorization": f"token {cfg['api_key']}",
+        "Accept": "application/json",
+    }
+    if body is not None:
+        headers["Content-Type"] = "application/json"
+    req = urllib.request.Request(url, data=body, method=method, headers=headers)
     ctx = ssl.create_default_context()
     try:
         with urllib.request.urlopen(req, timeout=30, context=ctx) as resp:
@@ -324,7 +340,7 @@ def supersede_existing(order: Order) -> None:
         try:
             _request(
                 "POST",
-                f"/api/v1/stores/{cfg['store_id']}/invoices/{invoice.invoice_id}/status",
+                _store_path(cfg["store_id"], f"/invoices/{urllib.parse.quote(invoice.invoice_id, safe='')}/status"),
                 {"status": "Invalid"},
                 cfg,
             )
@@ -351,24 +367,29 @@ def create_invoice(order: Order) -> BtcInvoice:
     cfg = get_config()
     from orders.pay_token import checkout_url
 
+    # Match GreatLife Greenfield createInvoice: amount + currency + metadata.orderId/buyerEmail + checkout.
+    order_id = str(primary.order_number).strip()
     payload = {
         "amount": f"{amount:.2f}",
         "currency": "USD",
         "metadata": {
-            "orderId": primary.group_id or primary.order_number,
-            "buyerEmail": primary.customer_email,
-            "itemDesc": f"Invictus Pharma {primary.group_id or primary.order_number}",
+            "orderId": order_id,
+            "buyerEmail": primary.customer_email or None,
+            "itemDesc": f"Invictus Pharma {primary.group_id or order_id}",
+            "groupId": primary.group_id or order_id,
         },
         "checkout": {
             "redirectURL": checkout_url(primary),
             "expirationMinutes": invoice_expiration_minutes(),
         },
     }
-    status, data = _request("POST", f"/api/v1/stores/{cfg['store_id']}/invoices", payload, cfg)
+    status, data = _request("POST", _store_path(cfg["store_id"], "/invoices"), payload, cfg)
     if status >= 400 or not isinstance(data, dict) or not data.get("id"):
         message = ""
         if isinstance(data, dict):
             message = data.get("message") or data.get("error") or ""
+            if data.get("missingPermission"):
+                message = message or f"Missing permission {data['missingPermission']}."
         raise BtcPayError(message or "Failed to create BTCPay invoice.", status, data)
 
     details = extract_payment_details(data)
@@ -389,7 +410,12 @@ def create_invoice(order: Order) -> BtcInvoice:
 
 def fetch_invoice(invoice_id: str) -> dict:
     cfg = get_config()
-    status, data = _request("GET", f"/api/v1/stores/{cfg['store_id']}/invoices/{invoice_id}", None, cfg)
+    status, data = _request(
+        "GET",
+        _store_path(cfg["store_id"], f"/invoices/{urllib.parse.quote(str(invoice_id), safe='')}"),
+        None,
+        cfg,
+    )
     if status >= 400 or not isinstance(data, dict):
         raise BtcPayError("Failed to load invoice status from BTCPay.", status, data)
     return data
@@ -610,7 +636,7 @@ def test_connection() -> dict:
         for permission in permissions:
             if isinstance(permission, str) and ":" in permission:
                 extracted_store_id = permission.split(":", 1)[1] or extracted_store_id
-    status, store = _request("GET", f"/api/v1/stores/{cfg['store_id']}", None, cfg)
+    status, store = _request("GET", _store_path(cfg["store_id"]), None, cfg)
     if status == 401:
         raise BtcPayError("Unauthenticated. Check the API key.")
     if status == 403:
@@ -636,34 +662,34 @@ def test_connection() -> dict:
 
 
 def webhook_status() -> dict:
+    """GreatLife-aligned status: trust saved webhook, soft-fail list errors."""
     if not is_configured():
         return {"configured": False, "message": "BTCPay not configured"}
     cfg = get_config()
     expected = webhook_public_url()
-    status, data = _request("GET", f"/api/v1/stores/{cfg['store_id']}/webhooks", None, cfg)
+    stored_id = setting_get(SETTING_KEYS["webhook_id"])
+    stored_secret = setting_get(SETTING_KEYS["webhook_secret"])
+    if stored_id and stored_secret:
+        return {
+            "configured": True,
+            "message": "Webhook is configured",
+            "webhookId": stored_id,
+        }
+
+    status, data = _request("GET", _store_path(cfg["store_id"], "/webhooks"), None, cfg)
     if status >= 400:
-        message = ""
-        missing = ""
-        if isinstance(data, dict):
-            message = str(data.get("message") or data.get("error") or "").strip()
-            missing = str(data.get("missingPermission") or "").strip()
-        if status in (401, 403):
-            # BTCPay rejected listing webhooks — almost always missing canviewwebhooks on the API key.
-            detail = message or "API key cannot view webhooks."
-            if missing:
-                detail = f"{detail} Missing permission: {missing}."
-            elif not message:
-                detail = (
-                    "API key cannot view webhooks (BTCPay returned "
-                    f"{status}). Create a new key with view/modify webhooks for this store."
-                )
-            return {"configured": False, "message": detail, "httpStatus": status}
-        return {"configured": False, "message": "No webhook setup, yet."}
-    webhooks = data if isinstance(data, list) else []
+        # GreatLife: auth/list failures become a soft "No webhook setup, yet."
+        # (except hard unauthenticated), instead of a repeating permission alarm.
+        if status == 401:
+            return {
+                "configured": False,
+                "message": "Unauthenticated. Please check your API key.",
+                "httpStatus": status,
+            }
+        return {"configured": False, "message": "No webhook setup, yet.", "httpStatus": status}
+
     path = "/api/btc/webhook"
-    for item in webhooks:
-        if not isinstance(item, dict):
-            continue
+    for item in _normalize_webhook_rows(data):
         url = item.get("url") or ""
         if path in url or url.rstrip("/") == expected.rstrip("/"):
             return {
@@ -671,44 +697,14 @@ def webhook_status() -> dict:
                 "message": "Webhook is configured",
                 "webhookId": item.get("id"),
             }
-    stored_id = setting_get(SETTING_KEYS["webhook_id"])
     if stored_id:
         return {"configured": True, "message": "Webhook is configured", "webhookId": stored_id}
     return {"configured": False, "message": "No webhook setup, yet."}
 
 
-def setup_webhook() -> dict:
-    if not is_configured():
-        raise BtcPayError("Save the server URL, API key, and store ID first.")
-    cfg = get_config()
-    url = webhook_public_url()
-    current = webhook_status()
-    if current.get("configured"):
-        return {
-            "configured": True,
-            "message": "Webhook is already configured.",
-            "webhookId": current.get("webhookId"),
-            "webhookUrl": url,
-        }
-    payload = {
-        "enabled": True,
-        "automaticRedelivery": True,
-        "url": url,
-        "authorizedEvents": {"everything": False, "specificEvents": WEBHOOK_EVENTS},
-    }
-    status, data = _request("POST", f"/api/v1/stores/{cfg['store_id']}/webhooks", payload, cfg)
-    if status >= 400 or not isinstance(data, dict):
-        message = ""
-        if isinstance(data, dict):
-            message = data.get("message") or data.get("error") or ""
-            if data.get("missingPermission"):
-                message = (
-                    message
-                    or f"Missing permission {data['missingPermission']}. Create an API key that can modify webhooks."
-                )
-        raise BtcPayError(message or "Failed to create the BTCPay webhook.", status, data)
-    secret = data.get("secret") or ""
-    webhook_id = data.get("id") or ""
+def _persist_webhook(data: dict, url: str) -> dict:
+    secret = str(data.get("secret") or "")
+    webhook_id = str(data.get("id") or "")
     if secret:
         setting_set(SETTING_KEYS["webhook_secret"], secret, "BTCPay webhook secret")
     if webhook_id:
@@ -721,6 +717,79 @@ def setup_webhook() -> dict:
         "webhookUrl": url,
         "webhookSecret": mask_secret(secret),
     }
+
+
+def setup_webhook() -> dict:
+    """Create store webhook like GreatLife (specific events, then everything=true fallback)."""
+    if not is_configured():
+        raise BtcPayError("Save the server URL, API key, and store ID first.")
+    cfg = get_config()
+    url = webhook_public_url()
+    stored_id = setting_get(SETTING_KEYS["webhook_id"])
+    stored_secret = setting_get(SETTING_KEYS["webhook_secret"])
+    if stored_id and stored_secret:
+        return {
+            "configured": True,
+            "message": "Webhook is already configured.",
+            "webhookId": stored_id,
+            "webhookUrl": url,
+        }
+
+    # If list works and our URL already exists, adopt it (secret may already be saved manually).
+    list_status, list_data = _request("GET", _store_path(cfg["store_id"], "/webhooks"), None, cfg)
+    if list_status < 400:
+        path = "/api/btc/webhook"
+        for item in _normalize_webhook_rows(list_data):
+            item_url = item.get("url") or ""
+            if path in item_url or item_url.rstrip("/") == url.rstrip("/"):
+                webhook_id = str(item.get("id") or "")
+                if webhook_id:
+                    setting_set(SETTING_KEYS["webhook_id"], webhook_id, "BTCPay webhook id")
+                setting_set(SETTING_KEYS["webhook_url"], url, "BTCPay webhook URL")
+                return {
+                    "configured": True,
+                    "message": "Webhook already exists",
+                    "webhookId": webhook_id,
+                    "webhookUrl": url,
+                }
+
+    specific_payload = {
+        "enabled": True,
+        "automaticRedelivery": True,
+        "url": url,
+        "authorizedEvents": {"everything": False, "specificEvents": WEBHOOK_EVENTS},
+    }
+    status, data = _request("POST", _store_path(cfg["store_id"], "/webhooks"), specific_payload, cfg)
+    if status < 400 and isinstance(data, dict) and data.get("id"):
+        return _persist_webhook(data, url)
+
+    # GreatLife HTTP fallback: create with everything=true when specific-event create fails.
+    fallback_payload = {
+        "enabled": True,
+        "automaticRedelivery": True,
+        "url": url,
+        "authorizedEvents": {"everything": True},
+    }
+    status2, data2 = _request("POST", _store_path(cfg["store_id"], "/webhooks"), fallback_payload, cfg)
+    if status2 < 400 and isinstance(data2, dict) and data2.get("id"):
+        return _persist_webhook(data2, url)
+
+    message = ""
+    err_payload = data2 if isinstance(data2, dict) else data if isinstance(data, dict) else {}
+    if isinstance(err_payload, dict):
+        message = str(err_payload.get("message") or err_payload.get("error") or "")
+        if err_payload.get("missingPermission"):
+            message = (
+                message
+                or f"Missing permission {err_payload['missingPermission']}. "
+                "Create an API key with Store: Can modify webhooks, or add the webhook manually "
+                f"in BTCPay to {url} and paste the secret here."
+            )
+    raise BtcPayError(
+        message or "Failed to create the BTCPay webhook.",
+        status2 if status2 >= 400 else status,
+        err_payload,
+    )
 
 
 def admin_payload() -> dict:
@@ -839,7 +908,7 @@ def complete_authorize(api_key: str, permissions: list[str], state: str | None =
     # Verify the key talks to the same server we started with.
     status, _ = _request(
         "GET",
-        f"/api/v1/stores/{store_id}",
+        _store_path(store_id),
         None,
         {"server_url": pending_server, "api_key": key, "store_id": store_id},
     )

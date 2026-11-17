@@ -42,8 +42,9 @@ function BtcPaySettingsFormInner({ settings }: { settings: ApiBtcPaySettings }) 
       <div className="tile grid max-w-3xl gap-4">
         <h2 className="text-lg">BTCPay Server Payments Settings</h2>
         <p className="text-sm text-muted-foreground">
-          Same flow as GreatLife: enter your BTCPay URL, connect from this app (Authorize app), then
-          webhook registers automatically with the right permissions.
+          GreatLife-style setup: enter your BTCPay URL, connect or paste API key + store ID, then
+          create the webhook (or add it manually in BTCPay and paste the secret). Invoice create uses
+          the same Greenfield API pattern as GreatLife.
         </p>
 
         <label className="grid gap-1 text-sm">
