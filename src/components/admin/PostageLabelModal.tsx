@@ -7,29 +7,57 @@ import { warehouseShort } from "@/lib/warehouse";
 export const MAX_BTCPOSTAGE_LABEL_BATCH = 10;
 
 const PACKAGE_PRESETS = [
-  { key: "envelope", label: '10" × 14" envelope', length: "10", width: "14", height: "0.75" },
   { key: "4x6x2", label: '4" × 6" × 2"', length: "4", width: "6", height: "2" },
   { key: "9x6x2", label: '9" × 6" × 2"', length: "9", width: "6", height: "2" },
   { key: "8x6x3", label: '8" × 6" × 3"', length: "8", width: "6", height: "3" },
+  { key: "envelope", label: '10" × 14" envelope', length: "10", width: "14", height: "0.75" },
 ] as const;
 
+/** Align with GreatLife WooCommerce plugin packagetype_usps options (common subset). */
 const USPS_PACKAGE_TYPES = [
-  { value: "USPScustom", label: "Custom Box/Package" },
+  { value: "USPScustom", label: "Custom Box/Package (Most Common)" },
+  { value: "Flat", label: "Flat" },
   { value: "Parcel", label: "Parcel" },
   { value: "LargeParcel", label: "Large Parcel" },
-  { value: "Flat", label: "Flat" },
+  { value: "IrregularParcel", label: "Irregular Size (Rolls, Tubes)" },
+  { value: "Letter", label: "Letter" },
   {
     value: "FlatRateEnvelope",
     label: 'Flat Rate Envelope (12.5" × 9.5")',
   },
   {
+    value: "SmallFlatRateBox",
+    label: "Flat Rate Box - Small",
+  },
+  {
     value: "MediumFlatRateBox",
     label: 'Medium Flat Rate Box (11" × 8.5" × 5.5")',
   },
+  {
+    value: "LargeFlatRateBox",
+    label: "Flat Rate Box - Large",
+  },
 ] as const;
 
+type PostageRate = {
+  carrier: string;
+  service: string;
+  serviceDisplay: string;
+  rate: string;
+  currency: string;
+  estDeliveryDays: string;
+};
+
 function isUspsPriorityFlatRate(packageType: string) {
-  return packageType === "FlatRateEnvelope" || packageType === "MediumFlatRateBox";
+  return (
+    packageType === "FlatRateEnvelope" ||
+    packageType === "FlatRateLegalEnvelope" ||
+    packageType === "FlatRatePaddedEnvelope" ||
+    packageType === "SmallFlatRateEnvelope" ||
+    packageType === "SmallFlatRateBox" ||
+    packageType === "MediumFlatRateBox" ||
+    packageType === "LargeFlatRateBox"
+  );
 }
 
 function flatRateDimensions(packageType: string) {
@@ -98,7 +126,8 @@ function emptyPackage(): PackageForm {
   return {
     carrier: "usps",
     packageType: "USPScustom",
-    service: "GroundAdvantage",
+    // GreatLife leaves service empty until get-rates returns a quote to pick.
+    service: "",
     weightLbs: "1",
     weightOz: "0",
     length: PACKAGE_PRESETS[0].length,
@@ -270,12 +299,14 @@ function createPurchaseBody(
   recipient: RecipientForm,
   pkg: PackageForm,
   testMode: boolean,
+  serviceOverride?: string,
 ) {
   const flat = pkg.carrier === "usps" && isUspsPriorityFlatRate(pkg.packageType);
   const dims = flat
     ? flatRateDimensions(pkg.packageType)
     : { length: pkg.length, width: pkg.width, height: pkg.height };
-  const service = flat ? "Priority" : pkg.service;
+  // GreatLife: service comes from the selected get-rates row (not a guessed default).
+  const service = (serviceOverride || pkg.service || (flat ? "Priority" : "")).trim();
   const payload: Record<string, string | boolean> = {
     carrier: pkg.carrier,
     service,
@@ -296,6 +327,7 @@ function createPurchaseBody(
     to_state: recipient.toState,
     to_zip: recipient.toZip,
     to_country: recipient.toCountry || "US",
+    to_commercial_address: "false",
     package_type: pkg.packageType,
     packagetype_usps: pkg.packageType,
     packageType: pkg.packageType,
@@ -357,7 +389,7 @@ function PackageFields({
             const dims = nextFlat ? flatRateDimensions(packageType) : PACKAGE_PRESETS[0];
             onChange({
               packageType,
-              service: nextFlat ? "Priority" : pkg.service || "GroundAdvantage",
+              service: nextFlat ? "Priority" : "",
               length: dims.length,
               width: dims.width,
               height: dims.height,
@@ -373,20 +405,12 @@ function PackageFields({
       </label>
       <label className={labelClass}>
         Service
-        {flat ? (
-          <select className={fieldClass} value="Priority" disabled>
-            <option value="Priority">Priority (required for flat rate)</option>
-          </select>
-        ) : (
-          <select
-            className={fieldClass}
-            value={pkg.service}
-            onChange={(e) => onChange({ service: e.target.value })}
-          >
-            <option value="GroundAdvantage">Ground Advantage</option>
-            <option value="Priority">Priority</option>
-          </select>
-        )}
+        <select className={fieldClass} value={flat ? "Priority" : ""} disabled>
+          <option value="">
+            {flat ? "Priority (via Get rates)" : "Choose after Get rates"}
+          </option>
+          {flat ? <option value="Priority">Priority</option> : null}
+        </select>
       </label>
       {pkg.packageType === "USPScustom" ? (
         <label className={labelClass}>
@@ -547,9 +571,16 @@ export function PostageLabelModal({
   const [senders, setSenders] = useState<ApiPostageSender[]>([]);
   const [senderId, setSenderId] = useState("");
   const [testMode, setTestMode] = useState(false);
+  const [rates, setRates] = useState<PostageRate[]>([]);
+  const [selectedService, setSelectedService] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
+
+  function clearRates() {
+    setRates([]);
+    setSelectedService("");
+  }
 
   const orderIdsKey = orders.map((row) => row.id).join(",");
   useEffect(() => {
@@ -639,48 +670,100 @@ export function PostageLabelModal({
     return null;
   }
 
-  async function submit() {
-    setError("");
-
+  function buildTargets() {
     const useSharedFrom = !bulk || sharedFrom;
-    if (useSharedFrom) {
-      const fromError = validateSender(sender);
-      if (fromError) {
-        setError(fromError);
-        return;
-      }
-    }
-
-    const targets = orders.map((row) => {
+    return orders.map((row) => {
       const to = bulk ? recipientsById[row.id] || emptyRecipient(row) : recipient;
       const rowPkg = bulk ? packagesById[row.id] || emptyPackage() : pkg;
-      const from = useSharedFrom
-        ? sender
-        : sendersById[row.id] || emptySender();
+      const from = useSharedFrom ? sender : sendersById[row.id] || emptySender();
       return { order: row, to, pkg: rowPkg, from };
     });
+  }
 
+  function validateTargets(
+    targets: ReturnType<typeof buildTargets>,
+    useSharedFrom: boolean,
+  ): string | null {
+    if (useSharedFrom) {
+      const fromError = validateSender(sender);
+      if (fromError) return fromError;
+    }
     for (const target of targets) {
       if (!useSharedFrom) {
         const fromError = validateSender(
           target.from,
           `FROM address for ${target.order.orderNumber}`,
         );
-        if (fromError) {
-          setError(fromError);
-          return;
-        }
+        if (fromError) return fromError;
       }
       const recipientError = validateRecipient(target.to, target.order.orderNumber);
-      if (recipientError) {
-        setError(recipientError);
-        return;
-      }
+      if (recipientError) return recipientError;
       const packageError = validatePackage(target.pkg, target.order.orderNumber);
-      if (packageError) {
-        setError(packageError);
+      if (packageError) return packageError;
+    }
+    return null;
+  }
+
+  /** GreatLife step 1: quote rates before create-purchase. */
+  async function fetchRates() {
+    setError("");
+    const useSharedFrom = !bulk || sharedFrom;
+    const targets = buildTargets();
+    const validationError = validateTargets(targets, useSharedFrom);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    const target = targets[0];
+    if (!target) return;
+
+    setBusy(true);
+    setProgress("Getting rates");
+    clearRates();
+    try {
+      const response = await fetch(`/api/admin/orders/${target.order.id}/label/rates`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(
+          createPurchaseBody(target.from, target.to, target.pkg, testMode, ""),
+        ),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string; rates?: PostageRate[] }
+        | null;
+      if (!response.ok || !payload?.rates?.length) {
+        setError(
+          payload?.error ||
+            "No valid price quotes found. Check carrier/package/weight/dimensions and ZIP codes.",
+        );
         return;
       }
+      setRates(payload.rates);
+      const preferred =
+        payload.rates.find((row) => row.service === "GroundAdvantage") ||
+        payload.rates.find((row) => row.service === "Priority") ||
+        payload.rates[0];
+      setSelectedService(preferred?.service || "");
+    } finally {
+      setBusy(false);
+      setProgress("");
+    }
+  }
+
+  async function submit(serviceOverride?: string) {
+    setError("");
+    const service = (serviceOverride || selectedService || "").trim();
+    if (!service) {
+      setError("Get rates first, then choose a service (same as GreatLife).");
+      return;
+    }
+
+    const useSharedFrom = !bulk || sharedFrom;
+    const targets = buildTargets();
+    const validationError = validateTargets(targets, useSharedFrom);
+    if (validationError) {
+      setError(validationError);
+      return;
     }
 
     setBusy(true);
@@ -693,7 +776,7 @@ export function PostageLabelModal({
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(
-            createPurchaseBody(target.from, target.to, target.pkg, testMode),
+            createPurchaseBody(target.from, target.to, target.pkg, testMode, service),
           ),
         });
         const payload = (await response.json().catch(() => null)) as
@@ -815,7 +898,10 @@ export function PostageLabelModal({
                 />
                 <SenderFields
                   sender={sender}
-                  onChange={(patch) => setSender((current) => ({ ...current, ...patch }))}
+                  onChange={(patch) => {
+                    clearRates();
+                    setSender((current) => ({ ...current, ...patch }));
+                  }}
                 />
                 {!bulk ? (
                   <label className="mt-1 flex items-start gap-2 rounded border border-border/50 bg-muted/20 p-3 text-sm">
@@ -823,7 +909,10 @@ export function PostageLabelModal({
                       className="mt-0.5"
                       type="checkbox"
                       checked={testMode}
-                      onChange={(e) => setTestMode(e.target.checked)}
+                      onChange={(e) => {
+                        clearRates();
+                        setTestMode(e.target.checked);
+                      }}
                     />
                     <span>
                       <strong>Test mode (USPS)</strong>. Unchecked = live labels (credits used).
@@ -839,7 +928,10 @@ export function PostageLabelModal({
                   </legend>
                   <RecipientFields
                     recipient={recipient}
-                    onChange={(patch) => setRecipient((current) => ({ ...current, ...patch }))}
+                    onChange={(patch) => {
+                      clearRates();
+                      setRecipient((current) => ({ ...current, ...patch }));
+                    }}
                   />
                 </fieldset>
               ) : null}
@@ -850,7 +942,10 @@ export function PostageLabelModal({
             <div className="mt-4">
               <PackageFields
                 pkg={pkg}
-                onChange={(patch) => setPkg((current) => ({ ...current, ...patch }))}
+                onChange={(patch) => {
+                  clearRates();
+                  setPkg((current) => ({ ...current, ...patch }));
+                }}
               />
             </div>
           ) : (
@@ -932,9 +1027,60 @@ export function PostageLabelModal({
             </div>
           )}
 
+          {rates.length ? (
+            <div className="mt-4 space-y-2">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-signal">
+                Rates
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Same as GreatLife: pick a quoted service, then create the label
+                {bulk ? " (that service is used for every order in the batch)" : ""}.
+              </p>
+              <div className="space-y-2">
+                {rates.map((rate) => {
+                  const active = selectedService === rate.service;
+                  return (
+                    <div
+                      key={`${rate.carrier}-${rate.service}-${rate.rate}`}
+                      className={`flex flex-wrap items-center justify-between gap-3 rounded border p-3 ${
+                        active ? "border-signal bg-muted/30" : "border-border/50 bg-muted/10"
+                      }`}
+                    >
+                      <div className="min-w-0 text-sm">
+                        <p className="font-semibold">
+                          {(rate.carrier || "usps").toUpperCase()} ·{" "}
+                          {rate.serviceDisplay || rate.service}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {rate.estDeliveryDays
+                            ? `${rate.estDeliveryDays} business days · `
+                            : ""}
+                          {rate.rate} {rate.currency || "USD"}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="gold-btn !px-3 !py-2 text-sm"
+                        disabled={busy}
+                        onClick={() => {
+                          setSelectedService(rate.service);
+                          void submit(rate.service);
+                        }}
+                      >
+                        {bulk ? "Create labels" : "Create label"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
           {error ? <p className="mt-3 text-sm text-brand-red">{error}</p> : null}
           {progress ? (
-            <p className="mt-3 text-sm text-muted-foreground">Creating {progress}…</p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              {progress.startsWith("Getting") ? progress : `Creating ${progress}`}…
+            </p>
           ) : null}
         </div>
 
@@ -943,10 +1089,24 @@ export function PostageLabelModal({
             type="button"
             className="gold-btn"
             disabled={busy}
-            onClick={() => void submit()}
+            onClick={() => void fetchRates()}
           >
-            {busy ? "Creating…" : bulk ? "Create labels" : "Create label"}
+            {busy && progress.startsWith("Getting") ? "Getting rates…" : "Get rates"}
           </button>
+          {selectedService ? (
+            <button
+              type="button"
+              className="ghost-btn"
+              disabled={busy}
+              onClick={() => void submit()}
+            >
+              {busy && !progress.startsWith("Getting")
+                ? "Creating…"
+                : bulk
+                  ? `Create labels (${selectedService})`
+                  : `Create label (${selectedService})`}
+            </button>
+          ) : null}
           <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
             Cancel
           </button>

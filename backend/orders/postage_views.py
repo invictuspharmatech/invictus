@@ -9,6 +9,7 @@ from orders.bitcoinpostage import (
     ensure_accounts,
     get_credits,
     get_or_create_account,
+    get_rates,
     normalize_api_base,
     serialize_label,
     serialize_sender,
@@ -175,12 +176,23 @@ def postage_charge_view(request):
 
 @api_view(["POST"])
 @permission_classes([IsPortalStaff])
-def postage_create_label_view(request, pk):
-    order = Order.objects.filter(pk=pk).first()
+def postage_rates_view(request, pk):
+    """GreatLife step 1: quote rates before create-purchase."""
+    order = _order_for_postage(request, pk)
     if not order:
         return Response({"error": "Not found."}, status=404)
-    warehouse = managed_warehouse(request.user)
-    if warehouse and order.warehouse != warehouse:
+    try:
+        rates = get_rates(order, request.data if isinstance(request.data, dict) else {})
+    except BitcoinPostageError as exc:
+        return Response({"error": str(exc)}, status=400)
+    return Response({"ok": True, "rates": rates})
+
+
+@api_view(["POST"])
+@permission_classes([IsPortalStaff])
+def postage_create_label_view(request, pk):
+    order = _order_for_postage(request, pk)
+    if not order:
         return Response({"error": "Not found."}, status=404)
     try:
         label = create_label(order, request.data if isinstance(request.data, dict) else {})

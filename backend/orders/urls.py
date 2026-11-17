@@ -53,6 +53,7 @@ urlpatterns = [
     path("admin/orders/<uuid:pk>/split-move/", views.admin_order_split_move),
     path("admin/orders/<uuid:pk>/tracking/", views.admin_order_tracking_view),
     path("admin/orders/<uuid:pk>/label/", postage_views.postage_create_label_view),
+    path("admin/orders/<uuid:pk>/label/rates/", postage_views.postage_rates_view),
     path(
         "admin/orders/<uuid:pk>/labels/<uuid:label_id>/",
         postage_views.postage_delete_label_view,

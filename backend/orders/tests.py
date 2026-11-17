@@ -451,12 +451,30 @@ class BitcoinPostagePayloadTests(SimpleTestCase):
         self.assertEqual(_first_item(rooted)["filename"], "https://example.com/a.pdf")
 
     def test_json_object_strips_bom_and_noise(self):
-        from orders.bitcoinpostage import _parse_json_object
+        from orders.bitcoinpostage import _parse_json_object, _parse_json_payload
 
         data = _parse_json_object('\ufeff{"items":[{"filename":"x"}]}')
         self.assertEqual(data["items"][0]["filename"], "x")
         wrapped = _parse_json_object('notice {"items":[{"filename":"y"}]} trailing')
         self.assertEqual(wrapped["items"][0]["filename"], "y")
+        # get-rates returns a bare array — must not collapse to the first dict only.
+        rates = _parse_json_payload(
+            '[{"service":"GroundAdvantage","rate":"4.50"},{"service":"Priority","rate":"8.00"}]'
+        )
+        self.assertIsInstance(rates, list)
+        self.assertEqual(len(rates), 2)
+
+    def test_normalize_rates_payload_list(self):
+        from orders.bitcoinpostage import _normalize_rates_payload
+
+        rows = _normalize_rates_payload(
+            [
+                {"service": "GroundAdvantage", "service_display": "USPS Ground Advantage", "rate": "5.1"},
+                {"service": "Priority", "rate": "9"},
+            ]
+        )
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["service"], "GroundAdvantage")
 
 
 class PostageDeleteLabelTests(TestCase):

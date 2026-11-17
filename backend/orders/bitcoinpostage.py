@@ -3,6 +3,7 @@ import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
+from typing import Any
 
 from django.utils import timezone
 
@@ -180,7 +181,17 @@ BTCPOSTAGE_USER_AGENT = (
 )
 # Upstream often exceeds 60s (Great Life uses 300s).
 HTTP_TIMEOUT_SECONDS = 300
-FLAT_RATE_TYPES = frozenset({"FlatRateEnvelope", "MediumFlatRateBox"})
+FLAT_RATE_TYPES = frozenset(
+    {
+        "FlatRateEnvelope",
+        "FlatRateLegalEnvelope",
+        "FlatRatePaddedEnvelope",
+        "SmallFlatRateEnvelope",
+        "SmallFlatRateBox",
+        "MediumFlatRateBox",
+        "LargeFlatRateBox",
+    }
+)
 CUSTOM_PACKAGE_TYPES = frozenset({"USPScustom", "FedExcustom", "canadapost_custom"})
 
 
@@ -220,26 +231,45 @@ def _resolve_usps_test_mode(options: dict) -> bool:
     return False
 
 
-def _parse_json_object(text: str) -> dict | None:
+def _parse_json_payload(text: str) -> Any:
+    """Parse BTCPostage JSON (object or rate list). Keep lists intact for get-rates."""
     raw = (text or "").strip()
     if raw.startswith("\ufeff"):
         raw = raw.lstrip("\ufeff")
     if not raw:
         return None
     try:
-        data = json.loads(raw)
+        return json.loads(raw)
     except json.JSONDecodeError:
-        start = raw.find("{")
-        end = raw.rfind("}")
-        if start < 0 or end <= start:
-            return None
+        pass
+    # Purchase responses are objects; tolerate leading/trailing noise.
+    start_obj = raw.find("{")
+    end_obj = raw.rfind("}")
+    if start_obj >= 0 and end_obj > start_obj:
         try:
-            data = json.loads(raw[start : end + 1])
+            return json.loads(raw[start_obj : end_obj + 1])
+        except json.JSONDecodeError:
+            pass
+    start_list = raw.find("[")
+    end_list = raw.rfind("]")
+    if start_list >= 0 and end_list > start_list:
+        try:
+            return json.loads(raw[start_list : end_list + 1])
         except json.JSONDecodeError:
             return None
+    return None
+
+
+def _parse_json_object(text: str) -> dict | None:
+    data = _parse_json_payload(text)
+    if isinstance(data, dict):
+        return data
+    # Backward-compatible: some purchase replies were wrapped as a one-item list.
     if isinstance(data, list) and data and isinstance(data[0], dict):
-        data = data[0]
-    return data if isinstance(data, dict) else None
+        first = data[0]
+        if first.get("items") or first.get("Items") or first.get("filename"):
+            return first
+    return None
 
 
 def _normalize_purchase_result(result: dict) -> dict:
@@ -291,6 +321,13 @@ def _api_package_type(package_type: str) -> str:
 def _flat_rate_dimensions(package_type: str) -> dict[str, str]:
     if package_type == "MediumFlatRateBox":
         return {"width": "8.5", "height": "5.5", "depth": "11"}
+    if package_type == "LargeFlatRateBox":
+        return {"width": "12", "height": "5.5", "depth": "12"}
+    if package_type == "SmallFlatRateBox":
+        return {"width": "5.375", "height": "1.625", "depth": "8.625"}
+    if package_type == "FlatRateLegalEnvelope":
+        return {"width": "9.5", "height": "0.75", "depth": "15"}
+    # FlatRateEnvelope / padded / small envelope defaults
     return {"width": "9.5", "height": "0.75", "depth": "12.5"}
 
 
@@ -310,7 +347,7 @@ def _default_sender(warehouse: str | None = None) -> BitcoinPostageSender | None
     )
 
 
-def _post_form(url: str, form: dict) -> dict:
+def _post_form(url: str, form: dict) -> Any:
     url = (url or "").rstrip("/")
     payload = urllib.parse.urlencode({k: "" if v is None else str(v) for k, v in form.items()}).encode()
     req = urllib.request.Request(url, data=payload, method="POST")
@@ -326,8 +363,13 @@ def _post_form(url: str, form: dict) -> dict:
         raise BitcoinPostageError(_error_detail(exc.code, url, detail)) from exc
     except urllib.error.URLError as exc:
         raise BitcoinPostageError(f"Bitcoin Postage request failed ({url}): {exc.reason}") from exc
-    data = _parse_json_object(body)
+    data = _parse_json_payload(body)
     if data is None:
+        raise BitcoinPostageError(_error_detail(200, url, body))
+    # get-rates returns a bare list of quotes (GreatLife parses JSON.parse(response) as array).
+    if isinstance(data, list):
+        return data
+    if not isinstance(data, dict):
         raise BitcoinPostageError(_error_detail(200, url, body))
     data = _normalize_purchase_result(data)
     message = _purchase_error(data)
@@ -426,7 +468,19 @@ def charge_credits(amount: str, currency: str, warehouse: str | None = None) -> 
     }
 
 
-def create_label(order: Order, options: dict) -> ShippingLabel:
+def _build_label_form(
+    order: Order,
+    options: dict,
+    *,
+    for_rates: bool = False,
+) -> tuple[dict, dict, str, str]:
+    """
+    Build the GreatLife WooCommerce create-purchase / get-rates form.
+
+    GreatLife always calls get-rates first (service empty), then create-purchase
+    with the exact service code returned by a rate. Guessing GroundAdvantage
+    against create-purchase is what triggers "No valid price quotes found."
+    """
     warehouse = (order.warehouse or "").strip().upper()
     creds = credentials(warehouse)
     if not creds["key"] or not creds["secret"]:
@@ -435,23 +489,28 @@ def create_label(order: Order, options: dict) -> ShippingLabel:
         )
 
     sender = _default_sender(warehouse)
-    carrier = _option(options, "carrier", default="usps").lower()
+    carrier = _option(options, "carrier", default="usps").lower() or "usps"
     package_type = _option(
         options, "packageType", "package_type", "packagetype_usps", default="USPScustom"
     )
     if package_type in FLAT_RATE_TYPES:
-        service = "Priority"
+        # Flat-rate boxes still need Priority in practice; rates will confirm.
+        service = _option(options, "service", default="Priority")
         dims = _flat_rate_dimensions(package_type)
         width, height, depth = dims["width"], dims["height"], dims["depth"]
     else:
-        service = _option(
-            options,
-            "service",
-            default="GroundAdvantage" if carrier == "usps" else "",
-        )
+        # GreatLife get-rates uses empty service; create-purchase requires the chosen rate.
+        service = _option(options, "service", default="")
         width = _option(options, "width", "input_width")
         height = _option(options, "height", "input_height")
         depth = _option(options, "length", "input_length", "depth")
+    if for_rates:
+        service = ""
+    elif not service:
+        raise BitcoinPostageError(
+            "Select a postage rate/service first (same as GreatLife: Get rates → Create label)."
+        )
+
     lbs, oz = _split_weight(options)
     if lbs * 16 + float(oz or 0) <= 0:
         raise BitcoinPostageError("Enter a package weight (lbs and/or oz).")
@@ -487,11 +546,28 @@ def create_label(order: Order, options: dict) -> ShippingLabel:
             "Fill the Bitcoin Postage sender address (name, street, city, state, ZIP) before creating a label."
         )
 
+    to_name = _option(options, "toName", "to_name", default=order.customer_name)
+    to_street = _option(options, "toStreet", "to_street", default=order.shipping_line1)
+    to_city = _option(options, "toCity", "to_city", default=order.shipping_city)
+    to_state = _option(options, "toState", "to_state", default=order.shipping_state)
+    to_zip = _option(options, "toZip", "to_zip", default=order.shipping_postal)
+    if not all([to_name, to_street, to_city, to_state, to_zip]):
+        raise BitcoinPostageError(
+            "Fill the recipient address (name, street, city, state, ZIP) before creating a label."
+        )
+
     from_apt = _option(
-        options, "fromApt", "from_apt", "fromStreet2", "from_street2",
+        options,
+        "fromApt",
+        "from_apt",
+        "fromStreet2",
+        "from_street2",
         default=sender.from_apt if sender else "",
     )
-    # Bitcoin Postage docs + GreatLife plugin use from_street2 (apt/suite), not from_apt.
+    from_phone = _option(
+        options, "fromPhone", "from_phone", default=sender.from_phone if sender else ""
+    )
+    # GreatLife plugin posts from_apt; API docs also accept from_street2 — send both.
     form = {
         **_auth_form(creds),
         "order_id": order.order_number or str(order.id),
@@ -500,24 +576,33 @@ def create_label(order: Order, options: dict) -> ShippingLabel:
         "carrier": carrier,
         "from_name": from_name,
         "from_street": from_street,
+        "from_apt": from_apt,
         "from_street2": from_apt,
         "from_city": from_city,
         "from_state": from_state,
         "from_zip": from_zip,
         "from_country": from_country or "US",
-        "from_phone": _option(
-            options, "fromPhone", "from_phone", default=sender.from_phone if sender else ""
-        ),
-        "to_name": _option(options, "toName", "to_name", default=order.customer_name),
-        "to_street": _option(options, "toStreet", "to_street", default=order.shipping_line1),
+        "from_phone": from_phone,
+        "to_name": to_name,
+        "to_street": to_street,
         "to_street2": _option(options, "toStreet2", "to_street2", default=order.shipping_line2),
-        "to_city": _option(options, "toCity", "to_city", default=order.shipping_city),
-        "to_state": _option(options, "toState", "to_state", default=order.shipping_state),
-        "to_zip": _option(options, "toZip", "to_zip", default=order.shipping_postal),
+        "to_city": to_city,
+        "to_state": to_state,
+        "to_zip": to_zip,
         "to_country": _option(
             options, "toCountry", "to_country", default=order.shipping_country or "US"
         ),
         "to_phone": _option(options, "toPhone", "to_phone"),
+        # Required by BTCPostage get-rates / create-purchase docs.
+        "to_commercial_address": "true"
+        if _truthy(_option(options, "toCommercialAddress", "to_commercial_address", default="false"))
+        else "false",
+        # Mirror GreatLife input_* → width/height/depth mapping.
+        "input_width": width,
+        "input_height": height,
+        "input_length": depth,
+        "input_weight_lbs": str(lbs),
+        "input_weight_oz": oz,
         "weight_lbs": str(lbs),
         "weight_oz": oz,
         "width": width,
@@ -538,6 +623,51 @@ def create_label(order: Order, options: dict) -> ShippingLabel:
     elif carrier == "canadapost":
         form["packagetype_canadapost"] = package_type
 
+    return form, creds, carrier, service
+
+
+def _normalize_rates_payload(data: Any) -> list[dict]:
+    if isinstance(data, list):
+        return [row for row in data if isinstance(row, dict)]
+    if isinstance(data, dict):
+        message = data.get("error") or data.get("message") or data.get("msg")
+        if isinstance(message, str) and message.strip():
+            raise BitcoinPostageError(message.strip())
+        for key in ("rates", "result", "data", "items"):
+            nested = data.get(key)
+            if isinstance(nested, list):
+                return [row for row in nested if isinstance(row, dict)]
+    return []
+
+
+def get_rates(order: Order, options: dict) -> list[dict]:
+    """GreatLife step 1: POST /api/get-rates with empty service, return quote rows."""
+    form, creds, _, _ = _build_label_form(order, options, for_rates=True)
+    result = _post_form(f"{creds['api_url']}/get-rates", form)
+    rates = _normalize_rates_payload(result)
+    if not rates:
+        raise BitcoinPostageError(
+            "No valid price quotes found. Check carrier/package/service, weight, dimensions, and ZIP codes."
+        )
+    return [
+        {
+            "carrier": str(row.get("carrier") or ""),
+            "service": str(row.get("service") or ""),
+            "serviceDisplay": str(row.get("service_display") or row.get("service") or ""),
+            "rate": str(row.get("rate") or ""),
+            "currency": str(row.get("currency") or "USD"),
+            "estDeliveryDays": str(
+                row.get("est_delivery_days") or row.get("estDeliveryDays") or ""
+            ),
+            "raw": row,
+        }
+        for row in rates
+        if str(row.get("service") or "").strip()
+    ]
+
+
+def create_label(order: Order, options: dict) -> ShippingLabel:
+    form, creds, carrier, service = _build_label_form(order, options, for_rates=False)
     result = _post_form(f"{creds['api_url']}{CREATE_PURCHASE_PATH}", form)
     item = _first_item(result)
     filename = _label_url(item)
