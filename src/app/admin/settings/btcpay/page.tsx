@@ -14,9 +14,10 @@ export default async function BtcPaySettingsPage() {
     <div>
       <h1 className="display-font text-3xl">BTCPay / Bitcoin</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-        Super user only. Use Connect with BTCPay to authorize this store (same wizard style as
-        GreatLife). Checkout then creates Bitcoin invoices in a popup; settled webhooks mark orders
-        paid.
+        Super user only. Connect the primary BTCPay store (GreatLife-style authorize). Optionally add
+        a second failover BTCPay — checkout uses primary first; if invoice create fails for any reason
+        (including Cloudflare blocks that looked like API-key errors), it tries failover. If both
+        fail, shoppers get the same error path as before.
       </p>
       <div className="mt-8">
         <BtcPaySettingsForm settings={settings} />

@@ -41,7 +41,22 @@ SETTING_KEYS = {
     "default_customer_message": "btcpay.default_customer_message",
     "authorize_state": "btcpay.authorize_state",
     "authorize_server_url": "btcpay.authorize_server_url",
+    "authorize_profile": "btcpay.authorize_profile",
 }
+
+# Optional failover BTCPay — never overwrites primary keys above.
+SECONDARY_SETTING_KEYS = {
+    "server_url": "btcpay.secondary.server_url",
+    "api_key": "btcpay.secondary.api_key",
+    "store_id": "btcpay.secondary.store_id",
+    "webhook_secret": "btcpay.secondary.webhook_secret",
+    "webhook_id": "btcpay.secondary.webhook_id",
+    "webhook_url": "btcpay.secondary.webhook_url",
+    "enabled": "btcpay.secondary.enabled",
+}
+
+PROFILES = ("primary", "secondary")
+INVOICE_META_KEY = "_invictusBtcPay"
 
 # Same set GreatLife/WooCommerce requests via /api-keys/authorize (webhook included).
 AUTHORIZE_PERMISSIONS = [
@@ -116,16 +131,114 @@ def webhook_public_url() -> str:
     return settings.PUBLIC_SITE_URL.rstrip("/") + "/api/btc/webhook"
 
 
-def get_config() -> dict[str, str]:
-    server_url = clean_server_url(setting_get(SETTING_KEYS["server_url"]))
-    api_key = clean_api_key(setting_get(SETTING_KEYS["api_key"]))
-    store_id = setting_get(SETTING_KEYS["store_id"]).strip()
-    return {"server_url": server_url, "api_key": api_key, "store_id": store_id}
+def normalize_profile(profile: str | None) -> str:
+    value = (profile or "primary").strip().lower()
+    return value if value in PROFILES else "primary"
 
 
-def is_configured() -> bool:
-    cfg = get_config()
+def _keys_for_profile(profile: str) -> dict[str, str]:
+    return SECONDARY_SETTING_KEYS if normalize_profile(profile) == "secondary" else SETTING_KEYS
+
+
+def get_config(profile: str | None = "primary") -> dict[str, str]:
+    """Return connection for primary or secondary. Primary keys are never read from secondary."""
+    code = normalize_profile(profile)
+    keys = _keys_for_profile(code)
+    server_url = clean_server_url(setting_get(keys["server_url"]))
+    api_key = clean_api_key(setting_get(keys["api_key"]))
+    store_id = setting_get(keys["store_id"]).strip()
+    enabled = True
+    if code == "secondary":
+        enabled = setting_get(SECONDARY_SETTING_KEYS["enabled"], "1").strip().lower() not in (
+            "0",
+            "false",
+            "off",
+            "no",
+        )
+    return {
+        "profile": code,
+        "server_url": server_url,
+        "api_key": api_key,
+        "store_id": store_id,
+        "enabled": "1" if enabled else "0",
+    }
+
+
+def is_configured(profile: str | None = "primary") -> bool:
+    cfg = get_config(profile)
+    if normalize_profile(profile) == "secondary" and cfg["enabled"] != "1":
+        return False
     return bool(cfg["server_url"] and cfg["api_key"] and cfg["store_id"])
+
+
+def secondary_enabled() -> bool:
+    return is_configured("secondary")
+
+
+def runtime_configs() -> list[dict[str, str]]:
+    """Primary first, then secondary failover if configured. Order is intentional."""
+    configs: list[dict[str, str]] = []
+    if is_configured("primary"):
+        configs.append(get_config("primary"))
+    if secondary_enabled():
+        configs.append(get_config("secondary"))
+    return configs
+
+
+def _attach_invoice_meta(data: dict, cfg: dict[str, str]) -> dict:
+    payload = dict(data) if isinstance(data, dict) else {}
+    payload[INVOICE_META_KEY] = {
+        "profile": cfg.get("profile") or "primary",
+        "serverUrl": cfg.get("server_url") or "",
+        "storeId": cfg.get("store_id") or "",
+    }
+    return payload
+
+
+def config_for_invoice(invoice: BtcInvoice | None) -> dict[str, str]:
+    """Prefer the BTCPay profile that created the invoice; fall back to primary."""
+    if invoice is not None:
+        raw = invoice.btc_pay_response if isinstance(invoice.btc_pay_response, dict) else {}
+        meta = raw.get(INVOICE_META_KEY) if isinstance(raw, dict) else None
+        if isinstance(meta, dict):
+            profile = normalize_profile(str(meta.get("profile") or ""))
+            cfg = get_config(profile)
+            if cfg["server_url"] and cfg["api_key"] and cfg["store_id"]:
+                return cfg
+            stored_url = clean_server_url(str(meta.get("serverUrl") or ""))
+            stored_store = str(meta.get("storeId") or invoice.store_id or "").strip()
+            if stored_url and cfg["api_key"] and stored_store:
+                return {
+                    "profile": profile,
+                    "server_url": stored_url,
+                    "api_key": cfg["api_key"],
+                    "store_id": stored_store,
+                    "enabled": "1",
+                }
+        # Match by store id if meta missing (older invoices).
+        store = (invoice.store_id or "").strip()
+        if store:
+            for cfg in runtime_configs():
+                if cfg["store_id"] == store:
+                    return cfg
+    return get_config("primary")
+
+
+def _is_unreachable_failure(status: int | None, data: Any, exc: Exception | None = None) -> bool:
+    """Failover only when the primary host is down/blocked — not on bad keys or validation."""
+    if exc is not None:
+        return True
+    if status is None:
+        return True
+    if status in (502, 503, 504, 520, 521, 522, 523, 524):
+        return True
+    if isinstance(data, dict):
+        if data.get("cloudflareBlocked") or data.get("cloudflare_error") or data.get("error_code") == 1010:
+            return True
+        title = str(data.get("title") or "")
+        if "Error 1010" in title or "cloudflare" in title.lower():
+            return True
+    return False
 
 
 def invoice_expiration_minutes() -> int:
@@ -333,10 +446,10 @@ def supersede_existing(order: Order) -> None:
     existing = list(order.btc_invoices.all())
     if not existing:
         return
-    cfg = get_config()
     for invoice in existing:
         if (invoice.status or "").lower() in ("complete", "paid"):
             raise BtcPayError("This order already has a settled Bitcoin invoice.")
+        cfg = config_for_invoice(invoice)
         try:
             _request(
                 "POST",
@@ -349,10 +462,20 @@ def supersede_existing(order: Order) -> None:
         invoice.delete()
 
 
+def _invoice_create_failure_message(status: int, data: Any) -> str:
+    message = ""
+    if isinstance(data, dict):
+        message = data.get("message") or data.get("error") or ""
+        if data.get("missingPermission"):
+            message = message or f"Missing permission {data['missingPermission']}."
+    return message or "Failed to create BTCPay invoice."
+
+
 def create_invoice(order: Order) -> BtcInvoice:
     if checkout_window_closed(order):
         raise BtcPayError("This Bitcoin payment link has expired. Place a new order to pay.")
-    if not is_configured():
+    configs = runtime_configs()
+    if not configs:
         raise BtcPayError("BTCPay Server is not connected. An admin must save the server URL, API key, and store ID.")
     if not order.order_number:
         raise BtcPayError("Order number is required to create a BTCPay invoice.")
@@ -364,7 +487,6 @@ def create_invoice(order: Order) -> BtcInvoice:
     for sibling in live_group_orders(primary):
         supersede_existing(sibling)
 
-    cfg = get_config()
     from orders.pay_token import checkout_url
 
     # Match GreatLife Greenfield createInvoice: amount + currency + metadata.orderId/buyerEmail + checkout.
@@ -383,33 +505,71 @@ def create_invoice(order: Order) -> BtcInvoice:
             "expirationMinutes": invoice_expiration_minutes(),
         },
     }
-    status, data = _request("POST", _store_path(cfg["store_id"], "/invoices"), payload, cfg)
-    if status >= 400 or not isinstance(data, dict) or not data.get("id"):
-        message = ""
-        if isinstance(data, dict):
-            message = data.get("message") or data.get("error") or ""
-            if data.get("missingPermission"):
-                message = message or f"Missing permission {data['missingPermission']}."
-        raise BtcPayError(message or "Failed to create BTCPay invoice.", status, data)
 
-    details = extract_payment_details(data)
-    return BtcInvoice.objects.create(
-        order=primary,
-        invoice_id=data["id"],
-        store_id=cfg["store_id"],
-        amount=amount,
-        currency="USD",
-        crypto_code=details["crypto_code"],
-        crypto_amount=details["crypto_amount"],
-        payment_address=details["payment_address"],
-        status=map_status(data.get("status") or "New"),
-        expires_at=_parse_expiry(data.get("expirationTime")),
-        btc_pay_response=data,
-    )
+    # Failover policy: if primary cannot create an invoice for ANY reason
+    # (network, Cloudflare 1010/403, permission-looking blocks, 4xx/5xx, timeouts),
+    # try the next configured BTCPay. Only when every profile fails do shoppers
+    # see the same error path as before.
+    last_error: BtcPayError | None = None
+    for index, cfg in enumerate(configs):
+        profile = cfg.get("profile") or "primary"
+        has_failover = index + 1 < len(configs)
+        try:
+            status, data = _request("POST", _store_path(cfg["store_id"], "/invoices"), payload, cfg)
+        except BtcPayError as exc:
+            last_error = exc
+            if has_failover:
+                logger.warning(
+                    "BTCPay %s invoice create raised (%s); trying failover.",
+                    profile,
+                    exc,
+                )
+                continue
+            raise
 
+        if status < 400 and isinstance(data, dict) and data.get("id"):
+            details = extract_payment_details(data)
+            stored = _attach_invoice_meta(data, cfg)
+            if index > 0:
+                logger.info(
+                    "BTCPay invoice created via failover profile=%s store=%s",
+                    profile,
+                    cfg.get("store_id"),
+                )
+            return BtcInvoice.objects.create(
+                order=primary,
+                invoice_id=data["id"],
+                store_id=cfg["store_id"],
+                amount=amount,
+                currency="USD",
+                crypto_code=details["crypto_code"],
+                crypto_amount=details["crypto_amount"],
+                payment_address=details["payment_address"],
+                status=map_status(data.get("status") or "New"),
+                expires_at=_parse_expiry(data.get("expirationTime")),
+                btc_pay_response=stored,
+            )
 
-def fetch_invoice(invoice_id: str) -> dict:
-    cfg = get_config()
+        message = _invoice_create_failure_message(status, data)
+        last_error = BtcPayError(message, status, data)
+        if has_failover:
+            reason = "cloudflare/unreachable" if _is_unreachable_failure(status, data) else f"HTTP {status}"
+            logger.warning(
+                "BTCPay %s failed invoice create (%s: %s); trying failover.",
+                profile,
+                reason,
+                message,
+            )
+            continue
+        raise last_error
+
+    # Both (or all) hosts failed → same end-user error path as before.
+    if last_error is not None:
+        raise last_error
+    raise BtcPayError("Failed to create BTCPay invoice.")
+
+def fetch_invoice(invoice_id: str, *, invoice: BtcInvoice | None = None) -> dict:
+    cfg = config_for_invoice(invoice) if invoice is not None else get_config("primary")
     status, data = _request(
         "GET",
         _store_path(cfg["store_id"], f"/invoices/{urllib.parse.quote(str(invoice_id), safe='')}"),
@@ -418,7 +578,7 @@ def fetch_invoice(invoice_id: str) -> dict:
     )
     if status >= 400 or not isinstance(data, dict):
         raise BtcPayError("Failed to load invoice status from BTCPay.", status, data)
-    return data
+    return _attach_invoice_meta(data, cfg)
 
 
 def apply_order_update(
@@ -529,7 +689,7 @@ def sync_order_from_invoice(order: Order, invoice: BtcInvoice, mapped: str, invo
 
 
 def update_invoice_status(invoice: BtcInvoice) -> BtcInvoice:
-    data = fetch_invoice(invoice.invoice_id)
+    data = fetch_invoice(invoice.invoice_id, invoice=invoice)
     mapped = map_status(data.get("status") or "New")
     fields = ["status", "btc_pay_response", "updated_at"]
     invoice.status = mapped
@@ -556,17 +716,30 @@ def update_invoice_status(invoice: BtcInvoice) -> BtcInvoice:
     return invoice
 
 
+def _webhook_secrets() -> list[str]:
+    secrets_list: list[str] = []
+    for key in (SETTING_KEYS["webhook_secret"], SECONDARY_SETTING_KEYS["webhook_secret"]):
+        secret = setting_get(key).strip()
+        if secret and secret not in secrets_list:
+            secrets_list.append(secret)
+    return secrets_list
+
+
 def verify_webhook_signature(raw_body: bytes, signature: str | None) -> bool:
-    secret = setting_get(SETTING_KEYS["webhook_secret"]).strip()
-    if not secret:
+    secrets_list = _webhook_secrets()
+    # No secret saved yet → accept (same as prior primary-only behavior).
+    if not secrets_list:
         return True
     if not raw_body or not signature:
         return False
     sig = signature.strip()
     if sig.lower().startswith("sha256="):
         sig = sig.split("=", 1)[1]
-    digest = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(digest, sig)
+    for secret in secrets_list:
+        digest = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
+        if hmac.compare_digest(digest, sig):
+            return True
+    return False
 
 
 def normalize_webhook(payload: dict) -> tuple[str | None, str | None]:
@@ -624,10 +797,13 @@ def apply_webhook_event(order: Order, invoice: BtcInvoice, event_type: str | Non
         mark_failed(order, Order.PaymentStatus.FAILED)
 
 
-def test_connection() -> dict:
-    if not is_configured():
-        raise BtcPayError("Save the server URL, API key, and store ID first.")
-    cfg = get_config()
+def test_connection(profile: str | None = "primary") -> dict:
+    code = normalize_profile(profile)
+    if not is_configured(code):
+        raise BtcPayError(
+            f"Save the {'failover ' if code == 'secondary' else ''}server URL, API key, and store ID first."
+        )
+    cfg = get_config(code)
     extracted_store_id = None
     permissions: list[str] = []
     status, key_data = _request("GET", "/api/v1/api-keys/current", None, cfg)
@@ -651,29 +827,34 @@ def test_connection() -> dict:
         message = store.get("message") if isinstance(store, dict) else ""
         raise BtcPayError((message or "Could not load the BTCPay store.") + hint)
     name = store.get("name") if isinstance(store, dict) else None
+    label = "failover BTCPay" if code == "secondary" else "BTCPay store"
     return {
         "connected": True,
+        "profile": code,
         "storeName": name,
         "storeId": cfg["store_id"],
         "permissions": permissions,
         "extractedStoreId": extracted_store_id,
-        "message": f"Connected to {name or 'BTCPay store'}.",
+        "message": f"Connected to {name or label}.",
     }
 
 
-def webhook_status() -> dict:
+def webhook_status(profile: str | None = "primary") -> dict:
     """GreatLife-aligned status: trust saved webhook, soft-fail list errors."""
-    if not is_configured():
-        return {"configured": False, "message": "BTCPay not configured"}
-    cfg = get_config()
+    code = normalize_profile(profile)
+    keys = _keys_for_profile(code)
+    if not is_configured(code):
+        return {"configured": False, "message": "BTCPay not configured", "profile": code}
+    cfg = get_config(code)
     expected = webhook_public_url()
-    stored_id = setting_get(SETTING_KEYS["webhook_id"])
-    stored_secret = setting_get(SETTING_KEYS["webhook_secret"])
+    stored_id = setting_get(keys["webhook_id"])
+    stored_secret = setting_get(keys["webhook_secret"])
     if stored_id and stored_secret:
         return {
             "configured": True,
             "message": "Webhook is configured",
             "webhookId": stored_id,
+            "profile": code,
         }
 
     status, data = _request("GET", _store_path(cfg["store_id"], "/webhooks"), None, cfg)
@@ -685,8 +866,14 @@ def webhook_status() -> dict:
                 "configured": False,
                 "message": "Unauthenticated. Please check your API key.",
                 "httpStatus": status,
+                "profile": code,
             }
-        return {"configured": False, "message": "No webhook setup, yet.", "httpStatus": status}
+        return {
+            "configured": False,
+            "message": "No webhook setup, yet.",
+            "httpStatus": status,
+            "profile": code,
+        }
 
     path = "/api/btc/webhook"
     for item in _normalize_webhook_rows(data):
@@ -696,43 +883,56 @@ def webhook_status() -> dict:
                 "configured": True,
                 "message": "Webhook is configured",
                 "webhookId": item.get("id"),
+                "profile": code,
             }
     if stored_id:
-        return {"configured": True, "message": "Webhook is configured", "webhookId": stored_id}
-    return {"configured": False, "message": "No webhook setup, yet."}
+        return {
+            "configured": True,
+            "message": "Webhook is configured",
+            "webhookId": stored_id,
+            "profile": code,
+        }
+    return {"configured": False, "message": "No webhook setup, yet.", "profile": code}
 
 
-def _persist_webhook(data: dict, url: str) -> dict:
+def _persist_webhook(data: dict, url: str, profile: str | None = "primary") -> dict:
+    code = normalize_profile(profile)
+    keys = _keys_for_profile(code)
     secret = str(data.get("secret") or "")
     webhook_id = str(data.get("id") or "")
+    label_suffix = " (failover)" if code == "secondary" else ""
     if secret:
-        setting_set(SETTING_KEYS["webhook_secret"], secret, "BTCPay webhook secret")
+        setting_set(keys["webhook_secret"], secret, f"BTCPay webhook secret{label_suffix}")
     if webhook_id:
-        setting_set(SETTING_KEYS["webhook_id"], webhook_id, "BTCPay webhook id")
-    setting_set(SETTING_KEYS["webhook_url"], url, "BTCPay webhook URL")
+        setting_set(keys["webhook_id"], webhook_id, f"BTCPay webhook id{label_suffix}")
+    setting_set(keys["webhook_url"], url, f"BTCPay webhook URL{label_suffix}")
     return {
         "configured": True,
         "message": "Webhook created on BTCPay Server.",
         "webhookId": webhook_id,
         "webhookUrl": url,
         "webhookSecret": mask_secret(secret),
+        "profile": code,
     }
 
 
-def setup_webhook() -> dict:
+def setup_webhook(profile: str | None = "primary") -> dict:
     """Create store webhook like GreatLife (specific events, then everything=true fallback)."""
-    if not is_configured():
+    code = normalize_profile(profile)
+    keys = _keys_for_profile(code)
+    if not is_configured(code):
         raise BtcPayError("Save the server URL, API key, and store ID first.")
-    cfg = get_config()
+    cfg = get_config(code)
     url = webhook_public_url()
-    stored_id = setting_get(SETTING_KEYS["webhook_id"])
-    stored_secret = setting_get(SETTING_KEYS["webhook_secret"])
+    stored_id = setting_get(keys["webhook_id"])
+    stored_secret = setting_get(keys["webhook_secret"])
     if stored_id and stored_secret:
         return {
             "configured": True,
             "message": "Webhook is already configured.",
             "webhookId": stored_id,
             "webhookUrl": url,
+            "profile": code,
         }
 
     # If list works and our URL already exists, adopt it (secret may already be saved manually).
@@ -743,14 +943,16 @@ def setup_webhook() -> dict:
             item_url = item.get("url") or ""
             if path in item_url or item_url.rstrip("/") == url.rstrip("/"):
                 webhook_id = str(item.get("id") or "")
+                label_suffix = " (failover)" if code == "secondary" else ""
                 if webhook_id:
-                    setting_set(SETTING_KEYS["webhook_id"], webhook_id, "BTCPay webhook id")
-                setting_set(SETTING_KEYS["webhook_url"], url, "BTCPay webhook URL")
+                    setting_set(keys["webhook_id"], webhook_id, f"BTCPay webhook id{label_suffix}")
+                setting_set(keys["webhook_url"], url, f"BTCPay webhook URL{label_suffix}")
                 return {
                     "configured": True,
                     "message": "Webhook already exists",
                     "webhookId": webhook_id,
                     "webhookUrl": url,
+                    "profile": code,
                 }
 
     specific_payload = {
@@ -761,7 +963,7 @@ def setup_webhook() -> dict:
     }
     status, data = _request("POST", _store_path(cfg["store_id"], "/webhooks"), specific_payload, cfg)
     if status < 400 and isinstance(data, dict) and data.get("id"):
-        return _persist_webhook(data, url)
+        return _persist_webhook(data, url, code)
 
     # GreatLife HTTP fallback: create with everything=true when specific-event create fails.
     fallback_payload = {
@@ -772,7 +974,7 @@ def setup_webhook() -> dict:
     }
     status2, data2 = _request("POST", _store_path(cfg["store_id"], "/webhooks"), fallback_payload, cfg)
     if status2 < 400 and isinstance(data2, dict) and data2.get("id"):
-        return _persist_webhook(data2, url)
+        return _persist_webhook(data2, url, code)
 
     message = ""
     err_payload = data2 if isinstance(data2, dict) else data if isinstance(data, dict) else {}
@@ -792,16 +994,34 @@ def setup_webhook() -> dict:
     )
 
 
-def admin_payload() -> dict:
-    cfg = get_config()
-    secret = setting_get(SETTING_KEYS["webhook_secret"])
+def _profile_admin_block(profile: str) -> dict:
+    code = normalize_profile(profile)
+    keys = _keys_for_profile(code)
+    cfg = get_config(code)
+    secret = setting_get(keys["webhook_secret"])
+    enabled = True if code == "primary" else setting_get(SECONDARY_SETTING_KEYS["enabled"], "1") != "0"
     return {
+        "profile": code,
         "serverUrl": cfg["server_url"],
         "apiKey": mask_secret(cfg["api_key"]),
         "storeId": cfg["store_id"],
         "webhookSecret": mask_secret(secret),
-        "isConfigured": is_configured(),
-        "webhookStatus": webhook_status(),
+        "isConfigured": is_configured(code),
+        "enabled": enabled if code == "secondary" else True,
+        "webhookStatus": webhook_status(code),
+    }
+
+
+def admin_payload() -> dict:
+    primary = _profile_admin_block("primary")
+    secondary = _profile_admin_block("secondary")
+    return {
+        "serverUrl": primary["serverUrl"],
+        "apiKey": primary["apiKey"],
+        "storeId": primary["storeId"],
+        "webhookSecret": primary["webhookSecret"],
+        "isConfigured": primary["isConfigured"],
+        "webhookStatus": primary["webhookStatus"],
         "webhookUrl": webhook_public_url(),
         "invoiceExpirationMinutes": invoice_expiration_minutes(),
         "defaultCustomerMessage": setting_get(
@@ -815,7 +1035,17 @@ def admin_payload() -> dict:
             "btcpay.store.canviewinvoices": "Store: Can view invoices",
             "btcpay.store.cancreateinvoice": "Store: Can create invoices",
         },
-        "apiKeysUrl": f"{cfg['server_url']}/account/apikeys" if cfg["server_url"] else "",
+        "apiKeysUrl": f"{primary['serverUrl']}/account/apikeys" if primary["serverUrl"] else "",
+        "failover": {
+            "enabled": bool(secondary.get("enabled")),
+            "serverUrl": secondary["serverUrl"],
+            "apiKey": secondary["apiKey"],
+            "storeId": secondary["storeId"],
+            "webhookSecret": secondary["webhookSecret"],
+            "isConfigured": secondary["isConfigured"],
+            "webhookStatus": secondary["webhookStatus"],
+            "webhookUrl": webhook_public_url(),
+        },
     }
 
 
@@ -842,19 +1072,30 @@ def build_authorize_url(server_url: str, state: str) -> str:
     return f"{host}/api-keys/authorize?{urllib.parse.urlencode(query)}"
 
 
-def start_authorize(server_url: str) -> dict:
+def start_authorize(server_url: str, profile: str | None = "primary") -> dict:
+    code = normalize_profile(profile)
     host = clean_server_url(server_url)
     if not host:
         raise BtcPayError("Enter your BTCPay Server URL first.")
     state = secrets.token_urlsafe(24)
     setting_set(SETTING_KEYS["authorize_state"], state, "BTCPay authorize state")
     setting_set(SETTING_KEYS["authorize_server_url"], host, "BTCPay authorize server URL")
-    # Persist server URL early so reconnects keep the host even if authorize is abandoned.
-    setting_set(SETTING_KEYS["server_url"], host, "BTCPay server URL")
+    setting_set(SETTING_KEYS["authorize_profile"], code, "BTCPay authorize profile")
+    keys = _keys_for_profile(code)
+    # Persist only this profile's server URL — never overwrite the other profile.
+    label = "BTCPay failover server URL" if code == "secondary" else "BTCPay server URL"
+    setting_set(keys["server_url"], host, label)
+    if code == "secondary":
+        setting_set(SECONDARY_SETTING_KEYS["enabled"], "1", "BTCPay failover enabled")
     return {
         "authorizeUrl": build_authorize_url(host, state),
         "serverUrl": host,
-        "message": "Redirecting to BTCPay Server to authorize Invictus Pharma.",
+        "profile": code,
+        "message": (
+            "Redirecting to failover BTCPay Server to authorize Invictus Pharma."
+            if code == "secondary"
+            else "Redirecting to BTCPay Server to authorize Invictus Pharma."
+        ),
     }
 
 
@@ -886,7 +1127,9 @@ def _store_id_from_permissions(permissions: list[str]) -> str:
 
 def complete_authorize(api_key: str, permissions: list[str], state: str | None = None) -> dict:
     expected = setting_get(SETTING_KEYS["authorize_state"])
-    pending_server = setting_get(SETTING_KEYS["authorize_server_url"]) or setting_get(SETTING_KEYS["server_url"])
+    profile = normalize_profile(setting_get(SETTING_KEYS["authorize_profile"], "primary"))
+    keys = _keys_for_profile(profile)
+    pending_server = setting_get(SETTING_KEYS["authorize_server_url"]) or setting_get(keys["server_url"])
     state_ok = bool(expected and state and len(expected) == len(state) and secrets.compare_digest(expected, state))
     if not state_ok:
         raise BtcPayError("Authorize session expired or invalid. Start Connect with BTCPay again.")
@@ -910,27 +1153,48 @@ def complete_authorize(api_key: str, permissions: list[str], state: str | None =
         "GET",
         _store_path(store_id),
         None,
-        {"server_url": pending_server, "api_key": key, "store_id": store_id},
+        {
+            "profile": profile,
+            "server_url": pending_server,
+            "api_key": key,
+            "store_id": store_id,
+            "enabled": "1",
+        },
     )
     if status >= 400:
         raise BtcPayError("Could not verify the API key against the BTCPay Server URL.")
 
-    setting_set(SETTING_KEYS["server_url"], pending_server, "BTCPay server URL")
-    setting_set(SETTING_KEYS["api_key"], key, "BTCPay API key")
-    setting_set(SETTING_KEYS["store_id"], store_id, "BTCPay store ID")
+    label_suffix = " (failover)" if profile == "secondary" else ""
+    setting_set(keys["server_url"], pending_server, f"BTCPay server URL{label_suffix}")
+    setting_set(keys["api_key"], key, f"BTCPay API key{label_suffix}")
+    setting_set(keys["store_id"], store_id, f"BTCPay store ID{label_suffix}")
+    if profile == "secondary":
+        setting_set(SECONDARY_SETTING_KEYS["enabled"], "1", "BTCPay failover enabled")
     setting_set(SETTING_KEYS["authorize_state"], "", "BTCPay authorize state")
     setting_set(SETTING_KEYS["authorize_server_url"], "", "BTCPay authorize server URL")
+    setting_set(SETTING_KEYS["authorize_profile"], "", "BTCPay authorize profile")
 
     webhook_result = None
     try:
-        webhook_result = setup_webhook()
+        webhook_result = setup_webhook(profile)
     except BtcPayError as exc:
         logger.warning("Authorize succeeded but webhook setup failed: %s", exc)
-        webhook_result = {"configured": False, "message": str(exc)}
+        webhook_result = {"configured": False, "message": str(exc), "profile": profile}
 
     payload = admin_payload()
-    payload["message"] = "Connected to BTCPay Server."
-    payload["webhookStatus"] = webhook_result or payload.get("webhookStatus")
+    payload["message"] = (
+        "Connected to failover BTCPay Server."
+        if profile == "secondary"
+        else "Connected to BTCPay Server."
+    )
+    payload["connectedProfile"] = profile
+    if profile == "secondary":
+        payload["failover"] = {
+            **(payload.get("failover") or {}),
+            "webhookStatus": webhook_result or (payload.get("failover") or {}).get("webhookStatus"),
+        }
+    else:
+        payload["webhookStatus"] = webhook_result or payload.get("webhookStatus")
     return payload
 
 
@@ -962,16 +1226,26 @@ def api_key_instructions(server_url: str | None = None) -> dict:
     }
 
 
-def save_admin_settings(data: dict) -> dict:
+def _save_profile_connection(data: dict, profile: str) -> tuple[bool, str]:
+    """Save one BTCPay profile. Returns (user_provided_new_key, webhook_secret_or_empty)."""
+    code = normalize_profile(profile)
+    keys = _keys_for_profile(code)
+    label_suffix = " (failover)" if code == "secondary" else ""
     server_url = clean_server_url(str(data.get("serverUrl") or data.get("server_url") or ""))
     store_id = str(data.get("storeId") or data.get("store_id") or "").strip()
+    if not server_url:
+        server_url = clean_server_url(setting_get(keys["server_url"]))
+    if not store_id:
+        store_id = setting_get(keys["store_id"]).strip()
     incoming = clean_api_key(str(data.get("apiKey") or data.get("api_key") or ""))
     if incoming.startswith("***"):
         incoming = ""
-    existing = clean_api_key(setting_get(SETTING_KEYS["api_key"]))
+    existing = clean_api_key(setting_get(keys["api_key"]))
     if not incoming:
-        if not existing:
+        if not existing and code == "primary":
             raise BtcPayError("API key is required on first setup. Paste the full BTCPay API key.")
+        if not existing and code == "secondary" and (server_url or store_id):
+            raise BtcPayError("Failover API key is required. Paste the full BTCPay API key.")
         api_key = existing
         user_provided_new_key = False
     else:
@@ -979,43 +1253,90 @@ def save_admin_settings(data: dict) -> dict:
             raise BtcPayError("API key looks incomplete. Copy the full key from BTCPay Server.")
         api_key = incoming
         user_provided_new_key = True
-    if not server_url or not store_id:
+    if code == "primary" and (not server_url or not store_id):
         raise BtcPayError("Server URL and store ID are required.")
+    if code == "secondary":
+        enabled_raw = data.get("enabled")
+        if enabled_raw is None:
+            enabled = True
+        else:
+            enabled = str(enabled_raw).strip().lower() not in ("0", "false", "off", "no", "")
+        setting_set(
+            SECONDARY_SETTING_KEYS["enabled"],
+            "1" if enabled else "0",
+            "BTCPay failover enabled",
+        )
+        # Allow disabling failover without requiring full credentials.
+        if not enabled:
+            return False, ""
+        if not server_url or not store_id or not api_key:
+            raise BtcPayError("Failover needs server URL, store ID, and API key when enabled.")
 
-    setting_set(SETTING_KEYS["server_url"], server_url, "BTCPay server URL")
-    setting_set(SETTING_KEYS["api_key"], api_key, "BTCPay API key")
-    setting_set(SETTING_KEYS["store_id"], store_id, "BTCPay store ID")
+    if server_url:
+        setting_set(keys["server_url"], server_url, f"BTCPay server URL{label_suffix}")
+    if api_key:
+        setting_set(keys["api_key"], api_key, f"BTCPay API key{label_suffix}")
+    if store_id:
+        setting_set(keys["store_id"], store_id, f"BTCPay store ID{label_suffix}")
 
     webhook_secret = str(data.get("webhookSecret") or data.get("webhook_secret") or "").strip()
     if webhook_secret and not webhook_secret.startswith("***"):
-        setting_set(SETTING_KEYS["webhook_secret"], webhook_secret, "BTCPay webhook secret")
+        setting_set(keys["webhook_secret"], webhook_secret, f"BTCPay webhook secret{label_suffix}")
+    return user_provided_new_key, webhook_secret if not webhook_secret.startswith("***") else ""
 
-    minutes = data.get("invoiceExpirationMinutes")
-    if minutes is None:
-        minutes = data.get("invoice_expiration_minutes", 480)
-    try:
-        minutes_int = max(5, min(10080, int(minutes)))
-    except (TypeError, ValueError):
-        minutes_int = 480
-    setting_set(SETTING_KEYS["invoice_expiration_minutes"], str(minutes_int), "Invoice expiration minutes")
 
-    message = data.get("defaultCustomerMessage") or data.get("default_customer_message")
-    if message is not None:
+def save_admin_settings(data: dict) -> dict:
+    profile = normalize_profile(str(data.get("profile") or "primary"))
+
+    # Shared checkout options only live on primary saves (keeps failover form isolated).
+    if profile == "primary":
+        user_provided_new_key, webhook_secret = _save_profile_connection(data, "primary")
+        minutes = data.get("invoiceExpirationMinutes")
+        if minutes is None:
+            minutes = data.get("invoice_expiration_minutes", 480)
+        try:
+            minutes_int = max(5, min(10080, int(minutes)))
+        except (TypeError, ValueError):
+            minutes_int = 480
         setting_set(
-            SETTING_KEYS["default_customer_message"],
-            str(message),
-            "BTCPay checkout message",
+            SETTING_KEYS["invoice_expiration_minutes"],
+            str(minutes_int),
+            "Invoice expiration minutes",
         )
+        message = data.get("defaultCustomerMessage") or data.get("default_customer_message")
+        if message is not None:
+            setting_set(
+                SETTING_KEYS["default_customer_message"],
+                str(message),
+                "BTCPay checkout message",
+            )
+        # Optional nested failover payload on the same primary save.
+        failover_data = data.get("failover")
+        if isinstance(failover_data, dict):
+            _save_profile_connection(failover_data, "secondary")
+    else:
+        user_provided_new_key, webhook_secret = _save_profile_connection(data, "secondary")
 
     webhook_result = None
-    if user_provided_new_key and not webhook_secret:
+    if user_provided_new_key and not webhook_secret and is_configured(profile):
         try:
-            webhook_result = setup_webhook()
+            webhook_result = setup_webhook(profile)
         except BtcPayError as exc:
-            logger.warning("Auto webhook setup failed: %s", exc)
+            logger.warning("Auto webhook setup failed (%s): %s", profile, exc)
 
     payload = admin_payload()
-    payload["message"] = "BTCPay settings saved."
+    payload["message"] = (
+        "Failover BTCPay settings saved."
+        if profile == "secondary"
+        else "BTCPay settings saved."
+    )
+    payload["savedProfile"] = profile
     if webhook_result:
-        payload["webhookStatus"] = webhook_result
+        if profile == "secondary":
+            payload["failover"] = {
+                **(payload.get("failover") or {}),
+                "webhookStatus": webhook_result,
+            }
+        else:
+            payload["webhookStatus"] = webhook_result
     return payload

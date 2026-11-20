@@ -181,6 +181,24 @@ export type AdminOrdersResponse = {
   counts: Record<string, number>;
 };
 
+export type ApiBtcPayWebhookStatus = {
+  configured: boolean;
+  message: string;
+  webhookId?: string;
+  profile?: string;
+};
+
+export type ApiBtcPayFailoverSettings = {
+  enabled: boolean;
+  serverUrl: string;
+  apiKey: string | null;
+  storeId: string;
+  webhookSecret: string | null;
+  isConfigured: boolean;
+  webhookStatus: ApiBtcPayWebhookStatus;
+  webhookUrl: string;
+};
+
 export type ApiBtcPaySettings = {
   serverUrl: string;
   apiKey: string | null;
@@ -190,13 +208,10 @@ export type ApiBtcPaySettings = {
   webhookUrl: string;
   invoiceExpirationMinutes: number;
   defaultCustomerMessage: string;
-  webhookStatus: {
-    configured: boolean;
-    message: string;
-    webhookId?: string;
-  };
+  webhookStatus: ApiBtcPayWebhookStatus;
   requiredPermissions?: Record<string, string>;
   apiKeysUrl?: string;
+  failover?: ApiBtcPayFailoverSettings;
 };
 
 export type ApiPage = {

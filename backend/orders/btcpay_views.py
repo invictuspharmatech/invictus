@@ -214,11 +214,21 @@ def admin_btcpay_settings_view(request):
     return Response(admin_payload())
 
 
+def _btcpay_profile(request) -> str:
+    data = request.data if isinstance(getattr(request, "data", None), dict) else {}
+    return str(
+        data.get("profile")
+        or request.GET.get("profile")
+        or getattr(request, "query_params", {}).get("profile")
+        or "primary"
+    ).strip().lower() or "primary"
+
+
 @api_view(["POST"])
 @permission_classes([IsSuperuser])
 def admin_btcpay_test_view(request):
     try:
-        return Response(test_connection())
+        return Response(test_connection(_btcpay_profile(request)))
     except BtcPayError as exc:
         return invoice_error(exc, 400)
 
@@ -227,7 +237,7 @@ def admin_btcpay_test_view(request):
 @permission_classes([IsSuperuser])
 def admin_btcpay_webhook_view(request):
     try:
-        return Response(setup_webhook())
+        return Response(setup_webhook(_btcpay_profile(request)))
     except BtcPayError as exc:
         return invoice_error(exc, 400)
 
@@ -237,8 +247,9 @@ def admin_btcpay_webhook_view(request):
 def admin_btcpay_authorize_view(request):
     data = request.data if isinstance(request.data, dict) else {}
     server_url = str(data.get("serverUrl") or data.get("server_url") or "").strip()
+    profile = str(data.get("profile") or "primary").strip().lower() or "primary"
     try:
-        return Response(start_authorize(server_url))
+        return Response(start_authorize(server_url, profile))
     except BtcPayError as exc:
         return invoice_error(exc, 422)
 

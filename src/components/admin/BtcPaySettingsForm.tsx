@@ -9,9 +9,17 @@ function BtcPaySettingsFormInner({ settings }: { settings: ApiBtcPaySettings }) 
   const searchParams = useSearchParams();
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
-  const [busy, setBusy] = useState<"save" | "test" | "webhook" | "connect" | "">("");
+  const [busy, setBusy] = useState<
+    "save" | "test" | "webhook" | "connect" | "failover-save" | "failover-test" | "failover-webhook" | "failover-connect" | ""
+  >("");
   const [showAdvanced, setShowAdvanced] = useState(!settings.isConfigured);
   const [serverUrl, setServerUrl] = useState(settings.serverUrl || "");
+  const failover = settings.failover;
+  const [failoverEnabled, setFailoverEnabled] = useState(Boolean(failover?.enabled));
+  const [failoverServerUrl, setFailoverServerUrl] = useState(failover?.serverUrl || "");
+  const [showFailoverAdvanced, setShowFailoverAdvanced] = useState(
+    Boolean(failover?.isConfigured || failover?.serverUrl),
+  );
   const [showInstructions, setShowInstructions] = useState(false);
   const [instructions, setInstructions] = useState<{
     instructions: string[];
@@ -81,7 +89,7 @@ function BtcPaySettingsFormInner({ settings }: { settings: ApiBtcPaySettings }) 
                 const response = await fetch("/api/admin/btcpay/authorize", {
                   method: "POST",
                   headers: { "content-type": "application/json" },
-                  body: JSON.stringify({ serverUrl: serverUrl.trim() }),
+                  body: JSON.stringify({ serverUrl: serverUrl.trim(), profile: "primary" }),
                 });
                 const data = (await response.json().catch(() => null)) as
                   | { authorizeUrl?: string; error?: string }
@@ -285,7 +293,11 @@ function BtcPaySettingsFormInner({ settings }: { settings: ApiBtcPaySettings }) 
             setError("");
             setSaved("");
             setBusy("test");
-            const response = await fetch("/api/admin/btcpay/test", { method: "POST" });
+            const response = await fetch("/api/admin/btcpay/test", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ profile: "primary" }),
+            });
             const data = (await response.json().catch(() => null)) as
               | { message?: string; error?: string }
               | null;
@@ -308,7 +320,11 @@ function BtcPaySettingsFormInner({ settings }: { settings: ApiBtcPaySettings }) 
             setError("");
             setSaved("");
             setBusy("webhook");
-            const response = await fetch("/api/admin/btcpay/webhook", { method: "POST" });
+            const response = await fetch("/api/admin/btcpay/webhook", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ profile: "primary" }),
+            });
             const data = (await response.json().catch(() => null)) as
               | { message?: string; error?: string }
               | null;
@@ -323,6 +339,228 @@ function BtcPaySettingsFormInner({ settings }: { settings: ApiBtcPaySettings }) 
         >
           {busy === "webhook" ? "Creating…" : "Create webhook"}
         </button>
+      </div>
+
+      <div className="tile grid max-w-3xl gap-4">
+        <h2 className="text-lg">Failover BTCPay (optional)</h2>
+        <p className="text-sm text-muted-foreground">
+          Connect a second BTCPay Server without changing the primary connection. Checkout tries
+          primary first; if invoice create fails for any reason (timeout, 5xx, Cloudflare 403/1010,
+          permission-looking blocks, etc.), it retries on this failover. If both fail, shoppers see
+          the same error as today.
+        </p>
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            className="mt-1"
+            type="checkbox"
+            checked={failoverEnabled}
+            onChange={(event) => setFailoverEnabled(event.target.checked)}
+          />
+          <span>
+            <strong>Enable failover</strong>
+            <span className="mt-1 block text-xs text-muted-foreground">
+              Leave off until the second server URL, store ID, and API key are saved.
+            </span>
+          </span>
+        </label>
+        <label className="grid gap-1 text-sm">
+          Failover BTCPay Server URL
+          <input
+            className="field"
+            value={failoverServerUrl}
+            onChange={(event) => setFailoverServerUrl(event.target.value)}
+            placeholder="https://backup-pay.example.com"
+          />
+        </label>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="gold-btn"
+            type="button"
+            disabled={busy !== ""}
+            onClick={async () => {
+              setError("");
+              setSaved("");
+              if (!failoverServerUrl.trim()) {
+                setError("Enter failover BTCPay Server URL first.");
+                return;
+              }
+              setBusy("failover-connect");
+              const response = await fetch("/api/admin/btcpay/authorize", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                  serverUrl: failoverServerUrl.trim(),
+                  profile: "secondary",
+                }),
+              });
+              const data = (await response.json().catch(() => null)) as
+                | { authorizeUrl?: string; error?: string }
+                | null;
+              setBusy("");
+              if (!response.ok || !data?.authorizeUrl) {
+                setError(data?.error || (await readError(response)));
+                return;
+              }
+              window.location.href = data.authorizeUrl;
+            }}
+          >
+            {busy === "failover-connect" ? "Opening…" : "Connect failover BTCPay"}
+          </button>
+          <button
+            type="button"
+            className="text-sm underline underline-offset-4"
+            onClick={() => setShowFailoverAdvanced((value) => !value)}
+          >
+            {showFailoverAdvanced ? "Hide" : "Show"} failover manual settings
+          </button>
+        </div>
+        <p className="text-sm">
+          Failover status:{" "}
+          {failover?.isConfigured ? (
+            <span>connected{failover.storeId ? ` · store ${failover.storeId}` : ""}</span>
+          ) : (
+            <span className="text-brand-red">not connected</span>
+          )}
+          {" · "}
+          webhook:{" "}
+          {failover?.webhookStatus?.configured ? (
+            <span>configured</span>
+          ) : (
+            <span className="text-brand-red">not set up yet</span>
+          )}
+        </p>
+        {showFailoverAdvanced ? (
+          <form
+            className="grid gap-3"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              setError("");
+              setSaved("");
+              setBusy("failover-save");
+              const form = new FormData(event.currentTarget);
+              const response = await fetch("/api/admin/btcpay", {
+                method: "PUT",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                  profile: "secondary",
+                  enabled: failoverEnabled,
+                  serverUrl: String(form.get("failoverServerUrl") || failoverServerUrl || ""),
+                  apiKey: String(form.get("failoverApiKey") || ""),
+                  storeId: String(form.get("failoverStoreId") || ""),
+                  webhookSecret: String(form.get("failoverWebhookSecret") || ""),
+                }),
+              });
+              setBusy("");
+              if (!response.ok) {
+                setError(await readError(response));
+                return;
+              }
+              setSaved("Failover BTCPay settings saved. Primary connection was not changed.");
+              router.refresh();
+            }}
+          >
+            <input type="hidden" name="failoverServerUrl" value={failoverServerUrl} />
+            <label className="grid gap-1 text-sm">
+              Failover store ID
+              <input
+                className="field"
+                name="failoverStoreId"
+                defaultValue={failover?.storeId || ""}
+                placeholder="Failover BTCPay store ID"
+              />
+            </label>
+            <label className="grid gap-1 text-sm">
+              Failover API key
+              <input
+                className="field"
+                name="failoverApiKey"
+                type="password"
+                autoComplete="off"
+                placeholder={
+                  failover?.isConfigured
+                    ? "Leave blank to keep the current failover key"
+                    : "Paste the full failover BTCPay API key"
+                }
+              />
+              {failover?.apiKey ? (
+                <span className="text-xs text-muted-foreground">Current key: {failover.apiKey}</span>
+              ) : null}
+            </label>
+            <label className="grid gap-1 text-sm">
+              Failover webhook secret (optional)
+              <input
+                className="field"
+                name="failoverWebhookSecret"
+                type="password"
+                autoComplete="off"
+                placeholder={
+                  failover?.webhookSecret
+                    ? "Leave blank to keep the current failover secret"
+                    : "Created automatically when possible"
+                }
+              />
+            </label>
+            <button className="gold-btn max-w-56" type="submit" disabled={busy !== ""}>
+              {busy === "failover-save" ? "Saving…" : "Save failover only"}
+            </button>
+          </form>
+        ) : null}
+        <div className="flex flex-wrap gap-3">
+          <button
+            className="ghost-btn"
+            type="button"
+            disabled={busy !== "" || !failover?.isConfigured}
+            onClick={async () => {
+              setError("");
+              setSaved("");
+              setBusy("failover-test");
+              const response = await fetch("/api/admin/btcpay/test", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ profile: "secondary" }),
+              });
+              const data = (await response.json().catch(() => null)) as
+                | { message?: string; error?: string }
+                | null;
+              setBusy("");
+              if (!response.ok) {
+                setError(data?.error || data?.message || "Failover connection test failed.");
+                return;
+              }
+              setSaved(data?.message || "Failover connection succeeded.");
+              router.refresh();
+            }}
+          >
+            {busy === "failover-test" ? "Testing…" : "Test failover"}
+          </button>
+          <button
+            className="ghost-btn"
+            type="button"
+            disabled={busy !== "" || !failover?.isConfigured}
+            onClick={async () => {
+              setError("");
+              setSaved("");
+              setBusy("failover-webhook");
+              const response = await fetch("/api/admin/btcpay/webhook", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ profile: "secondary" }),
+              });
+              const data = (await response.json().catch(() => null)) as
+                | { message?: string; error?: string }
+                | null;
+              setBusy("");
+              if (!response.ok) {
+                setError(data?.error || data?.message || "Failover webhook setup failed.");
+                return;
+              }
+              setSaved(data?.message || "Failover webhook created.");
+              router.refresh();
+            }}
+          >
+            {busy === "failover-webhook" ? "Creating…" : "Create failover webhook"}
+          </button>
+        </div>
       </div>
 
       {showInstructions && instructions ? (

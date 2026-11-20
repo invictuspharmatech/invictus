@@ -53,12 +53,6 @@ export const TOOL_LINKS: { href: string; label: string }[] = [
   { href: "/crashed-gear-protocol", label: "Crashed gear protocol" },
 ];
 
-export const DEFAULT_PROMO_ITEMS = [
-  "Paid orders process the same business day when received before 2pm ET.",
-  "Bitcoin checkout only — see the tutorial under FAQ → Tools.",
-  "$100 minimum order · $20 shipping.",
-];
-
 export const HIDDEN_HOME_CATEGORY_SLUGS = new Set([
   "injectables",
   "gift-cards",

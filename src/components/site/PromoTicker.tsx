@@ -11,7 +11,6 @@ import {
   type ReactNode,
 } from "react";
 import { bannerBgColor, bannerTextColor } from "@/lib/feature-banners";
-import { DEFAULT_PROMO_ITEMS } from "@/lib/storefront-nav";
 import type { BannerBgMode, BannerTextMode } from "@/lib/api-types";
 
 export type PromoSlide = {
@@ -28,15 +27,6 @@ const BANNER_MAX_FONT_PX_MOBILE = 14;
 const BANNER_MAX_FONT_PX_DESKTOP = 16;
 const BANNER_STRIP_MIN_HEIGHT_PX = 40;
 const BANNER_STRIP_MAX_HEIGHT_PX = 56;
-
-function fallbackSlides(): PromoSlide[] {
-  return DEFAULT_PROMO_ITEMS.map((title, index) => ({
-    id: `default-${index}`,
-    title,
-    bgColorMode: "danger",
-    textColorMode: "light",
-  }));
-}
 
 function slideColor(slide: PromoSlide): string {
   return bannerTextColor(slide.textColorMode);
@@ -171,7 +161,8 @@ export function PromoTicker({
   enabled?: boolean;
   displayMode?: "marquee" | "slider";
 }) {
-  const slides = items.length > 0 ? items : fallbackSlides();
+  // Live DB banners only — never fall back to hardcoded promo copy.
+  const slides = items;
   const [activeIndex, setActiveIndex] = useState(0);
   const [stripHeight, setStripHeight] = useState(BANNER_STRIP_MIN_HEIGHT_PX);
 
@@ -193,7 +184,7 @@ export function PromoTicker({
   );
   const marqueeDuration = `${Math.max(slides.length * 9, 24)}s`;
 
-  if (!enabled) return null;
+  if (!enabled || slides.length === 0) return null;
 
   if (displayMode === "marquee") {
     const bg = bannerBgColor(slides[0]?.bgColorMode);

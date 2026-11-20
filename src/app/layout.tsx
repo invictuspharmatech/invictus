@@ -17,6 +17,10 @@ import { asBannerRuntime } from "@/lib/feature-banners";
 import { COMING_SOON_FALLBACK, type ComingSoonPublic } from "@/lib/coming-soon";
 import "./globals.css";
 
+// Always re-fetch storefront chrome (banners, categories) so browser back /
+// soft navigation cannot restore a stale empty banner strip.
+export const dynamic = "force-dynamic";
+
 // Self-hosted fonts — next/font/google can crash Docker/CI builds when Google
 // returns extensionless /l/font?kit= URLs (Next.js #99114).
 const cinzel = localFont({
