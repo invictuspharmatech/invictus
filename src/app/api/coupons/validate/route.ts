@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { djangoJson, DjangoError } from "@/lib/django";
+import { djangoJson, DjangoError, sessionToken } from "@/lib/django";
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -7,6 +7,7 @@ export async function POST(request: Request) {
     const data = await djangoJson("/api/coupons/validate/", {
       method: "POST",
       body,
+      token: await sessionToken(),
     });
     return NextResponse.json(data);
   } catch (error) {

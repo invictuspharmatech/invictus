@@ -94,6 +94,7 @@ export default function CheckoutPage() {
         const result = await validateCouponCode(code, merchandiseTotal, {
           existingCodes: kept.map((item) => item.code),
           shippingTotal,
+          email: accountEmail || undefined,
         });
         if (!result.ok) {
           if (!cancelled) {
@@ -121,7 +122,7 @@ export default function CheckoutPage() {
     return () => {
       cancelled = true;
     };
-  }, [merchandiseTotal, appliedCodesKey, shippingTotal]);
+  }, [merchandiseTotal, appliedCodesKey, shippingTotal, accountEmail]);
 
   const minOrder = settings?.minOrderAmount ?? 100;
   const fees = settings?.shippingFees ?? [];
@@ -146,6 +147,7 @@ export default function CheckoutPage() {
     const result = await validateCouponCode(code, merchandiseTotal, {
       existingCodes: appliedCoupons.map((row) => row.code),
       shippingTotal,
+      email: accountEmail || undefined,
     });
     if (!result.ok) {
       setCouponError(result.error);

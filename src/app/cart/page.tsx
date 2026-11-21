@@ -222,15 +222,17 @@ export default function CartPage() {
               {items.map((item) => {
                 const stock = stockLines[item.productId];
                 const unavailable = stockReady && stock && !stock.ok;
+                const lineTotal = item.unitPrice * item.quantity;
                 return (
                   <li key={item.productId} className="py-4">
                     <div className="flex items-start justify-between gap-4">
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <Link href={`/products/${item.slug}`} className="font-medium">
                           {item.name}
                         </Link>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          {formatMoney(item.unitPrice)}
+                          {formatMoney(item.unitPrice)} each
+                          {item.quantity > 1 ? ` · Qty ${item.quantity}` : ""}
                         </p>
                         {unavailable ? (
                           <p className="mt-2 text-sm text-brand-red">
@@ -238,28 +240,35 @@ export default function CartPage() {
                           </p>
                         ) : null}
                       </div>
-                      <div className="flex items-center gap-3">
-                        <input
-                          className="field w-16"
-                          type="number"
-                          min={1}
-                          max={
-                            stock?.maxPurchasable != null && stock.maxPurchasable > 0
-                              ? stock.maxPurchasable
-                              : undefined
-                          }
-                          value={item.quantity}
-                          onChange={(event) =>
-                            updateQuantity(item.productId, Number(event.target.value) || 1)
-                          }
-                        />
-                        <button
-                          type="button"
-                          className="text-xs uppercase tracking-[0.14em] text-muted-foreground"
-                          onClick={() => removeItem(item.productId)}
-                        >
-                          Remove
-                        </button>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        <p className="text-sm font-medium text-signal">{formatMoney(lineTotal)}</p>
+                        <div className="flex items-center gap-3">
+                          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span className="uppercase tracking-[0.14em]">Qty</span>
+                            <input
+                              className="field w-16"
+                              type="number"
+                              min={1}
+                              max={
+                                stock?.maxPurchasable != null && stock.maxPurchasable > 0
+                                  ? stock.maxPurchasable
+                                  : undefined
+                              }
+                              value={item.quantity}
+                              aria-label={`Quantity for ${item.name}`}
+                              onChange={(event) =>
+                                updateQuantity(item.productId, Number(event.target.value) || 1)
+                              }
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            className="text-xs uppercase tracking-[0.14em] text-muted-foreground"
+                            onClick={() => removeItem(item.productId)}
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
                     </div>
                     {unavailable && !stock.allowBackorder ? (

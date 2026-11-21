@@ -114,6 +114,7 @@ export async function validateCouponCode(
 > {
   const response = await fetch("/api/coupons/validate", {
     method: "POST",
+    credentials: "same-origin",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       code,
