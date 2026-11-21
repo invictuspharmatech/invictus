@@ -80,6 +80,7 @@ urlpatterns = [
     path("admin/users/<uuid:pk>/", account_views.admin_user_detail_view),
     path("admin/contact/ip-blocks/", account_views.contact_ip_blocks_view),
     path("admin/contact/ip-blocks/<int:pk>/", account_views.contact_ip_block_delete_view),
+    path("admin/contact/ban-settings/", account_views.contact_ip_ban_settings_view),
     path("admin/affiliates/", account_views.admin_affiliates_view),
     path("admin/affiliates/<uuid:pk>/", account_views.admin_affiliate_action_view),
     path("admin/coupons/", coupon_views.admin_coupon_list),

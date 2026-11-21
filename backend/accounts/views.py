@@ -9,7 +9,12 @@ from accounts.cloudflare_blocks import queue_lift, queue_enforce_current, save_e
 from accounts.password_reset_blocks import BLOCK_MESSAGE, block, is_blocked, protects
 from accounts.guards import person_name_error
 from accounts.models import AffiliateApplication, BlockedEmailDomain, PasswordResetIpBlock, SessionEpoch, User
-from orders.contact_blocks import BLOCK_MINUTES, active_blocked_rows, expires_at
+from orders.contact_blocks import (
+    active_blocked_rows,
+    ban_policy,
+    expires_at,
+    save_ban_policy,
+)
 from orders.models import ContactIpBlock
 from accounts.password_reset import (
     issue_reset_token,
@@ -581,20 +586,43 @@ def logout_all_view(request):
 @permission_classes([IsStoreStaff])
 def contact_ip_blocks_view(request):
     rows = active_blocked_rows()
+    policy = ban_policy()
+    data = []
+    for row in rows:
+        until = expires_at(row)
+        data.append(
+            {
+                "id": row.id,
+                "ip_address": row.ip_address,
+                "rejected_count": row.rejected_count,
+                "blocked_at": row.blocked_at.isoformat() if row.blocked_at else None,
+                "blocked_until": until.isoformat() if until else None,
+                "permanent": until is None,
+                "block_minutes": policy["minutes"] if policy["autoExpire"] else None,
+            }
+        )
+    return Response({"ok": True, "settings": policy, "data": data})
+
+
+@api_view(["GET", "PUT"])
+@permission_classes([IsStoreStaff])
+def contact_ip_ban_settings_view(request):
+    if request.method == "GET":
+        return Response({"ok": True, "data": ban_policy()})
+    auto_expire = request.data.get("autoExpire")
+    if not isinstance(auto_expire, bool):
+        return Response({"error": "autoExpire must be true or false."}, status=400)
+    minutes = request.data.get("minutes", ban_policy()["minutes"])
+    saved = save_ban_policy(auto_expire, minutes)
     return Response(
         {
             "ok": True,
-            "data": [
-                {
-                    "id": row.id,
-                    "ip_address": row.ip_address,
-                    "rejected_count": row.rejected_count,
-                    "blocked_at": row.blocked_at.isoformat() if row.blocked_at else None,
-                    "blocked_until": expires_at(row.blocked_at).isoformat() if row.blocked_at else None,
-                    "block_minutes": BLOCK_MINUTES,
-                }
-                for row in rows
-            ],
+            "message": (
+                f"Contact bans auto-expire after {saved['minutes']} minutes."
+                if saved["autoExpire"]
+                else "Contact bans stay until removed manually."
+            ),
+            "data": saved,
         }
     )
 

@@ -407,6 +407,8 @@ class ContactIpBlock(models.Model):
     ip_address = models.CharField(max_length=45, unique=True)
     rejected_count = models.PositiveSmallIntegerField(default=0)
     blocked_at = models.DateTimeField(null=True, blank=True)
+    # Null while blocked = permanent until manual remove; set = auto-expire time.
+    block_expires_at = models.DateTimeField(null=True, blank=True)
     cloudflare_rule_id = models.CharField(max_length=64, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

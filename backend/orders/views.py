@@ -13,9 +13,17 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from accounts.client_ip import client_ip
 from accounts.guards import address_email_rejection, markup_error, person_name_error
 from accounts.models import User
-from orders.contact_blocks import BLOCK_MESSAGE, is_blocked, note_rejection, remaining_block_seconds
+from orders.contact_blocks import (
+    block_message,
+    is_blocked,
+    note_rejection,
+    policy_minutes_or_none,
+    remaining_block_seconds,
+    row_ban_minutes,
+)
 from accounts.permissions import (
     IsAuthenticatedUser,
     IsPortalStaff,
@@ -67,7 +75,15 @@ from orders.coupons import (
     normalize_codes,
     resolve_coupon_stack,
 )
-from orders.models import AccountingReset, ContactMessage, Coupon, FulfillmentRequest, Order, OrderItem
+from orders.models import (
+    AccountingReset,
+    ContactIpBlock,
+    ContactMessage,
+    Coupon,
+    FulfillmentRequest,
+    Order,
+    OrderItem,
+)
 from orders.order_ip import count as order_ip_count, enabled as order_ip_enabled, ip_for, record as record_order_ip, set_enabled as set_order_ip_enabled, wash as wash_order_ips
 from orders.order_numbers import allocate_order_number
 from orders.serializers import (
@@ -383,8 +399,18 @@ def contact_view(request):
     if not email or not name or not subject or not message:
         return Response({"error": "Name, subject, and message are required."}, status=400)
     if is_blocked(request):
+        minutes = policy_minutes_or_none()
+        ip = client_ip(request)
+        row = ContactIpBlock.objects.filter(ip_address=ip, blocked_at__isnull=False).first() if ip else None
+        if row is not None:
+            minutes = row_ban_minutes(row)
         seconds = remaining_block_seconds(request)
-        payload = {"error": BLOCK_MESSAGE, "blocked": True, "blockMinutes": 30}
+        payload = {
+            "error": block_message(minutes),
+            "blocked": True,
+            "blockMinutes": minutes,
+            "autoExpire": minutes is not None,
+        }
         if seconds is not None:
             payload["remainingSeconds"] = seconds
         return Response(payload, status=403)
@@ -397,7 +423,8 @@ def contact_view(request):
                 "error": strike.get("message") or text_error,
                 "strikes": strike.get("strikes") or 0,
                 "blocked": bool(strike.get("blocked")),
-                "blockMinutes": strike.get("blockMinutes") or 30,
+                "blockMinutes": strike.get("blockMinutes"),
+                "autoExpire": strike.get("autoExpire"),
                 "blockedUntil": strike.get("blockedUntil"),
             },
             status=status,

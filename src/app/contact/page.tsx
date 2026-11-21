@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/site/PageHeader";
 type Account = { name: string; email: string };
 
 const CHAR_TIP =
-  "Do not use HTML characters such as < or >. Plain text is fine — apostrophes, question marks, and quotes are allowed. After two warnings, a third attempt blocks this network for 30 minutes.";
+  "Do not use HTML characters such as < or >. Plain text is fine — apostrophes, question marks, and quotes are allowed. After two warnings, a third attempt can block this network (temporary or until staff remove it, per site settings).";
 
 export default function ContactPage() {
   const [account, setAccount] = useState<Account | null>(null);
