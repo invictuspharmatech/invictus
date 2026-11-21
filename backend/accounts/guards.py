@@ -8,7 +8,8 @@ from urllib.parse import unquote
 
 from django.conf import settings
 
-_MARKUP = re.compile(r"[<>＜＞&＆\"'`\\{}＂＇]")
+# Only block HTML/script injection markers — normal punctuation (?, !, ', ", &, etc.) is allowed.
+_ANGLE = re.compile(r"[<>＜＞]")
 _EVENT = re.compile(
     r"\b(onerror|onload|onclick|onmouseover|onfocus|onmouseenter|onpointerdown)\s*=",
     re.IGNORECASE,
@@ -16,7 +17,7 @@ _EVENT = re.compile(
 _JS = re.compile(r"javascript\s*:", re.IGNORECASE)
 _PERSON = re.compile(r"^[A-Za-z]+(?: [A-Za-z]+)*$")
 
-MARKUP_MESSAGE = "This field cannot include HTML, quotes, or script text."
+MARKUP_MESSAGE = "This field cannot include HTML or script text."
 NAME_MESSAGE = "Name can only contain letters."
 
 
@@ -31,7 +32,7 @@ def contains_markup(value: str) -> bool:
         candidates.append(decoded)
         candidates.append(html.unescape(decoded))
     for text in candidates:
-        if _MARKUP.search(text) or _EVENT.search(text) or _JS.search(text):
+        if _ANGLE.search(text) or _EVENT.search(text) or _JS.search(text):
             return True
     return False
 

@@ -6,10 +6,14 @@ import { PageHeader } from "@/components/site/PageHeader";
 
 type Account = { name: string; email: string };
 
+const CHAR_TIP =
+  "Do not use HTML characters such as < or >. Plain text is fine — apostrophes, question marks, and quotes are allowed. After two warnings, a third attempt blocks this network for 30 minutes.";
+
 export default function ContactPage() {
   const [account, setAccount] = useState<Account | null>(null);
   const [ready, setReady] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [statusTone, setStatusTone] = useState<"ok" | "warn" | "error">("ok");
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
@@ -30,19 +34,40 @@ export default function ContactPage() {
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus(null);
+    setStatusTone("ok");
     const response = await fetch("/api/contact", {
       method: "POST",
       credentials: "same-origin",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ name, subject, message }),
     });
-    const data = (await response.json().catch(() => null)) as { error?: string } | null;
+    const data = (await response.json().catch(() => null)) as {
+      error?: string;
+      strikes?: number;
+      blocked?: boolean;
+      blockMinutes?: number;
+      remainingSeconds?: number;
+    } | null;
     if (!response.ok) {
-      setStatus(data?.error || "Could not send. Try again.");
+      const messageText = data?.error || "Could not send. Try again.";
+      const strikes = Number(data?.strikes) || 0;
+      if (data?.blocked) {
+        setStatusTone("error");
+        window.alert(messageText);
+      } else if (strikes >= 2) {
+        setStatusTone("warn");
+        window.alert(messageText);
+      } else if (strikes >= 1) {
+        setStatusTone("warn");
+      } else {
+        setStatusTone("error");
+      }
+      setStatus(messageText);
       return;
     }
     setSubject("");
     setMessage("");
+    setStatusTone("ok");
     setStatus("Message received. We typically reply within 24–48 hours.");
   }
 
@@ -68,6 +93,7 @@ export default function ContactPage() {
         ) : (
           <form onSubmit={onSubmit} className="tile space-y-4">
             <h2 className="text-lg">Send us a message</h2>
+            <p className="text-sm leading-6 text-muted-foreground">{CHAR_TIP}</p>
             <input
               className="field"
               name="name"
@@ -98,7 +124,19 @@ export default function ContactPage() {
             <button className="gold-btn" type="submit">
               Send message
             </button>
-            {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
+            {status ? (
+              <p
+                className={`text-sm ${
+                  statusTone === "ok"
+                    ? "text-muted-foreground"
+                    : statusTone === "warn"
+                      ? "text-signal"
+                      : "text-brand-red"
+                }`}
+              >
+                {status}
+              </p>
+            ) : null}
           </form>
         )}
         <div className="tile">

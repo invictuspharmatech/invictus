@@ -9,6 +9,7 @@ from accounts.cloudflare_blocks import queue_lift, queue_enforce_current, save_e
 from accounts.password_reset_blocks import BLOCK_MESSAGE, block, is_blocked, protects
 from accounts.guards import person_name_error
 from accounts.models import AffiliateApplication, BlockedEmailDomain, PasswordResetIpBlock, SessionEpoch, User
+from orders.contact_blocks import BLOCK_MINUTES, active_blocked_rows, expires_at
 from orders.models import ContactIpBlock
 from accounts.password_reset import (
     issue_reset_token,
@@ -579,7 +580,7 @@ def logout_all_view(request):
 @api_view(["GET"])
 @permission_classes([IsStoreStaff])
 def contact_ip_blocks_view(request):
-    rows = ContactIpBlock.objects.filter(blocked_at__isnull=False).order_by("-blocked_at")
+    rows = active_blocked_rows()
     return Response(
         {
             "ok": True,
@@ -588,7 +589,9 @@ def contact_ip_blocks_view(request):
                     "id": row.id,
                     "ip_address": row.ip_address,
                     "rejected_count": row.rejected_count,
-                    "blocked_at": row.blocked_at,
+                    "blocked_at": row.blocked_at.isoformat() if row.blocked_at else None,
+                    "blocked_until": expires_at(row.blocked_at).isoformat() if row.blocked_at else None,
+                    "block_minutes": BLOCK_MINUTES,
                 }
                 for row in rows
             ],

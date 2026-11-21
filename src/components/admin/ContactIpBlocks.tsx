@@ -7,6 +7,8 @@ type BlockRow = {
   ip_address: string;
   rejected_count: number;
   blocked_at: string | null;
+  blocked_until?: string | null;
+  block_minutes?: number;
 };
 
 export function ContactIpBlocks() {
@@ -25,10 +27,12 @@ export function ContactIpBlocks() {
   }, []);
 
   return (
-    <section className="tile mb-6">
+    <section className="tile">
       <h2 className="text-lg">Blocked contact IPs</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        A public IP is listed here after 2 contact messages are rejected for unsafe text. Removing a block lets that network use the contact form again. When the site-wide block is on, Remove also lifts that block if this IP is not still blocked from password reset.
+        A public IP is listed here after 3 rejected contact messages that include HTML/script
+        characters (such as &lt; or &gt;). Blocks last 30 minutes, then clear automatically. Remove
+        lifts the block immediately.
       </p>
       {loading ? <p className="mt-3 text-sm text-muted-foreground">Loading blocks…</p> : null}
       {!loading && rows.length === 0 ? (
@@ -41,7 +45,10 @@ export function ContactIpBlocks() {
               <p className="font-medium">{row.ip_address}</p>
               <p className="text-xs text-muted-foreground">
                 {row.rejected_count} rejected
-                {row.blocked_at ? ` · blocked ${row.blocked_at}` : ""}
+                {row.blocked_at ? ` · blocked ${new Date(row.blocked_at).toLocaleString()}` : ""}
+                {row.blocked_until
+                  ? ` · until ${new Date(row.blocked_until).toLocaleString()}`
+                  : " · 30 min block"}
               </p>
             </div>
             <button

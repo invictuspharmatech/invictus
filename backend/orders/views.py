@@ -15,7 +15,7 @@ from rest_framework.response import Response
 
 from accounts.guards import address_email_rejection, markup_error, person_name_error
 from accounts.models import User
-from orders.contact_blocks import BLOCK_MESSAGE, is_blocked, note_rejection
+from orders.contact_blocks import BLOCK_MESSAGE, is_blocked, note_rejection, remaining_block_seconds
 from accounts.permissions import (
     IsAuthenticatedUser,
     IsPortalStaff,
@@ -383,11 +383,25 @@ def contact_view(request):
     if not email or not name or not subject or not message:
         return Response({"error": "Name, subject, and message are required."}, status=400)
     if is_blocked(request):
-        return Response({"error": BLOCK_MESSAGE}, status=403)
+        seconds = remaining_block_seconds(request)
+        payload = {"error": BLOCK_MESSAGE, "blocked": True, "blockMinutes": 30}
+        if seconds is not None:
+            payload["remainingSeconds"] = seconds
+        return Response(payload, status=403)
     text_error = markup_error(name, subject, message)
     if text_error:
-        note_rejection(request)
-        return Response({"error": text_error}, status=400)
+        strike = note_rejection(request)
+        status = 403 if strike.get("blocked") else 400
+        return Response(
+            {
+                "error": strike.get("message") or text_error,
+                "strikes": strike.get("strikes") or 0,
+                "blocked": bool(strike.get("blocked")),
+                "blockMinutes": strike.get("blockMinutes") or 30,
+                "blockedUntil": strike.get("blockedUntil"),
+            },
+            status=status,
+        )
     ContactMessage.objects.create(
         name=name,
         email=email,

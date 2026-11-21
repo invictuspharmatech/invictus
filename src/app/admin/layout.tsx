@@ -54,6 +54,7 @@ const ADMIN_NAV: AdminNavItem[] = [
     label: "Email",
     children: [
       { href: "/admin/email/zoho", label: "Zoho Mail" },
+      { href: "/admin/email/zoho?tab=blocks", label: "Contact IP blocks" },
       { href: "/admin/email", label: "Bulk email" },
       { href: "/admin/cms/email", label: "Settings & templates" },
     ],

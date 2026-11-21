@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { ContactIpBlocks } from "@/components/admin/ContactIpBlocks";
 
 type ZohoStatus = {
   configured: boolean;
@@ -27,7 +28,7 @@ type ZohoRow = {
   receivedAt: string | null;
 };
 
-type Tab = "inbox" | "outbox";
+type Tab = "inbox" | "outbox" | "blocks";
 
 function formatWhen(value: string | null) {
   if (!value) return "—";
@@ -38,7 +39,8 @@ function formatWhen(value: string | null) {
 
 export function ZohoMailBoard() {
   const searchParams = useSearchParams();
-  const [tab, setTab] = useState<Tab>("inbox");
+  const initialTab = searchParams.get("tab") === "blocks" ? "blocks" : "inbox";
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [status, setStatus] = useState<ZohoStatus | null>(null);
   const [rows, setRows] = useState<ZohoRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -64,6 +66,12 @@ export function ZohoMailBoard() {
 
   const loadMessages = useCallback(
     async (mailbox: Tab, nextStatus?: ZohoStatus | null) => {
+      if (mailbox === "blocks") {
+        setRows([]);
+        setTotal(0);
+        setLoading(false);
+        return;
+      }
       const current = nextStatus ?? status;
       if (!current?.connected) {
         setRows([]);
@@ -335,6 +343,7 @@ export function ZohoMailBoard() {
             [
               ["inbox", "Zoho Inbox"],
               ["outbox", "Zoho Outbox"],
+              ["blocks", "Contact IP blocks"],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -343,22 +352,34 @@ export function ZohoMailBoard() {
               className={`px-3 py-2 text-[12px] uppercase tracking-[0.16em] ${
                 tab === key ? "border-b-2 border-primary text-foreground" : "text-muted-foreground"
               }`}
-              onClick={() => setTab(key)}
+              onClick={() => {
+                setTab(key);
+                const url = key === "blocks" ? "/admin/email/zoho?tab=blocks" : "/admin/email/zoho";
+                window.history.replaceState(null, "", url);
+              }}
             >
               {label}
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          className="ghost-btn mb-1"
-          disabled={loading || !status?.connected}
-          onClick={() => void loadMessages(tab)}
-        >
-          {loading ? "Refreshing…" : "Refresh"}
-        </button>
+        {tab !== "blocks" ? (
+          <button
+            type="button"
+            className="ghost-btn mb-1"
+            disabled={loading || !status?.connected}
+            onClick={() => void loadMessages(tab)}
+          >
+            {loading ? "Refreshing…" : "Refresh"}
+          </button>
+        ) : null}
       </div>
 
+      {tab === "blocks" ? (
+        <div className="mt-4">
+          <ContactIpBlocks />
+        </div>
+      ) : (
+      <>
       <div className="tile mt-4 flex flex-wrap items-center gap-2 p-3">
         <input
           className="field max-w-md"
@@ -486,6 +507,8 @@ export function ZohoMailBoard() {
             </tbody>
           </table>
         </div>
+      )}
+      </>
       )}
     </div>
   );
