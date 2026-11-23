@@ -223,6 +223,17 @@ export default function CartPage() {
                 const stock = stockLines[item.productId];
                 const unavailable = stockReady && stock && !stock.ok;
                 const lineTotal = item.unitPrice * item.quantity;
+                const maxQty =
+                  stock?.maxPurchasable != null && stock.maxPurchasable > 0
+                    ? stock.maxPurchasable
+                    : null;
+                const atMin = item.quantity <= 1;
+                const atMax = maxQty != null && item.quantity >= maxQty;
+                const setQty = (next: number) => {
+                  let qty = Math.max(1, Math.floor(Number(next) || 1));
+                  if (maxQty != null) qty = Math.min(qty, maxQty);
+                  updateQuantity(item.productId, qty);
+                };
                 return (
                   <li key={item.productId} className="py-4">
                     <div className="flex items-start justify-between gap-4">
@@ -243,24 +254,41 @@ export default function CartPage() {
                       <div className="flex shrink-0 flex-col items-end gap-2">
                         <p className="text-sm font-medium text-signal">{formatMoney(lineTotal)}</p>
                         <div className="flex items-center gap-3">
-                          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span className="uppercase tracking-[0.14em]">Qty</span>
-                            <input
-                              className="field w-16"
-                              type="number"
-                              min={1}
-                              max={
-                                stock?.maxPurchasable != null && stock.maxPurchasable > 0
-                                  ? stock.maxPurchasable
-                                  : undefined
-                              }
-                              value={item.quantity}
-                              aria-label={`Quantity for ${item.name}`}
-                              onChange={(event) =>
-                                updateQuantity(item.productId, Number(event.target.value) || 1)
-                              }
-                            />
-                          </label>
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                              Qty
+                            </span>
+                            <div className="inline-flex items-stretch overflow-hidden rounded-md border border-border/60">
+                              <button
+                                type="button"
+                                className="flex h-11 w-11 items-center justify-center text-lg leading-none text-foreground disabled:opacity-40"
+                                aria-label={`Decrease quantity for ${item.name}`}
+                                disabled={atMin}
+                                onClick={() => setQty(item.quantity - 1)}
+                              >
+                                −
+                              </button>
+                              <input
+                                className="field h-11 w-12 rounded-none border-0 border-x border-border/60 px-1 text-center text-base [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                type="number"
+                                inputMode="numeric"
+                                min={1}
+                                max={maxQty ?? undefined}
+                                value={item.quantity}
+                                aria-label={`Quantity for ${item.name}`}
+                                onChange={(event) => setQty(Number(event.target.value))}
+                              />
+                              <button
+                                type="button"
+                                className="flex h-11 w-11 items-center justify-center text-lg leading-none text-foreground disabled:opacity-40"
+                                aria-label={`Increase quantity for ${item.name}`}
+                                disabled={atMax}
+                                onClick={() => setQty(item.quantity + 1)}
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
                           <button
                             type="button"
                             className="text-xs uppercase tracking-[0.14em] text-muted-foreground"

@@ -123,9 +123,12 @@ export function BulkEmailBoard() {
   );
 
   const loadUsers = useCallback(async () => {
-    const res = await fetch("/api/admin/users");
+    const res = await fetch("/api/admin/users?isActive=true");
     const data = (await res.json().catch(() => [])) as ApiAdminUser[] | { error?: string };
-    if (Array.isArray(data)) setUsers(data);
+    if (Array.isArray(data)) {
+      // Only keep active accounts in the recipient picker (API + client guard).
+      setUsers(data.filter((user) => user.isActive === true));
+    }
   }, []);
 
   const loadBatches = useCallback(async () => {
@@ -404,12 +407,22 @@ export function BulkEmailBoard() {
                 const next = { ...selectedIds };
                 for (const user of pageUsers) next[user.id] = true;
                 setSelectedIds(next);
+                setSelectAllDb(false);
               }}
             >
               Select this page
             </button>
-            <button className="ghost-btn" type="button" onClick={() => setSelectAllDb(true)}>
-              Select all matching users
+            <button
+              className="ghost-btn"
+              type="button"
+              onClick={() => {
+                const next: Record<string, boolean> = {};
+                for (const user of filteredUsers) next[user.id] = true;
+                setSelectedIds(next);
+                setSelectAllDb(true);
+              }}
+            >
+              Select all matching active users
             </button>
             <button
               className="ghost-btn"
@@ -438,20 +451,40 @@ export function BulkEmailBoard() {
           </label>
           {selectAllDb ? (
             <p className="text-sm text-muted-foreground">
-              All matching users in the database will be included ({filteredUsers.length} visible matches).
+              All matching active users in the database will be included (
+              {filteredUsers.length} visible matches). Inactive accounts are skipped.
             </p>
           ) : (
-            <p className="text-sm text-muted-foreground">{selectedCount} selected on this list.</p>
+            <p className="text-sm text-muted-foreground">
+              {selectedCount} selected on this list (active users only).
+            </p>
           )}
           <div className="max-h-72 overflow-auto">
             <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="text-xs text-muted-foreground">
+                  <th className="py-1 pr-2 font-medium" />
+                  <th className="py-1 pr-2 font-medium">Name</th>
+                  <th className="py-1 pr-2 font-medium">Email</th>
+                  <th className="py-1 pr-2 font-medium">Role</th>
+                  <th className="py-1 font-medium">Status</th>
+                </tr>
+              </thead>
               <tbody>
+                {pageUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-4 text-muted-foreground">
+                      No active users match this search.
+                    </td>
+                  </tr>
+                ) : null}
                 {pageUsers.map((user) => (
                   <tr key={user.id} className="border-t border-border/40">
                     <td className="py-2 pr-2">
                       <input
                         type="checkbox"
-                        checked={!!selectedIds[user.id]}
+                        checked={selectAllDb || !!selectedIds[user.id]}
+                        disabled={selectAllDb}
                         onChange={() =>
                           setSelectedIds((prev) => ({ ...prev, [user.id]: !prev[user.id] }))
                         }
@@ -460,6 +493,7 @@ export function BulkEmailBoard() {
                     <td>{user.name}</td>
                     <td className="text-muted-foreground">{user.email}</td>
                     <td className="text-muted-foreground">{roleLabel(user.role)}</td>
+                    <td className="text-muted-foreground">Active</td>
                   </tr>
                 ))}
               </tbody>
