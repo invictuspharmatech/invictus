@@ -118,6 +118,39 @@ def public_coming_soon(request):
     return Response(payload())
 
 
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def public_footer_telegram(request):
+    from cms.footer_telegram import public_footer_telegram as payload
+
+    return Response(payload())
+
+
+@api_view(["GET", "PUT"])
+@permission_classes([IsStoreStaff])
+def admin_footer_telegram(request):
+    from cms.footer_telegram import get_footer_telegram, save_footer_telegram
+
+    if not is_full_admin(request.user):
+        return Response({"error": "Not allowed."}, status=403)
+    if request.method == "GET":
+        return Response({"ok": True, "data": get_footer_telegram()})
+    enabled = request.data.get("enabled")
+    if not isinstance(enabled, bool):
+        return Response({"error": "enabled must be true or false."}, status=400)
+    url = str(request.data.get("url") or "").strip()
+    if enabled and not url:
+        return Response({"error": "Enter a Telegram URL before enabling."}, status=400)
+    saved = save_footer_telegram(enabled, url)
+    return Response(
+        {
+            "ok": True,
+            "message": "Footer Telegram link saved." if enabled else "Footer Telegram link hidden.",
+            "data": saved,
+        }
+    )
+
+
 @api_view(["GET", "PUT"])
 @permission_classes([IsStoreStaff])
 def admin_coming_soon(request):

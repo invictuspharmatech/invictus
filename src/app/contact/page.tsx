@@ -6,9 +6,6 @@ import { PageHeader } from "@/components/site/PageHeader";
 
 type Account = { name: string; email: string };
 
-const CHAR_TIP =
-  "Do not use HTML characters such as < or >. Plain text is fine — apostrophes, question marks, and quotes are allowed. After two warnings, a third attempt can block this network (temporary or until staff remove it, per site settings).";
-
 export default function ContactPage() {
   const [account, setAccount] = useState<Account | null>(null);
   const [ready, setReady] = useState(false);
@@ -93,7 +90,6 @@ export default function ContactPage() {
         ) : (
           <form onSubmit={onSubmit} className="tile space-y-4">
             <h2 className="text-lg">Send us a message</h2>
-            <p className="text-sm leading-6 text-muted-foreground">{CHAR_TIP}</p>
             <input
               className="field"
               name="name"

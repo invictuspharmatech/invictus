@@ -2,10 +2,14 @@ from decimal import Decimal
 
 from django.test import SimpleTestCase, TestCase
 
+from django.utils import timezone
+
 from orders.accounting import (
     allocate_for_warehouse,
     allocate_sale,
     default_split,
+    pay_period_floor,
+    period_window,
     validate_split,
     w1_merchandise_share,
 )
@@ -92,6 +96,12 @@ class RevenueSplitTests(SimpleTestCase):
         )
         self.assertIsNone(error)
         self.assertEqual(parsed["w1_party2"], Decimal("15"))
+
+    def test_pay_period_is_not_calendar_day(self):
+        """Accounting must not auto-zero at midnight; only manual Reset all truncates."""
+        floor = pay_period_floor()
+        day = period_window("DAY", now=timezone.now())
+        self.assertLess(floor, day)
 
 
 class CustomerOrderGroupTests(SimpleTestCase):

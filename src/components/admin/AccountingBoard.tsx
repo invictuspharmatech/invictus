@@ -158,7 +158,7 @@ export function AccountingBoard({
   async function resetAll() {
     if (
       !window.confirm(
-        "Reset all accounting tiles to 0 for this period and warehouse? Use this after a payout so the next pay period starts clean.",
+        "Reset all accounting tiles to 0? Use this after a payout so the next pay period starts clean. Totals do not reset automatically.",
       )
     ) {
       return;
@@ -417,7 +417,7 @@ export function AccountingBoard({
         <div className="mt-8 overflow-x-auto tile">
           <h2 className="text-lg">Sales in this window</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Orders counted since the last Reset all (or the start of this period).
+            Orders counted since the last Reset all (or all time if you have never reset).
           </p>
           <table className="mt-4 w-full text-left text-sm">
             <thead className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">

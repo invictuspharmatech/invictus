@@ -65,14 +65,22 @@ export default async function RootLayout({
   const session = isAdminApp ? null : await readSession();
   // Always load storefront chrome data when coming-soon is on — only `/` hides
   // the menu; other routes must keep working with the normal header/footer.
-  const [categories, bannerPayload] = (
+  const [categories, bannerPayload, footerTelegram] = (
     isAdminApp
-      ? [[], { items: [], enabled: true, displayMode: "marquee" }]
+      ? [[], { items: [], enabled: true, displayMode: "marquee" }, { enabled: false, url: null }]
       : await Promise.all([
           djangoJsonSafe<ApiCategory[]>("/api/categories/", []),
           djangoJsonSafe("/api/cms/banners/", { items: [], enabled: true, displayMode: "marquee" }),
+          djangoJsonSafe<{ enabled: boolean; url: string | null }>("/api/cms/footer-telegram/", {
+            enabled: false,
+            url: null,
+          }),
         ])
-  ) as [ApiCategory[], unknown];
+  ) as [
+    ApiCategory[],
+    unknown,
+    { enabled: boolean; url: string | null },
+  ];
   const banners = asBannerRuntime(bannerPayload);
   const shopLinks =
     categories.length > 0
@@ -114,7 +122,10 @@ export default async function RootLayout({
             hideOnComingSoonHome={comingSoon.enabled}
           />
           <main className="flex-1">{children}</main>
-          <ConditionalFooter hideOnComingSoonHome={comingSoon.enabled} />
+          <ConditionalFooter
+            hideOnComingSoonHome={comingSoon.enabled}
+            telegram={footerTelegram}
+          />
         </CartProvider>
       </body>
     </html>

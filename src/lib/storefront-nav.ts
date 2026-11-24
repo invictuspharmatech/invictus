@@ -1,3 +1,4 @@
+/** Default Telegram URL used when staff enable the footer link in CMS settings. */
 export const TELEGRAM_URL = "https://t.me/invictuspharma";
 
 export const NAV_LINK_CLASS =
@@ -35,7 +36,6 @@ export const FOOTER_PRODUCTS: { href: string; label: string }[] = [
 export const FOOTER_COMPANY: { href: string; label: string; external?: boolean }[] = [
   { href: "/affiliate", label: "Affiliate program" },
   { href: "/contact", label: "Contact" },
-  { href: TELEGRAM_URL, label: "Telegram", external: true },
 ];
 
 export const POLICY_LINKS: { href: string; label: string }[] = [

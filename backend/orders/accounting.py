@@ -1,7 +1,8 @@
 from collections import defaultdict
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Iterable
+from zoneinfo import ZoneInfo
 
 from django.db.models import Prefetch, Q
 from django.utils import timezone
@@ -233,6 +234,7 @@ def resolve_warehouse(user, requested: str | None) -> str:
 
 
 def period_window(period: str, now=None):
+    """Calendar bounds kept for callers/tests. Accounting pay periods do not use these."""
     now = now or timezone.now()
     start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     if period == "WEEK":
@@ -240,6 +242,14 @@ def period_window(period: str, now=None):
     elif period == "MONTH":
         start = start.replace(day=1)
     return start
+
+
+# Far-past floor so tiles only truncate on manual AccountingReset, never at midnight.
+PAY_PERIOD_EPOCH = datetime(2000, 1, 1, tzinfo=ZoneInfo("UTC"))
+
+
+def pay_period_floor():
+    return PAY_PERIOD_EPOCH
 
 
 def later(a, b):
@@ -571,7 +581,9 @@ def accounting_response(user, period: str, warehouse_param: str | None) -> dict:
     if period not in ("DAY", "WEEK", "MONTH"):
         period = "DAY"
     warehouse = resolve_warehouse(user, warehouse_param)
-    window_start = period_window(period)
+    # Manual pay period only: calendar day/week/month must NOT auto-zero tiles.
+    # `period` remains the AccountingReset key (legacy rows use DAY).
+    window_start = pay_period_floor()
     resets = {
         row.tile_key: row
         for row in AccountingReset.objects.filter(period=period, warehouse=warehouse)

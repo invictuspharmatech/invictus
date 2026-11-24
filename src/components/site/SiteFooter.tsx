@@ -7,7 +7,16 @@ import {
   FOOTER_PRODUCTS,
 } from "@/lib/storefront-nav";
 
-export function SiteFooter() {
+export function SiteFooter({
+  telegram,
+}: {
+  telegram?: { enabled: boolean; url: string | null } | null;
+}) {
+  const companyLinks = [...FOOTER_COMPANY];
+  if (telegram?.enabled && telegram.url) {
+    companyLinks.push({ href: telegram.url, label: "Telegram", external: true });
+  }
+
   return (
     <footer className="border-t border-border bg-ink/80">
       <div className="mx-auto grid max-w-7xl gap-12 px-6 py-14 lg:grid-cols-[1.4fr_1fr_1fr] lg:items-start lg:px-10">
@@ -38,7 +47,7 @@ export function SiteFooter() {
         <div>
           <h2 className={FOOTER_HEADING_CLASS}>Company</h2>
           <ul className="space-y-2">
-            {FOOTER_COMPANY.map((link) => (
+            {companyLinks.map((link) => (
               <li key={link.href}>
                 {link.external ? (
                   <a href={link.href} className={FOOTER_LINK_CLASS} target="_blank" rel="noreferrer">

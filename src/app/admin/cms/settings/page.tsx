@@ -1,6 +1,7 @@
 import { requireStaff } from "@/lib/auth";
 import { djangoAuthed } from "@/lib/django";
 import { SettingsForm } from "@/components/admin/SettingsForm";
+import { FooterTelegramCard } from "@/components/admin/FooterTelegramCard";
 import type { ApiSetting } from "@/lib/api-types";
 
 export default async function CmsSettingsPage() {
@@ -15,6 +16,7 @@ export default async function CmsSettingsPage() {
         persistent media storage (same as products) so they work on live.
       </p>
       <SettingsForm items={items} />
+      <FooterTelegramCard />
     </div>
   );
 }
