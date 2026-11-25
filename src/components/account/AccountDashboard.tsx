@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { AffiliateApplyButton } from "@/components/shop/AffiliateApplyButton";
 import { useCart } from "@/components/shop/CartProvider";
 import { formatMoney } from "@/lib/constants";
 import { formatOrderStatus } from "@/lib/enums";
@@ -110,13 +109,11 @@ export function AccountDashboard({
   orders,
   orderCount,
   lifetimeSavings,
-  application,
 }: {
   session: SessionUser;
   orders: ApiOrder[];
   orderCount: number;
   lifetimeSavings: number;
-  application: { id: string; status: string } | null;
 }) {
   const router = useRouter();
   const { count, merchandiseTotal } = useCart();
@@ -164,9 +161,7 @@ export function AccountDashboard({
                   Affiliate{session.affiliateCode ? ` · ${session.affiliateCode}` : ""}
                 </span>
               </p>
-            ) : (
-              <AffiliateApplyButton pending={application?.status === "pending"} />
-            )}
+            ) : null}
             <div className="flex flex-wrap gap-x-4 gap-y-2 pt-3">
               <Link href="/account/profile" className="text-sm font-medium text-signal hover:underline">
                 Edit profile

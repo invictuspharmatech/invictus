@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { ChevronDown, Menu } from "lucide-react";
 import { useCart } from "@/components/shop/CartProvider";
-import { HeaderAccountMenu } from "@/components/site/HeaderAccountMenu";
 import { HeaderSearch } from "@/components/site/HeaderSearch";
 import { MobileSlideOut } from "@/components/site/MobileSlideOut";
 import { PromoTicker, type PromoSlide } from "@/components/site/PromoTicker";
@@ -124,7 +123,6 @@ export function SiteHeader({
   hideOnComingSoonHome?: boolean;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { count } = useCart();
   const showAdmin = session ? isFullAdmin(session.role) : false;
   const showManagerDashboard = session ? isStaff(session.role) && !showAdmin : false;
@@ -132,7 +130,6 @@ export function SiteHeader({
   const [shopOpen, setShopOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
   const shop = shopLinks.length > 0 ? shopLinks : SHOP_CATEGORIES;
   const accountHref = session ? "/account" : "/login";
 
@@ -141,7 +138,6 @@ export function SiteHeader({
     setShopOpen(false);
     setFaqOpen(false);
     setToolsOpen(false);
-    setAccountOpen(false);
   }, [pathname]);
 
   if (pathname.startsWith("/admin")) {
@@ -172,7 +168,6 @@ export function SiteHeader({
               ))}
             </Dropdown>
             <Dropdown label="FAQ">
-              <DropLink href="/faq" label="FAQ" />
               <DropLink href={TEST_RESULTS_LINK.href} label={TEST_RESULTS_LINK.label} />
               {POLICY_LINKS.map((item) => (
                 <DropLink key={item.href} href={item.href} label={item.label} />
@@ -196,17 +191,19 @@ export function SiteHeader({
               Cart
               <CartCount count={count} />
             </Link>
-            {session ? (
-              <HeaderAccountMenu
-                session={session}
-                showAdmin={showAdmin}
-                showManagerDashboard={showManagerDashboard}
-              />
-            ) : (
-              <Link href={accountHref} className={NAV_LINK_CLASS}>
-                My account
+            <Link href={accountHref} className={NAV_LINK_CLASS}>
+              My account
+            </Link>
+            {showAdmin ? (
+              <Link href="/admin" className={NAV_LINK_CLASS}>
+                Admin
               </Link>
-            )}
+            ) : null}
+            {showManagerDashboard ? (
+              <Link href="/admin/orders" className={NAV_LINK_CLASS}>
+                Manager dashboard
+              </Link>
+            ) : null}
           </nav>
           <button
             type="button"
@@ -238,9 +235,6 @@ export function SiteHeader({
           ))}
         </MobileAccordion>
         <MobileAccordion label="FAQ" open={faqOpen} onToggle={() => setFaqOpen((value) => !value)}>
-          <Link href="/faq" className={MOBILE_CHILD_LINK_CLASS} onClick={closeMenu}>
-            FAQ
-          </Link>
           <Link href={TEST_RESULTS_LINK.href} className={MOBILE_CHILD_LINK_CLASS} onClick={closeMenu}>
             {TEST_RESULTS_LINK.label}
           </Link>
@@ -274,49 +268,9 @@ export function SiteHeader({
         <Link href="/contact" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
           Contact
         </Link>
-        {session ? (
-          <MobileAccordion
-            label="My account"
-            open={accountOpen}
-            onToggle={() => setAccountOpen((value) => !value)}
-          >
-            <Link href="/account" className={MOBILE_CHILD_LINK_CLASS} onClick={closeMenu}>
-              Account
-            </Link>
-            <Link href="/account/orders" className={MOBILE_CHILD_LINK_CLASS} onClick={closeMenu}>
-              Orders
-            </Link>
-            <Link href="/account/profile" className={MOBILE_CHILD_LINK_CLASS} onClick={closeMenu}>
-              Profile
-            </Link>
-            {session.isAffiliate ? (
-              <Link
-                href="/account/affiliate"
-                className={MOBILE_CHILD_LINK_CLASS}
-                onClick={closeMenu}
-              >
-                Affiliate tracking
-              </Link>
-            ) : null}
-            <button
-              type="button"
-              className={`w-full text-left ${MOBILE_CHILD_LINK_CLASS}`}
-              onClick={() => {
-                closeMenu();
-                void fetch("/api/auth/logout", { method: "POST" }).then(() => {
-                  router.push("/");
-                  router.refresh();
-                });
-              }}
-            >
-              Sign out
-            </button>
-          </MobileAccordion>
-        ) : (
-          <Link href={accountHref} className={MOBILE_LINK_CLASS} onClick={closeMenu}>
-            My account
-          </Link>
-        )}
+        <Link href={accountHref} className={MOBILE_LINK_CLASS} onClick={closeMenu}>
+          My account
+        </Link>
         {showAdmin ? (
           <Link href="/admin" className={MOBILE_LINK_CLASS} onClick={closeMenu}>
             Admin

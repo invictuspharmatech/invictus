@@ -2,12 +2,12 @@ DEFAULT_TEMPLATES = [
     {
         "event_key": "order_placed",
         "name": "Order placed",
-        "description": "Sent when a customer completes checkout.",
+        "description": "Sent when a customer completes checkout. Use {{pay_now_html}} for the Pay with Bitcoin button.",
         "subject": "Order {{order_number}} received",
         "body": """<p>Hi {{customer_name}},</p>
 <p>Thank you for your order <strong>{{order_number}}</strong>.</p>
 <p>Items: {{items}}<br>Merchandise: ${{merchandise_total}}<br>Shipping: ${{shipping_total}}<br>Total: ${{grand_total}}</p>
-<p>Pay with Bitcoin: <a href="{{pay_now_url}}">{{pay_now_url}}</a></p>
+{{pay_now_html}}
 <p>Ship to: {{shipping_address}}</p>
 <p>Warehouse: {{warehouse}}</p>
 <p>— {{site_name}}</p>""",
@@ -59,11 +59,12 @@ DEFAULT_TEMPLATES = [
     {
         "event_key": "order_shipped",
         "name": "Order shipped",
-        "description": "Sent when an order ships.",
+        "description": "Sent when an order is completed/shipped with tracking. Use {{tracking_html}} for the track button.",
         "subject": "Order {{order_number}} has shipped",
         "body": """<p>Hi {{customer_name}},</p>
 <p>Your order <strong>{{order_number}}</strong> has shipped from {{warehouse}}.</p>
 <p>Items: {{items}}</p>
+{{tracking_html}}
 <p>— {{site_name}}</p>""",
         "notify_admin": False,
         "notify_user": True,
@@ -140,12 +141,12 @@ DEFAULT_TEMPLATES = [
     {
         "event_key": "contact_received",
         "name": "Contact form",
-        "description": "Sent when someone submits the contact page.",
+        "description": "Sent when someone submits the contact page. Use Custom list for the inbox (e.g. admin@…). Admin checkbox emails every admin/superuser account.",
         "subject": "Contact: {{subject}}",
         "body": """<p>From: {{user_name}} ({{user_email}})</p>
 <p>Subject: {{subject}}</p>
 <p>{{message}}</p>""",
-        "notify_admin": True,
+        "notify_admin": False,
         "notify_user": True,
         "notify_warehouse_manager": False,
         "sort_order": 60,

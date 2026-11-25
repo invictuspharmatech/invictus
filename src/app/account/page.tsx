@@ -12,7 +12,6 @@ export default async function AccountPage() {
     orders: ApiOrder[];
     orderCount?: number;
     lifetimeSavings?: number;
-    application: { id: string; status: string } | null;
   }>("/api/account/summary/");
 
   return (
@@ -21,7 +20,6 @@ export default async function AccountPage() {
       orders={payload.orders ?? []}
       orderCount={payload.orderCount ?? payload.orders?.length ?? 0}
       lifetimeSavings={payload.lifetimeSavings ?? 0}
-      application={payload.application}
     />
   );
 }

@@ -215,9 +215,9 @@ export default function CartPage() {
       updateQuantity(item.productId, qty);
     };
     const btnClass =
-      "inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center border-0 bg-[#3a1414] text-xl font-bold leading-none text-[#e8c56a] transition hover:bg-[#4a1c1c] disabled:cursor-not-allowed disabled:opacity-40";
+      "inline-flex h-full w-11 shrink-0 cursor-pointer items-center justify-center border-0 bg-[#3a1414] text-xl font-bold leading-none text-[#e8c56a] transition hover:bg-[#4a1c1c] disabled:cursor-not-allowed disabled:opacity-40";
     return (
-      <div className="inline-flex h-11 w-[148px] shrink-0 items-stretch overflow-hidden rounded-md border border-[#6b3220] bg-[#16080a]">
+      <div className="inline-flex h-11 shrink-0 items-stretch overflow-hidden rounded-md border border-[#6b3220] bg-[#16080a]">
         <button
           type="button"
           className={btnClass}
@@ -228,7 +228,7 @@ export default function CartPage() {
           -
         </button>
         <input
-          className="h-11 w-14 shrink-0 border-0 border-x border-[#6b3220] bg-[#080203] px-1 text-center text-base font-semibold text-[#e8c56a] outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="h-full w-14 shrink-0 border-0 border-x border-[#6b3220] bg-[#080203] px-1 text-center text-base font-semibold text-[#e8c56a] outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           type="number"
           inputMode="numeric"
           min={1}

@@ -81,7 +81,7 @@ export default function ContactPage() {
           <div className="tile space-y-4">
             <h2 className="text-lg">Sign in to send a message</h2>
             <p className="text-sm leading-7 text-muted-foreground">
-              The contact form is available to registered accounts. The message is sent from the email on your account.
+              The contact form is available to registered accounts.
             </p>
             <Link href="/login?next=/contact" className="gold-btn inline-flex">
               Sign in

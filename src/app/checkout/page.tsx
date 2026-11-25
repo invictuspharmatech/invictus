@@ -51,6 +51,13 @@ export default function CheckoutPage() {
   const [invoiceLink, setInvoiceLink] = useState<string | null>(null);
   const [placedGroup, setPlacedGroup] = useState("");
   const [accountEmail, setAccountEmail] = useState("");
+  const [shipName, setShipName] = useState("");
+  const [shipLine1, setShipLine1] = useState("");
+  const [shipLine2, setShipLine2] = useState("");
+  const [shipCity, setShipCity] = useState("");
+  const [shipState, setShipState] = useState("");
+  const [shipPostal, setShipPostal] = useState("");
+  const [profileReady, setProfileReady] = useState(false);
 
   const shippingOption = resolveShippingFee(settings, optionId);
   const shippingTotal = items.length > 0 ? shippingOption.fee : 0;
@@ -70,10 +77,33 @@ export default function CheckoutPage() {
     setAppliedCoupons(readSavedCoupons());
     void fetch("/api/auth/me", { credentials: "same-origin" })
       .then(async (response) => (response.ok ? response.json() : null))
-      .then((data: { email?: string } | null) => {
-        if (data?.email) setAccountEmail(data.email);
-      })
-      .catch(() => undefined);
+      .then(
+        (
+          data: {
+            email?: string;
+            name?: string;
+            shippingLine1?: string;
+            shippingLine2?: string;
+            shippingCity?: string;
+            shippingState?: string;
+            shippingPostal?: string;
+          } | null,
+        ) => {
+          if (!data?.email) {
+            setProfileReady(true);
+            return;
+          }
+          setAccountEmail(data.email);
+          if (data.name) setShipName(data.name);
+          if (data.shippingLine1) setShipLine1(data.shippingLine1);
+          if (data.shippingLine2) setShipLine2(data.shippingLine2);
+          if (data.shippingCity) setShipCity(data.shippingCity);
+          if (data.shippingState) setShipState(data.shippingState);
+          if (data.shippingPostal) setShipPostal(data.shippingPostal);
+          setProfileReady(true);
+        },
+      )
+      .catch(() => setProfileReady(true));
   }, [router]);
 
   useEffect(() => {
@@ -330,14 +360,22 @@ export default function CheckoutPage() {
       <form onSubmit={onSubmit} className="grid gap-8 lg:grid-cols-2">
         <div className="tile space-y-4">
           <h2 className="text-lg">Shipping</h2>
+          {accountEmail && profileReady ? (
+            <p className="text-xs text-muted-foreground">
+              Prefills from your saved profile address — edit here if this order needs a different one.
+            </p>
+          ) : null}
           <input
             className="field"
             name="name"
             placeholder="Full name"
             required
-            onInput={(event) => {
-              event.currentTarget.value = event.currentTarget.value.replace(/[^A-Za-z ]/g, "").replace(/ {2,}/g, " ");
-            }}
+            value={shipName}
+            onChange={(event) =>
+              setShipName(
+                event.target.value.replace(/[^A-Za-z ]/g, "").replace(/ {2,}/g, " "),
+              )
+            }
           />
           <input
             className="field"
@@ -349,13 +387,52 @@ export default function CheckoutPage() {
             readOnly={Boolean(accountEmail)}
             key={accountEmail || "guest-email"}
           />
-          <input className="field" name="line1" placeholder="Address" required />
-          <input className="field" name="line2" placeholder="Apartment, suite (optional)" />
+          <input
+            className="field"
+            name="line1"
+            placeholder="Address"
+            required
+            value={shipLine1}
+            onChange={(event) => setShipLine1(event.target.value)}
+            autoComplete="shipping address-line1"
+          />
+          <input
+            className="field"
+            name="line2"
+            placeholder="Apartment, suite (optional)"
+            value={shipLine2}
+            onChange={(event) => setShipLine2(event.target.value)}
+            autoComplete="shipping address-line2"
+          />
           <div className="grid grid-cols-2 gap-3">
-            <input className="field" name="city" placeholder="City" required />
-            <input className="field" name="state" placeholder="State" required />
+            <input
+              className="field"
+              name="city"
+              placeholder="City"
+              required
+              value={shipCity}
+              onChange={(event) => setShipCity(event.target.value)}
+              autoComplete="shipping address-level2"
+            />
+            <input
+              className="field"
+              name="state"
+              placeholder="State"
+              required
+              value={shipState}
+              onChange={(event) => setShipState(event.target.value)}
+              autoComplete="shipping address-level1"
+            />
           </div>
-          <input className="field" name="postal" placeholder="ZIP" required />
+          <input
+            className="field"
+            name="postal"
+            placeholder="ZIP"
+            required
+            value={shipPostal}
+            onChange={(event) => setShipPostal(event.target.value)}
+            autoComplete="shipping postal-code"
+          />
           {fees.length > 1 ? (
             <label className="text-sm">
               Shipping method

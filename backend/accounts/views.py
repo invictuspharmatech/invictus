@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from accounts.blocked_domains import blocks, normalize
 from accounts.cloudflare_blocks import queue_lift, queue_enforce_current, save_enabled, status_payload, enabled as cloudflare_enabled, configured as cloudflare_configured
 from accounts.password_reset_blocks import BLOCK_MESSAGE, block, is_blocked, protects
-from accounts.guards import person_name_error
+from accounts.guards import markup_error, person_name_error
 from accounts.models import AffiliateApplication, BlockedEmailDomain, PasswordResetIpBlock, SessionEpoch, User
 from orders.contact_blocks import (
     active_blocked_rows,
@@ -168,11 +168,47 @@ def me_view(request):
     clash = User.objects.filter(email=email).exclude(pk=user.pk)
     if clash.exists():
         return Response({"error": "An account with that email already exists."}, status=409)
+
+    phone = str(request.data.get("phone") or "").strip()[:64]
+    line1 = str(request.data.get("shippingLine1") or request.data.get("line1") or "").strip()[:255]
+    line2 = str(request.data.get("shippingLine2") or request.data.get("line2") or "").strip()[:255]
+    city = str(request.data.get("shippingCity") or request.data.get("city") or "").strip()[:120]
+    state = str(request.data.get("shippingState") or request.data.get("state") or "").strip()[:120]
+    postal = str(request.data.get("shippingPostal") or request.data.get("postal") or "").strip()[:40]
+    country = (
+        str(request.data.get("shippingCountry") or request.data.get("country") or user.shipping_country or "US")
+        .strip()
+        .upper()[:8]
+        or "US"
+    )
+    text_error = markup_error(line1, line2, city, state, postal, phone)
+    if text_error:
+        return Response({"error": text_error}, status=400)
+
     user.name = name
     user.email = email
-    user.save(update_fields=["name", "email"])
+    user.phone = phone
+    user.shipping_line1 = line1
+    user.shipping_line2 = line2
+    user.shipping_city = city
+    user.shipping_state = state
+    user.shipping_postal = postal
+    user.shipping_country = country
+    user.save(
+        update_fields=[
+            "name",
+            "email",
+            "phone",
+            "shipping_line1",
+            "shipping_line2",
+            "shipping_city",
+            "shipping_state",
+            "shipping_postal",
+            "shipping_country",
+        ]
+    )
     token = issue_token(user)
-    return Response({"ok": True, "token": token, "user": session_payload(user)})
+    return Response({"ok": True, "token": token, "user": SessionUserSerializer(user).data})
 
 
 @api_view(["POST"])

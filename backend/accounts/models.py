@@ -51,6 +51,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     name = models.CharField(max_length=255)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.CUSTOMER)
     phone = models.CharField(max_length=64, blank=True)
+    shipping_line1 = models.CharField(max_length=255, blank=True)
+    shipping_line2 = models.CharField(max_length=255, blank=True)
+    shipping_city = models.CharField(max_length=120, blank=True)
+    shipping_state = models.CharField(max_length=120, blank=True)
+    shipping_postal = models.CharField(max_length=40, blank=True)
+    shipping_country = models.CharField(max_length=8, blank=True, default="US")
     is_affiliate = models.BooleanField(default=False)
     affiliate_code = models.CharField(max_length=32, unique=True, null=True, blank=True)
     commission_type = models.CharField(

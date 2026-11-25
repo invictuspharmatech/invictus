@@ -4,7 +4,7 @@ import logging
 import re
 from dataclasses import dataclass
 from email.utils import formataddr
-from html import unescape
+from html import escape, unescape
 from typing import Any, Literal, assert_never
 
 from django.core.mail import EmailMultiAlternatives, get_connection
@@ -199,20 +199,40 @@ def order_context(order) -> dict[str, Any]:
         if row.warehouse not in warehouses:
             warehouses.append(row.warehouse)
     pay_now_url = ""
+    pay_now_html = ""
     try:
-        from orders.pay_token import checkout_url
+        from orders.pay_token import checkout_url, order_may_pay
 
-        pay_now_url = checkout_url(primary)
+        if order_may_pay(primary):
+            pay_now_url = checkout_url(primary)
+            safe_url = escape(pay_now_url, quote=True)
+            # Same pattern as GreatLife: branded button, no raw URL text in the body.
+            pay_now_html = (
+                '<div style="margin:20px 0 16px;padding:16px 18px;border-radius:12px;'
+                "background:rgba(139,26,26,0.08);border:1px solid rgba(196,160,106,0.45);\">"
+                '<p style="margin:0 0 12px;line-height:1.5;color:#610c0d;font-size:15px;font-weight:600;">'
+                "Pay with Bitcoin</p>"
+                '<p style="margin:0 0 14px;line-height:1.55;color:#3a1414;font-size:14px;">'
+                "Open the invoice on our site and complete payment there "
+                "(no raw payment URL in this email).</p>"
+                f'<a href="{safe_url}" style="display:inline-block;background:#8B1A1A;'
+                "color:#ffffff!important;text-decoration:none;padding:12px 22px;"
+                'border-radius:10px;font-weight:600;font-size:14px;">Pay now</a>'
+                "</div>"
+            )
     except Exception:
         pay_now_url = ""
+        pay_now_html = ""
     grand_total = merchandise_total + shipping_total
+    tracking_number, tracking_url, tracking_html = _tracking_context(order)
+    notify_email = order_notify_email(order)
     return {
         "site_name": SITE_NAME,
         "order_number": primary.group_id or order.order_number,
         "customer_name": order.customer_name,
-        "customer_email": order.customer_email,
+        "customer_email": notify_email,
         "user_name": order.customer_name,
-        "user_email": order.customer_email,
+        "user_email": notify_email,
         "status": primary.status,
         "warehouse": " / ".join(warehouse_label(code) for code in warehouses) or warehouse_label(order.warehouse),
         "warehouse_code": primary.warehouse,
@@ -221,6 +241,10 @@ def order_context(order) -> dict[str, Any]:
         "shipping_total": f"{shipping_total:.2f}",
         "items": ", ".join(f"{item.name} × {item.quantity}" for item in items),
         "pay_now_url": pay_now_url,
+        "pay_now_html": pay_now_html,
+        "tracking_number": tracking_number,
+        "tracking_url": tracking_url,
+        "tracking_html": tracking_html,
         "shipping_address": ", ".join(
             part
             for part in [
@@ -235,6 +259,63 @@ def order_context(order) -> dict[str, Any]:
     }
 
 
+def order_notify_email(order) -> str:
+    """Prefer the linked account email (checkout is locked to it); fall back to order email."""
+    user = getattr(order, "user", None)
+    account = (getattr(user, "email", None) or "").strip()
+    if account:
+        return account
+    return (order.customer_email or "").strip()
+
+
+def _tracking_context(order) -> tuple[str, str, str]:
+    tracking = (order.tracking_number or "").strip()
+    url = ""
+    label = None
+    labels = list(order.shipping_labels.all()) if hasattr(order, "shipping_labels") else []
+    if labels:
+        # Prefer the newest label that has a tracking number.
+        for row in sorted(labels, key=lambda item: item.created_at or timezone_min(), reverse=True):
+            if (row.tracking_number or "").strip():
+                label = row
+                break
+        if label is None and labels:
+            label = sorted(labels, key=lambda item: item.created_at or timezone_min(), reverse=True)[0]
+    if label:
+        tracking = tracking or (label.tracking_number or "").strip()
+        url = (label.tracking_url or "").strip()
+    if tracking and not url:
+        try:
+            from orders.bitcoinpostage import tracking_url_for
+
+            url = tracking_url_for("USPS", tracking)
+        except Exception:
+            url = ""
+    if not tracking:
+        return "", "", ""
+    safe_number = escape(tracking)
+    if url:
+        safe_url = escape(url, quote=True)
+        html = (
+            '<div style="margin:16px 0;padding:14px 16px;border-radius:10px;'
+            "background:rgba(139,26,26,0.06);border:1px solid rgba(196,160,106,0.4);\">"
+            f'<p style="margin:0 0 10px;color:#610c0d;font-weight:600;">Tracking number: {safe_number}</p>'
+            f'<a href="{safe_url}" style="display:inline-block;background:#8B1A1A;color:#ffffff!important;'
+            "text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600;font-size:14px;\">"
+            "Track package</a></div>"
+        )
+    else:
+        html = f"<p>Tracking number: <strong>{safe_number}</strong></p>"
+    return tracking, url, html
+
+
+def timezone_min():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    return datetime(1970, 1, 1, tzinfo=ZoneInfo("UTC"))
+
+
 def resolve_recipients(
     template: EmailTemplate,
     settings: EmailSettings,
@@ -242,6 +323,14 @@ def resolve_recipients(
     user_email: str | None = None,
     warehouse: str | None = None,
 ) -> list[str]:
+    """Build the To: list strictly from template recipient choices.
+
+    Rules:
+    - Enabled template with no boxes checked and empty custom list → nobody (no send).
+    - Custom list only → only those addresses (never default admin/customer/warehouse).
+    - Checked boxes + custom list → union of all selected targets.
+    - Checked boxes alone → only those role targets.
+    """
     recipients: list[str] = []
     if template.notify_admin:
         staff_emails = User.objects.filter(
@@ -260,6 +349,7 @@ def resolve_recipients(
         else:
             recipients.extend(parse_emails(settings.warehouse_1_emails))
             recipients.extend(parse_emails(settings.warehouse_2_emails))
+    # Manual list is additive only — never implies admin/user defaults.
     recipients.extend(parse_emails(template.custom_emails))
     return parse_emails(",".join(recipients))
 
@@ -366,6 +456,11 @@ def send_event(
             warehouse=warehouse or context.get("warehouse_code"),
         )
         if not recipients:
+            # Enabled alone is not enough — need at least one checked role or a custom address.
+            logger.info(
+                "Skipping %s email: no recipients (unchecked roles and empty custom list).",
+                event_key,
+            )
             return
         subject = render_tokens(template.subject, context)
         body = render_tokens(template.body, context)
@@ -382,10 +477,11 @@ def send_event(
 
 
 def send_order_event(event_key: str, order) -> None:
+    context = order_context(order)
     send_event(
         event_key,
-        order_context(order),
-        user_email=order.customer_email,
+        context,
+        user_email=context.get("customer_email") or order_notify_email(order),
         warehouse=order.warehouse,
     )
 

@@ -1147,6 +1147,7 @@ def admin_orders_bulk_restore_view(request):
 @permission_classes([IsPortalStaff])
 def admin_order_tracking_view(request, pk):
     from orders.bitcoinpostage import tracking_url_for
+    from orders.complete_on_label import mark_completed_with_tracking, maybe_send_completed_mail
     from orders.models import ShippingLabel
 
     order = Order.objects.filter(pk=pk).first()
@@ -1157,12 +1158,8 @@ def admin_order_tracking_view(request, pk):
         return Response({"error": "Not found."}, status=404)
     tracking = str(request.data.get("trackingNumber") or "").strip()
     carrier = str(request.data.get("carrier") or "USPS").strip() or "USPS"
-    order.tracking_number = tracking
     if tracking:
-        order.status = Order.Status.COMPLETED
-        stamp_if_completed(order)
-    order.save()
-    if tracking:
+        previous = mark_completed_with_tracking(order, tracking=tracking)
         ShippingLabel.objects.create(
             order=order,
             tracking_number=tracking,
@@ -1170,6 +1167,10 @@ def admin_order_tracking_view(request, pk):
             carrier=carrier.upper(),
             source=ShippingLabel.Source.MANUAL,
         )
+        maybe_send_completed_mail(order, previous)
+    else:
+        order.tracking_number = ""
+        order.save(update_fields=["tracking_number", "updated_at"])
     return Response(OrderSerializer(order).data)
 
 

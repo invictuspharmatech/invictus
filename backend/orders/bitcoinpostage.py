@@ -684,12 +684,11 @@ def create_label(order: Order, options: dict) -> ShippingLabel:
         source=ShippingLabel.Source.BTCPOSTAGE,
         raw=result,
     )
-    if tracking:
-        order.tracking_number = tracking
-    order.status = Order.Status.SHIPPED
-    if not order.shipped_at:
-        order.shipped_at = timezone.now()
-    order.save(update_fields=["tracking_number", "status", "shipped_at", "updated_at"])
+    from orders.complete_on_label import mark_completed_with_tracking, maybe_send_completed_mail
+
+    # GreatLife: label/tracking completion marks the order completed and emails the customer.
+    previous = mark_completed_with_tracking(order, tracking=tracking or "")
+    maybe_send_completed_mail(order, previous)
     return label
 
 

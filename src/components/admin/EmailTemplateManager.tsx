@@ -41,15 +41,19 @@ export function EmailTemplateManager({ items }: { items: ApiEmailTemplate[] }) {
       <div>
         <h2 className="display-font text-2xl">Templates and recipients</h2>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-          Enable or disable each notification, then choose who gets it: admins, the
-          customer, warehouse managers, a custom list, or any combination. The inner
-          body sits inside the main Invictus email template. Placeholders:{" "}
+          Enable a template, then choose recipients. No checked boxes and an empty custom
+          list means nobody is emailed. Custom list alone goes only to those addresses (not
+          default admins/customers). Checked boxes plus custom list go to all of them. The
+          inner body sits inside the main Invictus email template. Placeholders:{" "}
           <code>{"{{customer_name}}"}</code>, <code>{"{{order_number}}"}</code>,{" "}
           <code>{"{{status}}"}</code>, <code>{"{{warehouse}}"}</code>,{" "}
           <code>{"{{grand_total}}"}</code>, <code>{"{{items}}"}</code>,{" "}
           <code>{"{{user_email}}"}</code>, <code>{"{{subject}}"}</code>,{" "}
           <code>{"{{message}}"}</code>, <code>{"{{affiliate_code}}"}</code>,{" "}
-          <code>{"{{reset_url}}"}</code>, <code>{"{{expires_hours}}"}</code>.
+          <code>{"{{reset_url}}"}</code>, <code>{"{{expires_hours}}"}</code>,{" "}
+          <code>{"{{pay_now_html}}"}</code> (Pay with Bitcoin button),{" "}
+          <code>{"{{pay_now_url}}"}</code>, <code>{"{{tracking_html}}"}</code>,{" "}
+          <code>{"{{tracking_number}}"}</code>.
         </p>
       </div>
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
@@ -76,9 +80,9 @@ export function EmailTemplateManager({ items }: { items: ApiEmailTemplate[] }) {
             Recipients
           </p>
           <div className="flex flex-wrap gap-4 text-sm">
-            <label className="flex items-center gap-2">
+            <label className="flex items-center gap-2" title="Every active Admin and Superuser account email">
               <input name="notifyAdmin" type="checkbox" defaultChecked={item.notifyAdmin} />
-              Admin
+              All admin accounts
             </label>
             <label className="flex items-center gap-2">
               <input name="notifyUser" type="checkbox" defaultChecked={item.notifyUser} />
@@ -94,13 +98,17 @@ export function EmailTemplateManager({ items }: { items: ApiEmailTemplate[] }) {
             </label>
           </div>
           <label className="grid gap-1 text-sm">
-            Custom list
+            Custom list (manual)
             <textarea
               className="field min-h-16"
               name="customEmails"
-              placeholder="Extra emails, comma-separated"
+              placeholder="e.g. admin@invictuspharma.net — optional"
               defaultValue={item.customEmails}
             />
+            <span className="text-xs text-muted-foreground">
+              Manual only → just these addresses. Manual + checked boxes → both. Nothing checked
+              and empty list → email is not sent.
+            </span>
           </label>
           <input className="field" name="subject" defaultValue={item.subject} required />
           <label className="grid gap-1 text-sm">

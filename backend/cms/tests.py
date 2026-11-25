@@ -1,8 +1,15 @@
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
-from cms.mailer import bulk_profile, mail_channel_ready, profiles_for_send, transactional_profile
+from cms.mailer import (
+    bulk_profile,
+    mail_channel_ready,
+    profiles_for_send,
+    resolve_recipients,
+    transactional_profile,
+)
 from cms.peptide_calculator import compute_syringe_ml, format_syringe_ml
 
 
@@ -99,3 +106,56 @@ class DualSmtpRoutingTests(SimpleTestCase):
         settings = _settings(smtp_host="", fallback_transactional_to_bulk=False)
         self.assertFalse(mail_channel_ready(settings, "transactional"))
         self.assertEqual(transactional_profile(settings).configured, False)
+
+
+def _template(**overrides):
+    base = dict(
+        notify_admin=False,
+        notify_user=False,
+        notify_warehouse_manager=False,
+        custom_emails="",
+    )
+    base.update(overrides)
+    return SimpleNamespace(**base)
+
+
+def _email_settings(**overrides):
+    base = dict(
+        extra_admin_emails="staff-extra@example.com",
+        warehouse_1_emails="w1@example.com",
+        warehouse_2_emails="w2@example.com",
+    )
+    base.update(overrides)
+    return SimpleNamespace(**base)
+
+
+class RecipientRulesTests(SimpleTestCase):
+    def test_enabled_with_no_targets_sends_to_nobody(self):
+        with patch("cms.mailer.User.objects.filter") as filtered:
+            result = resolve_recipients(
+                _template(),
+                _email_settings(),
+                user_email="customer@example.com",
+            )
+        self.assertEqual(result, [])
+        filtered.assert_not_called()
+
+    def test_custom_list_only_skips_admin_and_user(self):
+        with patch("cms.mailer.User.objects.filter") as filtered:
+            result = resolve_recipients(
+                _template(custom_emails="inbox@invictuspharma.net"),
+                _email_settings(),
+                user_email="customer@example.com",
+            )
+        self.assertEqual(result, ["inbox@invictuspharma.net"])
+        filtered.assert_not_called()
+
+    def test_custom_plus_user_combines(self):
+        with patch("cms.mailer.User.objects.filter") as filtered:
+            result = resolve_recipients(
+                _template(notify_user=True, custom_emails="inbox@invictuspharma.net"),
+                _email_settings(),
+                user_email="customer@example.com",
+            )
+        self.assertEqual(result, ["customer@example.com", "inbox@invictuspharma.net"])
+        filtered.assert_not_called()
