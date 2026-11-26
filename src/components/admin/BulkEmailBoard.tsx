@@ -378,11 +378,6 @@ export function BulkEmailBoard() {
     <div className="space-y-8">
       <div>
         <h1 className="display-font text-3xl">Bulk email</h1>
-        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-          Select customers, paste addresses, or upload a CSV. Messages send in bursts, then pause so the mailbox
-          is not flooded. You can also schedule a send for later. Use <code>{"{{recipient_name}}"}</code> and{" "}
-          <code>{"{{recipient_email}}"}</code> in the subject, title, or body.
-        </p>
       </div>
       {error ? <p className="text-sm text-brand-red">{error}</p> : null}
       {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
@@ -451,8 +446,7 @@ export function BulkEmailBoard() {
           </label>
           {selectAllDb ? (
             <p className="text-sm text-muted-foreground">
-              All matching active users in the database will be included (
-              {filteredUsers.length} visible matches). Inactive accounts are skipped.
+              {filteredUsers.length} visible matches.
             </p>
           ) : (
             <p className="text-sm text-muted-foreground">
@@ -579,12 +573,6 @@ export function BulkEmailBoard() {
                 placeholder="Write your email message…"
               />
             </label>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Type like a normal message — press Enter for a new line. The branded
-              Invictus template wraps this automatically. Placeholders such as{" "}
-              <code className="rounded bg-muted px-1">{"{{recipient_name}}"}</code> work
-              in the text.
-            </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <label className="grid gap-1 text-sm">

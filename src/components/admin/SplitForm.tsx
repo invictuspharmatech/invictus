@@ -99,11 +99,6 @@ export function SplitForm({ split }: { split: RevenueSplit }) {
   return (
     <section className="tile mt-8">
       <h2 className="text-lg">Revenue split percentages</h2>
-      <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-        These shares are used for accounting. Defaults are Admin 25% / Party 1 60% / Party 2 15%
-        on Warehouse 1 and Admin 25% / Party 1 0% / Party 2 75% on Warehouse 2. Restore defaults
-        anytime. Each warehouse must total 100% and cannot go over.
-      </p>
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         {FIELDS.map((group) => {
           const total = group.warehouse === "Warehouse 1" ? w1Total : w2Total;

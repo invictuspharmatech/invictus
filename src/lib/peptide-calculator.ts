@@ -48,7 +48,7 @@ export function doseBounds(unit: DoseUnit) {
   }
 }
 
-/** Great Life syringe volume: dose / vial mass × bacteriostatic water (ml). */
+/** Syringe volume: dose / vial mass × bacteriostatic water (ml). */
 export function computeSyringeMl(
   vialUnit: VialUnit,
   vialAmt: number,

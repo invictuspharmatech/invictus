@@ -58,7 +58,7 @@ SECONDARY_SETTING_KEYS = {
 PROFILES = ("primary", "secondary")
 INVOICE_META_KEY = "_invictusBtcPay"
 
-# Same set GreatLife/WooCommerce requests via /api-keys/authorize (webhook included).
+# Permissions requested via /api-keys/authorize (webhook included).
 AUTHORIZE_PERMISSIONS = [
     "btcpay.store.canviewinvoices",
     "btcpay.store.cancreateinvoice",
@@ -257,7 +257,7 @@ def checkout_window_closed(order: Order) -> bool:
 
 
 def _store_path(store_id: str, suffix: str = "") -> str:
-    """Match GreatLife/Greenfield SDK: URL-encode store id in API paths."""
+    """URL-encode store id in Greenfield API paths."""
     encoded = urllib.parse.quote(str(store_id or "").strip(), safe="")
     return f"/api/v1/stores/{encoded}{suffix}"
 
@@ -279,7 +279,7 @@ def _request(method: str, path: str, payload: dict | None = None, config: dict |
     url = cfg["server_url"].rstrip("/") + path
     body = None if payload is None else json.dumps(payload).encode()
     headers = {
-        # Greenfield / GreatLife: Authorization: token <apiKey>
+        # Greenfield: Authorization: token <apiKey>
         "Authorization": f"token {cfg['api_key']}",
         "Accept": "application/json",
     }
@@ -489,7 +489,7 @@ def create_invoice(order: Order) -> BtcInvoice:
 
     from orders.pay_token import checkout_url
 
-    # Match GreatLife Greenfield createInvoice: amount + currency + metadata.orderId/buyerEmail + checkout.
+    # Greenfield createInvoice: amount + currency + metadata.orderId/buyerEmail + checkout.
     order_id = str(primary.order_number).strip()
     payload = {
         "amount": f"{amount:.2f}",
@@ -840,7 +840,7 @@ def test_connection(profile: str | None = "primary") -> dict:
 
 
 def webhook_status(profile: str | None = "primary") -> dict:
-    """GreatLife-aligned status: trust saved webhook, soft-fail list errors."""
+    """Webhook status: trust saved webhook, soft-fail list errors."""
     code = normalize_profile(profile)
     keys = _keys_for_profile(code)
     if not is_configured(code):
@@ -859,7 +859,7 @@ def webhook_status(profile: str | None = "primary") -> dict:
 
     status, data = _request("GET", _store_path(cfg["store_id"], "/webhooks"), None, cfg)
     if status >= 400:
-        # GreatLife: auth/list failures become a soft "No webhook setup, yet."
+        # Auth/list failures become a soft "No webhook setup, yet."
         # (except hard unauthenticated), instead of a repeating permission alarm.
         if status == 401:
             return {
@@ -917,7 +917,7 @@ def _persist_webhook(data: dict, url: str, profile: str | None = "primary") -> d
 
 
 def setup_webhook(profile: str | None = "primary") -> dict:
-    """Create store webhook like GreatLife (specific events, then everything=true fallback)."""
+    """Create store webhook (specific events, then everything=true fallback)."""
     code = normalize_profile(profile)
     keys = _keys_for_profile(code)
     if not is_configured(code):
@@ -965,7 +965,7 @@ def setup_webhook(profile: str | None = "primary") -> dict:
     if status < 400 and isinstance(data, dict) and data.get("id"):
         return _persist_webhook(data, url, code)
 
-    # GreatLife HTTP fallback: create with everything=true when specific-event create fails.
+    # HTTP fallback: create with everything=true when specific-event create fails.
     fallback_payload = {
         "enabled": True,
         "automaticRedelivery": True,

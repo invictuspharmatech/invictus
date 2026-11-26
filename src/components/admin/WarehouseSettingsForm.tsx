@@ -77,30 +77,18 @@ export function WarehouseSettingsForm({ settings }: { settings: ApiWarehouseSett
         <input name="splitEnabled" type="checkbox" defaultChecked={settings.splitEnabled} />
         <span>
           <strong>Allow warehouse splits</strong>
-          <span className="mt-1 block text-muted-foreground">
-            Master switch. Off means each product stays with its home warehouse.
-          </span>
         </span>
       </label>
       <label className="flex items-start gap-3 text-sm">
         <input name="autoSplitEnabled" type="checkbox" defaultChecked={settings.autoSplitEnabled} />
         <span>
           <strong>Auto-split on shortage</strong>
-          <span className="mt-1 block text-muted-foreground">
-            If the home warehouse does not have enough quantity, leftover units ship from the other
-            warehouse. Customer shipping is still charged once; the fee is always split 50/50
-            between W1 and W2 for warehouse accounting.
-          </span>
         </span>
       </label>
       <label className="flex items-start gap-3 text-sm">
         <input name="manualMoveEnabled" type="checkbox" defaultChecked={settings.manualMoveEnabled} />
         <span>
           <strong>Admin manual moves</strong>
-          <span className="mt-1 block text-muted-foreground">
-            Admins can move some or all items on an order to the other warehouse. Shipping stays
-            split 50/50 between warehouses for accounting.
-          </span>
         </span>
       </label>
       <label className="flex items-start gap-3 text-sm">
@@ -111,10 +99,6 @@ export function WarehouseSettingsForm({ settings }: { settings: ApiWarehouseSett
         />
         <span>
           <strong>Warehouse requests</strong>
-          <span className="mt-1 block text-muted-foreground">
-            A warehouse can ask the other for stock or to take order items, without seeing the other
-            warehouse’s counts. The other warehouse or an admin can accept or reject.
-          </span>
         </span>
       </label>
       {error ? <p className="text-sm text-red-400">{error}</p> : null}

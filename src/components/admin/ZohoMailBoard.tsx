@@ -286,9 +286,6 @@ export function ZohoMailBoard() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="display-font text-3xl">Zoho Mail</h1>
-          <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-            Connect the shop Zoho mailbox and manage inbox / sent mail from this dashboard.
-          </p>
         </div>
         <Link href="/admin/cms/email" className="ghost-btn">
           SMTP & templates

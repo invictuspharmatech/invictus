@@ -14,10 +14,6 @@ export default async function AdminProductSkusPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="display-font text-3xl">Generate SKUs</h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Assign <span className="font-mono">IP-{"{ABBR}"}-001</span> style SKUs for an entire
-            category. Numbers continue from the highest existing SKU for that abbreviation.
-          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href="/admin/categories" className="ghost-btn">

@@ -81,9 +81,6 @@ export default function BlockedDomainsPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="display-font text-3xl">Blocked email domains</h1>
-          <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-            Add a domain such as fldubai.com. A person who registers with that domain, or a subdomain of it, still gets an account and sees the normal message that a verification email was sent. No verification email is sent, and the account stays inactive until an admin activates it.
-          </p>
         </div>
         <Link href="/admin/users" className="ghost-btn">
           Back to users
@@ -150,9 +147,6 @@ export default function BlockedDomainsPage() {
 
       <section className="tile mt-8">
         <h2 className="text-lg">Blocked password-reset IPs</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The first password-reset request for any @invictuspharma.net address is refused. No email is sent, and that public IP stays blocked until you remove it. When the site-wide block is on, Remove also lifts that block if this IP is not still blocked from the contact form.
-        </p>
         {loading ? <p className="mt-3 text-sm text-muted-foreground">Loading…</p> : null}
         {!loading && resetBlocks.length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">No password-reset IPs are blocked.</p>

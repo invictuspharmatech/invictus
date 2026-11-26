@@ -12,7 +12,7 @@ from cms.policy_copy import QUALITY_GUARANTEE_HTML, PROCESSING_SHIPPING_HTML, TE
 from orders.models import Order, OrderItem
 
 STAFF = [
-    # Invictus-only staff. Never import Great Life customers or mailing lists.
+    # Invictus-only staff. Never import external customers or mailing lists.
     ("super@invictuspharma.net", "Super User", User.Role.SUPERUSER, "InvictusSuper!2026"),
     ("admin1@invictuspharma.net", "Admin One", User.Role.ADMIN, "AdminOne!2026"),
     ("admin2@invictuspharma.net", "Admin Two", User.Role.ADMIN, "AdminTwo!2026"),

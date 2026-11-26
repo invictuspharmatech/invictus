@@ -9,7 +9,7 @@ RUN apk add --no-cache libc6-compat openssl
 ARG DJANGO_API_URL=http://backend:8000
 ARG NEXT_PUBLIC_SITE_URL=https://invictuspharma.net
 ARG NEXT_PUBLIC_SITE_NAME="Invictus Pharma"
-ARG IMAGE_ORIGIN=https://greatlifepharma.com
+ARG IMAGE_ORIGIN=
 ARG AUTH_SECRET
 # Prisma schema still references DATABASE_URL; app data lives in Django/MySQL.
 ARG DATABASE_URL=file:./prisma/build.db

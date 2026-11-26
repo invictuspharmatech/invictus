@@ -349,7 +349,7 @@ def _visible_users(actor):
 
 
 def _filtered_users(actor, params):
-    """GreatLife-style list filters: search, role, active status."""
+    """List filters: search, role, active status."""
     qs = _visible_users(actor).order_by("-created_at", "email")
     search = str(params.get("search") or "").strip()
     if search:

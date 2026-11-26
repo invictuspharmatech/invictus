@@ -13,9 +13,6 @@ export default async function AdminUsersPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="display-font text-3xl">Users</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Search by name or email, then filter by role and status.
-          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {isSuperuser(staff.role) ? <SignOutAllUsers /> : null}

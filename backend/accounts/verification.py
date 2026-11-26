@@ -37,6 +37,24 @@ def login_gate(user: User) -> str:
     return "resend"
 
 
+def _verification_button_html(url: str) -> str:
+    from html import escape
+
+    safe_url = escape(url, quote=True)
+    return (
+        '<div style="margin:20px 0 16px;padding:16px 18px;border-radius:12px;'
+        "background:rgba(139,26,26,0.08);border:1px solid rgba(196,160,106,0.45);\">"
+        '<p style="margin:0 0 12px;line-height:1.5;color:#610c0d;font-size:15px;font-weight:600;">'
+        "Verify your email</p>"
+        '<p style="margin:0 0 14px;line-height:1.55;color:#3a1414;font-size:14px;">'
+        "Click the Verify E-mail button to activate your account.</p>"
+        f'<a href="{safe_url}" style="display:inline-block;background:#8B1A1A;'
+        "color:#ffffff!important;text-decoration:none;padding:12px 22px;"
+        'border-radius:10px;font-weight:600;font-size:14px;">Verify E-mail</a>'
+        "</div>"
+    )
+
+
 def _deliver(user: User, url: str) -> bool:
     from cms.mailer import ensure_default_templates, get_email_settings, mail_channel_ready, render_tokens, resolve_recipients, send_message
 
@@ -55,6 +73,7 @@ def _deliver(user: User, url: str) -> bool:
             "user_name": user.name or user.email,
             "user_email": user.email,
             "verification_url": url,
+            "verification_html": _verification_button_html(url),
             "expires_minutes": EXPIRES_MINUTES,
         }
         recipients = resolve_recipients(template, settings_row, user_email=user.email)

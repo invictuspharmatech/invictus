@@ -144,7 +144,7 @@ class CustomerOrderGroupTests(SimpleTestCase):
         self.assertEqual(grouped[0]["btcInvoice"]["checkoutLink"], "https://pay.example/1")
 
 
-class GreatLifeTotalsTests(SimpleTestCase):
+class CheckoutTotalsTests(SimpleTestCase):
     def test_two_warehouse_cart_charges_shipping_once(self):
         from orders.totals import allocate_weighted, customer_checkout_totals, equal_warehouse_shipping_shares
 
@@ -236,7 +236,7 @@ class GreatLifeTotalsTests(SimpleTestCase):
         self.assertEqual(triplet["grand_total"], 18)
 
 
-class GreatLifeDashboardStatsTests(SimpleTestCase):
+class DashboardStatsTests(SimpleTestCase):
     def test_week_bounds_are_monday_through_sunday(self):
         from datetime import datetime
         from zoneinfo import ZoneInfo

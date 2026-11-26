@@ -13,7 +13,7 @@ const PACKAGE_PRESETS = [
   { key: "envelope", label: '10" × 14" envelope', length: "10", width: "14", height: "0.75" },
 ] as const;
 
-/** Align with GreatLife WooCommerce plugin packagetype_usps options (common subset). */
+/** Common USPS package type options for Bitcoin Postage. */
 const USPS_PACKAGE_TYPES = [
   { value: "USPScustom", label: "Custom Box/Package (Most Common)" },
   { value: "Flat", label: "Flat" },
@@ -126,7 +126,7 @@ function emptyPackage(): PackageForm {
   return {
     carrier: "usps",
     packageType: "USPScustom",
-    // GreatLife leaves service empty until get-rates returns a quote to pick.
+    // Leave service empty until get-rates returns a quote to pick.
     service: "",
     weightLbs: "1",
     weightOz: "0",
@@ -305,7 +305,7 @@ function createPurchaseBody(
   const dims = flat
     ? flatRateDimensions(pkg.packageType)
     : { length: pkg.length, width: pkg.width, height: pkg.height };
-  // GreatLife: service comes from the selected get-rates row (not a guessed default).
+  // Service comes from the selected get-rates row (not a guessed default).
   const service = (serviceOverride || pkg.service || (flat ? "Priority" : "")).trim();
   const payload: Record<string, string | boolean> = {
     carrier: pkg.carrier,
@@ -342,7 +342,7 @@ function createPurchaseBody(
     width: dims.width,
     height: dims.height,
   };
-  // GreatLife / API: only include test_mode when USPS + enabled. Never send false.
+  // Only include test_mode when USPS + enabled. Never send false.
   if (pkg.carrier === "usps" && testMode) {
     payload.test_mode = true;
   }
@@ -704,7 +704,7 @@ export function PostageLabelModal({
     return null;
   }
 
-  /** GreatLife step 1: quote rates before create-purchase. */
+  /** Step 1: quote rates before create-purchase. */
   async function fetchRates() {
     setError("");
     const useSharedFrom = !bulk || sharedFrom;
@@ -754,7 +754,7 @@ export function PostageLabelModal({
     setError("");
     const service = (serviceOverride || selectedService || "").trim();
     if (!service) {
-      setError("Get rates first, then choose a service (same as GreatLife).");
+      setError("Get rates first, then choose a service.");
       return;
     }
 
@@ -953,11 +953,6 @@ export function PostageLabelModal({
               <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-signal">
                 Each order
               </h3>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {sharedFrom
-                  ? "Edit recipient and parcel options per order. Shared FROM + USPS test mode apply to all."
-                  : "Each order has its own FROM (warehouse default + dropdown), recipient, and parcel options. USPS test mode still applies to all."}
-              </p>
               <div className="mt-4 max-h-[55vh] space-y-4 overflow-y-auto pr-1">
                 {orders.map((row) => {
                   const to = recipientsById[row.id] || emptyRecipient(row);
@@ -1032,10 +1027,6 @@ export function PostageLabelModal({
               <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-signal">
                 Rates
               </h3>
-              <p className="text-xs text-muted-foreground">
-                Same as GreatLife: pick a quoted service, then create the label
-                {bulk ? " (that service is used for every order in the batch)" : ""}.
-              </p>
               <div className="space-y-2">
                 {rates.map((rate) => {
                   const active = selectedService === rate.service;

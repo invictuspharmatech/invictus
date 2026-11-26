@@ -9,9 +9,6 @@ export default async function AnalyticsLayout({ children }: { children: ReactNod
   return (
     <div>
       <h1 className="display-font text-3xl">Analytics</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Browse sections and time frames for sales, orders, products, and stock.
-      </p>
       <AnalyticsSubNav />
       <div className="mt-8">{children}</div>
     </div>

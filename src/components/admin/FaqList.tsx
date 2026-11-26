@@ -24,10 +24,6 @@ export function FaqList({ items }: { items: ApiFaq[] }) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="display-font text-3xl">FAQ</h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Questions and answers on the public FAQ page, grouped by section. Edit an existing
-            item or add a new one.
-          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href="/faq" target="_blank" className="ghost-btn">

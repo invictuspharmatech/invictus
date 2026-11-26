@@ -40,21 +40,6 @@ export function EmailTemplateManager({ items }: { items: ApiEmailTemplate[] }) {
     <div className="mt-10 space-y-6">
       <div>
         <h2 className="display-font text-2xl">Templates and recipients</h2>
-        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-          Enable a template, then choose recipients. No checked boxes and an empty custom
-          list means nobody is emailed. Custom list alone goes only to those addresses (not
-          default admins/customers). Checked boxes plus custom list go to all of them. The
-          inner body sits inside the main Invictus email template. Placeholders:{" "}
-          <code>{"{{customer_name}}"}</code>, <code>{"{{order_number}}"}</code>,{" "}
-          <code>{"{{status}}"}</code>, <code>{"{{warehouse}}"}</code>,{" "}
-          <code>{"{{grand_total}}"}</code>, <code>{"{{items}}"}</code>,{" "}
-          <code>{"{{user_email}}"}</code>, <code>{"{{subject}}"}</code>,{" "}
-          <code>{"{{message}}"}</code>, <code>{"{{affiliate_code}}"}</code>,{" "}
-          <code>{"{{reset_url}}"}</code>, <code>{"{{expires_hours}}"}</code>,{" "}
-          <code>{"{{pay_now_html}}"}</code> (Pay with Bitcoin button),{" "}
-          <code>{"{{pay_now_url}}"}</code>, <code>{"{{tracking_html}}"}</code>,{" "}
-          <code>{"{{tracking_number}}"}</code>.
-        </p>
       </div>
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
       {items.map((item) => (
@@ -105,20 +90,12 @@ export function EmailTemplateManager({ items }: { items: ApiEmailTemplate[] }) {
               placeholder="e.g. admin@invictuspharma.net — optional"
               defaultValue={item.customEmails}
             />
-            <span className="text-xs text-muted-foreground">
-              Manual only → just these addresses. Manual + checked boxes → both. Nothing checked
-              and empty list → email is not sent.
-            </span>
           </label>
           <input className="field" name="subject" defaultValue={item.subject} required />
           <label className="grid gap-1 text-sm">
             Inner message
             <textarea className="field min-h-36" name="body" defaultValue={item.body} required />
           </label>
-          <p className="text-xs text-muted-foreground">
-            Write the message itself. HTML is optional — blank lines become
-            paragraphs. Header, logo, and footer come from the main template.
-          </p>
           <button className="gold-btn max-w-40" type="submit">
             Save template
           </button>

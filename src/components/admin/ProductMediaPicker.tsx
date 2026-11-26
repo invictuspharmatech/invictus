@@ -69,10 +69,6 @@ export function ProductMediaPicker({
               Close
             </button>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Search by name, sort by upload date, or filter by folder. Uploads persist under{" "}
-            <code>/media/</code>.
-          </p>
           <div className="mt-4">
             <MediaLibraryBrowser
               mode="pick"

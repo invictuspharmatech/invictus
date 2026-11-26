@@ -224,11 +224,6 @@ export function AccountingBoard({
               <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                 Payout calculator · Admin ~{adminRateLabel.toFixed(1)}%
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Admin / Party shares use merchandise only. Manual: enter total received — shipping
-                since last Reset is subtracted first, then shares are calculated. Auto: uses order
-                merchandise (shipping already excluded). Shipping tile always stays from orders.
-              </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -304,9 +299,6 @@ export function AccountingBoard({
                     Calculate
                   </button>
                 </div>
-                <p className="normal-case tracking-normal text-muted-foreground">
-                  Pulled from counted orders (shipping excluded).
-                </p>
               </div>
             )}
           </div>
@@ -335,12 +327,7 @@ export function AccountingBoard({
                 Clear calculated
               </button>
             </div>
-          ) : (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Tiles show tracked order totals until you Calculate. Shipping tile is always from
-              orders.
-            </p>
-          )}
+          ) : null}
         </article>
 
         <div className="grid gap-2 sm:grid-cols-3">
@@ -416,9 +403,6 @@ export function AccountingBoard({
       {sales.length > 0 ? (
         <div className="mt-8 overflow-x-auto tile">
           <h2 className="text-lg">Sales in this window</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Orders counted since the last Reset all (or all time if you have never reset).
-          </p>
           <table className="mt-4 w-full text-left text-sm">
             <thead className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
               <tr>

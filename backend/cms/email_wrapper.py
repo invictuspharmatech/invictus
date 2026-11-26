@@ -14,7 +14,7 @@ _ALREADY_WRAPPED = re.compile(r"invictus-email-shell", re.IGNORECASE)
 _FULL_DOCUMENT = re.compile(r"<!DOCTYPE html|<html[\s>]", re.IGNORECASE)
 
 
-# Great Life wrapper layout (header plate, white card, branded footer), Invictus colors/logo.
+# Email wrapper layout (header plate, white card, branded footer), Invictus colors/logo.
 DEFAULT_WRAPPER_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>

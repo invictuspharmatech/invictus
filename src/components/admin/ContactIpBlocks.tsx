@@ -78,11 +78,6 @@ export function ContactIpBlocks() {
     <section className="tile space-y-4">
       <div>
         <h2 className="text-lg">Blocked contact IPs</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          After 3 rejected contact messages with HTML/script characters (such as &lt; or &gt;), the
-          network is banned. When site-wide Cloudflare IP block is enabled, a Cloudflare rule is
-          added and removed with the ban (auto-expire or manual Remove).
-        </p>
       </div>
 
       <div className="border border-border/40 p-3">
@@ -114,11 +109,7 @@ export function ContactIpBlocks() {
               }
             />
           </label>
-        ) : (
-          <p className="mt-2 text-sm text-muted-foreground">
-            Auto-expire is off — bans stay until you remove them manually.
-          </p>
-        )}
+        ) : null}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button type="button" className="gold-btn" disabled={saving} onClick={() => void saveSettings()}>
             {saving ? "Saving…" : "Save ban settings"}

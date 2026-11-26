@@ -109,10 +109,6 @@ export function EmailSettingsForm({ settings }: { settings: ApiEmailSettings }) 
       >
         <section className="tile grid gap-3">
           <h2 className="text-lg">Transactional SMTP</h2>
-          <p className="text-sm text-muted-foreground">
-            Used for order confirmations, payment, shipping, accounts, and other
-            store mail. Leave a password blank to keep the saved one.
-          </p>
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -201,10 +197,6 @@ export function EmailSettingsForm({ settings }: { settings: ApiEmailSettings }) 
 
         <section className="tile grid gap-3">
           <h2 className="text-lg">Bulk mail SMTP</h2>
-          <p className="text-sm text-muted-foreground">
-            Used only for admin bulk email. Order and account mail keep using
-            transactional SMTP unless the fallback switch below is on.
-          </p>
           <label className="grid gap-1 text-sm">
             SMTP host
             <input
@@ -347,11 +339,6 @@ export function EmailSettingsForm({ settings }: { settings: ApiEmailSettings }) 
               Reset to Invictus default
             </button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Tokens: <code>{"{{EMAIL_BODY}}"}</code>, <code>{"{{CURRENT_YEAR}}"}</code>,{" "}
-            <code>{"{{APP_NAME}}"}</code>. This wraps bulk mail, notifications, and
-            test emails.
-          </p>
           <textarea
             className="field min-h-56 font-mono text-xs"
             value={wrapperHtml}

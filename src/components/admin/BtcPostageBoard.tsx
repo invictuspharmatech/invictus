@@ -153,10 +153,6 @@ export function BtcPostageBoard({ settings }: { settings: ApiPostageSettings }) 
       <section className="tile space-y-4">
         <div>
           <h2 className="text-lg">API accounts by warehouse</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Each warehouse can use its own bitcoinpostage.info account. When you create a label,
-            credentials are taken from the account linked to that order&apos;s warehouse.
-          </p>
         </div>
         <div className="grid gap-6 lg:grid-cols-2">
           {accounts.map((account) => (
@@ -258,9 +254,6 @@ export function BtcPostageBoard({ settings }: { settings: ApiPostageSettings }) 
       <section className="tile space-y-4">
         <div>
           <h2 className="text-lg">Label credits</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Balance and top-up for each warehouse account, shown side by side.
-          </p>
         </div>
         <div className="grid gap-6 lg:grid-cols-2">
           {CREDIT_WAREHOUSES.map((warehouse) => {
@@ -420,10 +413,6 @@ export function BtcPostageBoard({ settings }: { settings: ApiPostageSettings }) 
 
       <section className="tile max-w-3xl">
         <h2 className="text-lg">Sender addresses</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Optionally link a sender to a warehouse so labels for that warehouse use the matching
-          ship-from address.
-        </p>
         <form
           className="mt-4 grid gap-2 md:grid-cols-2"
           onSubmit={async (event) => {

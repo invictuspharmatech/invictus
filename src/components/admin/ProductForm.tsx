@@ -5,7 +5,7 @@ import { useState } from "react";
 import { ProductMediaPicker } from "@/components/admin/ProductMediaPicker";
 import type { ApiCategory, ApiProduct } from "@/lib/api-types";
 
-/** Same values as product list bulk actions / GreatLife-style publish flags. */
+/** Same values as product list bulk publish actions. */
 function normalizeProductStatus(status?: string | null): "publish" | "draft" {
   if (!status || status === "publish" || status === "active") return "publish";
   return "draft";

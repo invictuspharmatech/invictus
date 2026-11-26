@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 type Props = {
   productId: string;
-  /** compact = product card; full = product detail (GreatLife) */
+  /** compact = product card; full = product detail */
   variant?: "compact" | "full";
   className?: string;
   /** When false, render nothing (parent already gated with productShowsStockNotify). */

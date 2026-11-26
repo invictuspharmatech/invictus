@@ -22,9 +22,6 @@ export default async function AdminAffiliatesPage() {
   return (
     <div>
       <h1 className="display-font text-3xl">Affiliates</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Approve tracking accounts. Wholesale is not offered on this store.
-      </p>
       <div className="mt-6 space-y-3">
         {visible.map((application) => (
           <article key={application.id} className="tile flex flex-wrap items-center justify-between gap-3">

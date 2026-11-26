@@ -14,7 +14,7 @@ from cms.peptide_calculator import compute_syringe_ml, format_syringe_ml
 
 
 class PeptideCalculatorMathTests(SimpleTestCase):
-    def test_default_mg_vial_mcg_dose_matches_greatlife(self):
+    def test_default_mg_vial_mcg_dose(self):
         ml, error = compute_syringe_ml("mg", 10, 2, "mcg", 250)
         self.assertIsNone(error)
         self.assertAlmostEqual(ml, 0.05)

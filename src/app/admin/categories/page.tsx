@@ -20,10 +20,6 @@ export default async function AdminCategoriesPage({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="display-font text-3xl">Categories</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Star (★) a category to show it on the homepage. More than 4 starred
-            categories become a moving carousel. Sort order controls display order.
-          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <CatalogCsvBar kind="categories" openImport={importFlag === "1"} autoExport={exportFlag === "1"} />

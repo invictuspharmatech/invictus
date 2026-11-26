@@ -18,10 +18,6 @@ export default async function ProductStockSummaryPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="display-font text-3xl">Stock summary</h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Products assigned to each warehouse, grouped by category, with price and stock at that
-            warehouse.
-          </p>
         </div>
         <Link href="/admin/products" className="ghost-btn">
           Back to products

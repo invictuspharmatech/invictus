@@ -11,7 +11,6 @@ import { formatMoney } from "@/lib/constants";
 import { addDays, todayYmd } from "@/components/admin/analytics/AnalyticsPeriodFilter";
 
 const DAY_BAR_PX = 52;
-const VISIBLE_DAYS_HINT = 7;
 const CHART_PLOT_H = 160;
 const Y_TICK_COUNT = 5;
 const CHARTS_MIN_YEAR = 2025;
@@ -181,10 +180,6 @@ function DailySalesScrollChart({ days, metric }: { days: DailySalesPoint[]; metr
 
   return (
     <div>
-      <p className="mb-2 text-sm text-muted-foreground">
-        About {VISIBLE_DAYS_HINT} days fit across the card at once. Scroll the chart or drag horizontally to browse the
-        range.
-      </p>
       <div className="flex items-stretch gap-1 border border-border/60 bg-ink/40">
         <div className="flex flex-col pt-4 pl-1" style={{ paddingBottom: labelH + 16 }}>
           <ChartYAxis axisMax={axisMax} />
@@ -420,10 +415,6 @@ export default function AnalyticsChartsPage() {
     <div>
       <div className="mb-6">
         <h2 className="m-0 text-xl font-semibold">Charts</h2>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Daily bars with scroll/drag, monthly or quarterly totals for the current year, and monthly totals for a
-          selected year (from {CHARTS_MIN_YEAR}).
-        </p>
       </div>
 
       <section className="tile mb-8">

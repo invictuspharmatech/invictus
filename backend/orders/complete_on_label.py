@@ -1,4 +1,4 @@
-"""GreatLife-style: completing an order when a label/tracking is saved also emails the customer."""
+"""Completing an order when a label/tracking is saved also emails the customer."""
 
 from __future__ import annotations
 

@@ -203,9 +203,7 @@ export function DashboardTilesEditor() {
             Add
           </button>
         </div>
-        <p className="mt-3 text-sm text-muted-foreground">
-          {catalog.length} metrics available. Layout applies to all staff dashboards.
-        </p>
+        <p className="mt-3 text-sm text-muted-foreground">{catalog.length} metrics available.</p>
       </section>
 
       <section className="tile overflow-x-auto">
@@ -349,10 +347,6 @@ export function DashboardTilesEditor() {
           </table>
         )}
       </section>
-      <p className="text-sm text-muted-foreground">
-        Row groups tiles horizontally — up to 4 tiles per row at 1-column width, or 2 at 2-column
-        width. Lower order values appear first within a row.
-      </p>
     </div>
   );
 }

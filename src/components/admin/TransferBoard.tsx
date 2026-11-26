@@ -71,9 +71,6 @@ export function TransferBoard({
           }}
         >
           <h2 className="text-lg">Ask the other warehouse for stock</h2>
-          <p className="text-sm text-muted-foreground">
-            You will not see their quantity. They (or an admin) can accept or reject.
-          </p>
           <select className="field" name="productId" required>
             <option value="">Product</option>
             {products.map((product) => (

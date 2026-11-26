@@ -32,9 +32,6 @@ export function FooterTelegramCard() {
   return (
     <section className="tile mt-8 max-w-3xl">
       <h2 className="text-lg">Footer Telegram link</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Hidden from the storefront footer until you enable it and save a URL.
-      </p>
       <label className="mt-4 flex items-start gap-2 text-sm">
         <input
           type="checkbox"

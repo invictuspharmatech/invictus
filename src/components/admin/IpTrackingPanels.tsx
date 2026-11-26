@@ -87,11 +87,6 @@ export function LoginIpPanel({
   return (
     <section className="tile mt-6 max-w-3xl">
       <h2 className="text-lg">Login IP</h2>
-      <p className="mt-2 text-sm text-muted-foreground">
-        {on
-          ? "Tracking is on. Each successful sign-in stores the public IP."
-          : "Tracking is off. New sign-ins are not stored."}
-      </p>
       <p className="mt-1 text-sm text-muted-foreground">{count} login IP records stored.</p>
       {rows.length ? (
         <ul className="mt-3 space-y-1 text-sm">
@@ -179,11 +174,6 @@ export function OrderIpPanel({
     <section className="tile mt-6">
       <h2 className="text-lg">Customer IP</h2>
       <p className="mt-2 font-mono text-sm">{ip || "Not recorded"}</p>
-      <p className="mt-2 text-sm text-muted-foreground">
-        {on
-          ? "Tracking is on. A customer checkout stores the public IP on the order number."
-          : "Tracking is off. New checkouts are not stored."}
-      </p>
       <p className="mt-1 text-sm text-muted-foreground">{count} order IP records stored.</p>
       {error ? <p className="mt-2 text-sm text-brand-red">{error}</p> : null}
       <div className="mt-3 flex flex-wrap gap-2">

@@ -20,10 +20,6 @@ export default async function AdminWarehousesPage() {
   return (
     <div>
       <h1 className="display-font text-3xl">Warehouses</h1>
-      <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-        Open a warehouse for low-stock products and processing orders. Split and request settings
-        live here now that Dashboard is the admin home.
-      </p>
       <div className="mt-8 grid gap-4 md:grid-cols-2">
         {overview.warehouses.map((row) => (
           <Link key={row.code} href={`/admin/warehouses/${row.code}`} className="tile block">

@@ -219,11 +219,11 @@ DEFAULT_TEMPLATES = [
     {
         "event_key": "email_verification",
         "name": "Email verification",
-        "description": "Sent when a new account is created. The link expires in 15 minutes. A second missed link asks them to contact an admin.",
+        "description": "Sent when a new account is created. Use {{verification_html}} for the Verify E-mail button. Expires in 15 minutes.",
         "subject": "Verify your {{site_name}} account",
         "body": """<p>Hi {{user_name}},</p>
-<p>Open this link to activate <strong>{{user_email}}</strong>. It expires in {{expires_minutes}} minutes.</p>
-<p><a href="{{verification_url}}">Verify email</a></p>
+<p>Activate <strong>{{user_email}}</strong> within {{expires_minutes}} minutes.</p>
+{{verification_html}}
 <p>If you did not create this account, you can ignore this email.</p>
 <p>— {{site_name}}</p>""",
         "notify_admin": False,

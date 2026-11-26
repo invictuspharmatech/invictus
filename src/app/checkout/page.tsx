@@ -248,7 +248,7 @@ export default function CheckoutPage() {
       data.checkoutLink || orders.find((order) => order.checkoutLink)?.checkoutLink || null;
     let invoiceError = data.error || null;
 
-    // Match GreatLife: if checkout did not return a link, create via pay-token (works for guests), then open popup.
+    // If checkout did not return a link, create via pay-token (works for guests), then open popup.
     if (!checkoutLink) {
       const payUrl = orders.find((order) => order.payUrl)?.payUrl || null;
       let payToken = "";
@@ -321,7 +321,7 @@ export default function CheckoutPage() {
     );
   }
 
-  // Stay on /checkout and open the invoice popup (GreatLife-style) — do not navigate away first.
+  // Stay on /checkout and open the invoice popup — do not navigate away first.
   if (invoiceLink) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-20 text-center">

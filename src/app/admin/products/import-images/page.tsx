@@ -14,9 +14,6 @@ export default async function AdminProductImageImportPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="display-font text-3xl">Import from images</h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Runs on this site&apos;s database — use it on live to create or update live products.
-          </p>
         </div>
         <Link href="/admin/products" className="ghost-btn">
           Back to products

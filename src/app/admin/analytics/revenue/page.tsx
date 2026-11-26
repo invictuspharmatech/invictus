@@ -102,10 +102,7 @@ export default function RevenueAnalyticsPage() {
       </div>
 
       <section className="tile mt-8">
-        <h3 className="mb-2 text-lg">Sales trend by period</h3>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Bar shows grand total; each row lists product sales vs shipping for that bucket.
-        </p>
+        <h3 className="mb-4 text-lg">Sales trend by period</h3>
         <SimpleChart data={data.revenue_chart} dataKey="revenue" money breakdown />
       </section>
 

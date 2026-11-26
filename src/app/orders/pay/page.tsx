@@ -78,7 +78,7 @@ function OrderPayInner() {
     const existingLink =
       data.invoice && !data.invoice.checkoutClosed ? data.invoice.checkoutLink : null;
 
-    // GreatLife-style: open the invoice popup immediately — never leave the shopper on a
+    // Open the invoice popup immediately — never leave the shopper on a
     // "Create Bitcoin invoice" interstitial as the primary path.
     if (!paid && data.canPay && !data.checkoutWindowClosed && !autoOpened.current) {
       autoOpened.current = true;

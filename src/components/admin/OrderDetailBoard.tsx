@@ -268,17 +268,9 @@ export function OrderDetailBoard({
         />
       ) : null}
 
-      {editMode ? (
-        <div className="tile mt-4 border-signal/30 bg-signal/5 p-4 text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">Order edit mode</p>
-          <p className="mt-1">
-            Update shipping, adjust quantities (0 removes a line), or add products. Stock is deducted when
-            you add or increase, and returned when you reduce or remove. Use Move selected below to split
-            lines to the other warehouse (optional note for the customer; no new payment).
-          </p>
-          {blocked ? (
-            <p className="mt-2 text-brand-red">This order status cannot be edited.</p>
-          ) : null}
+      {editMode && blocked ? (
+        <div className="tile mt-4 border-signal/30 bg-signal/5 p-4 text-sm">
+          <p className="text-brand-red">This order status cannot be edited.</p>
         </div>
       ) : null}
 
@@ -287,10 +279,6 @@ export function OrderDetailBoard({
       {(order.linkedOrders?.length ?? 0) > 1 ? (
         <section className="tile mt-6 border-signal/30">
           <h2 className="text-lg">Linked orders</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Placed together in one checkout and share one payment. Different order numbers are for
-            each warehouse fulfillment slice.
-          </p>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[28rem] text-left text-sm">
               <thead className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">

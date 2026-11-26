@@ -1,5 +1,5 @@
 /**
- * Stock display rules aligned with GreatLife (`productStock.ts`):
+ * Stock display rules for the storefront:
  * - out of stock (and not backorder) → hide add, show notify
  * - backorder allowed → treat as purchasable (no OOS / notify)
  * - in stock with qty 0 → same as OOS
@@ -17,7 +17,7 @@ function normalizeStatus(stockStatus?: string | null): string {
     .replace(/[_-\s]/g, "");
 }
 
-/** GreatLife `productShowsAddToCart` — Invictus maps backorder flag → purchasable. */
+/** Show add-to-cart when purchasable (backorder maps to purchasable). */
 export function productShowsAddToCart(product: StockProductFields): boolean {
   if (product.allowBackorder) return true;
   const status = normalizeStatus(product.stockStatus);
@@ -33,7 +33,7 @@ export function productShowsAddToCart(product: StockProductFields): boolean {
   return status !== "outofstock";
 }
 
-/** GreatLife `productShowsStockNotify` — show notify when the customer can’t buy. */
+/** Show stock-notify when the customer can’t buy. */
 export function productShowsStockNotify(product: StockProductFields): boolean {
   return !productShowsAddToCart(product);
 }

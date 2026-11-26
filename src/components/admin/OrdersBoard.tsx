@@ -240,11 +240,6 @@ export function OrdersBoard({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="display-font text-3xl">{trashed ? "Orders trash" : "Orders"}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {trashed
-              ? "Soft-deleted orders. Super admin can restore selected rows back to the live list."
-              : "Eye quick-edits the ship-to address; pencil quick-edits line items. Click the order number for the full order page. Status changes use row actions or bulk menu."}
-          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {trashed ? (

@@ -9,7 +9,7 @@ from django.utils.timezone import is_naive, make_aware
 
 from orders.models import Coupon, Order
 
-# Orders in these statuses do not count toward usage limits (GreatLife-aligned).
+# Orders in these statuses do not count toward usage limits.
 USAGE_EXCLUDED_STATUSES = (
     Order.Status.CANCELLED,
     Order.Status.FAILED,
@@ -140,7 +140,7 @@ def customer_usage_count(
 
 
 def can_stack_with(left: Coupon, right: Coupon) -> bool:
-    """GreatLife canStackWith: both must allow stacking; partner lists must agree."""
+    """Both coupons must allow stacking; partner allow-lists must agree."""
     if str(left.id) == str(right.id):
         return False
     if not left.stackable_with_other_coupons or not right.stackable_with_other_coupons:
@@ -225,7 +225,7 @@ def resolve_coupon_stack(
     email: str | None = None,
 ) -> tuple[list[Coupon], float, bool, bool, str | None]:
     """
-    Resolve one or more coupon codes with GreatLife-style stacking.
+    Resolve one or more coupon codes with stacking rules.
     Returns (coupons, total_discount, free_shipping, discount_covers_shipping, error).
     """
     cleaned = normalize_codes(codes)
@@ -363,7 +363,7 @@ def apply_coupon_fields(coupon: Coupon, data: dict) -> str | None:
 
 
 def sync_stack_partners(coupon: Coupon) -> None:
-    """Keep partner lists roughly symmetric (GreatLife-style)."""
+    """Keep partner lists roughly symmetric."""
     self_id = str(coupon.id)
     desired = set(normalized_id_list(coupon.stackable_coupon_ids)) if coupon.stackable_with_other_coupons else set()
     for partner in Coupon.objects.exclude(pk=coupon.pk):

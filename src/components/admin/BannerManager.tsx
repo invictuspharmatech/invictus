@@ -201,9 +201,6 @@ export function BannerManager({ initial }: { initial: ApiBannerRuntime }) {
       {!trashed ? (
         <div className="tile mt-6">
           <h2 className="text-lg">Storefront display style</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Choose how banner messages appear on the site header strip.
-          </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label
               className={`cursor-pointer rounded border px-4 py-3 ${

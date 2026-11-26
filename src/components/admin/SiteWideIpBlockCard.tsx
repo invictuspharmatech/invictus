@@ -26,23 +26,15 @@ export function SiteWideIpBlockCard() {
   return (
     <section className="tile mt-6 max-w-3xl">
       <h2 className="text-lg">Site-wide IP block</h2>
-      <label className="mt-3 flex items-start gap-2 text-sm">
+      <label className="mt-3 flex items-center gap-2 text-sm">
         <input
           type="checkbox"
-          className="mt-1"
           checked={setting.enabled}
           disabled={saving}
           onChange={(event) => setSetting({ ...setting, enabled: event.target.checked })}
         />
-        <span>
-          When this is on, an IP blocked from password reset or the contact form is also blocked from the whole site. The server sends that. This page does not.
-        </span>
+        Enable site-wide IP block
       </label>
-      <p className="mt-2 text-sm text-muted-foreground">
-        {setting.credentials_ready
-          ? "The server env file has the account id and token. Remove on a blocked-IP list also removes the site-wide block when that IP is not still blocked on the other list."
-          : "The switch can be saved now. Add the account id and API token in this site's server env file before any IP is sent."}
-      </p>
       {message ? <p className="mt-2 text-sm text-muted-foreground">{message}</p> : null}
       <button
         type="button"

@@ -54,10 +54,6 @@ export default async function AdminInventoryPage({
   return (
     <div>
       <h1 className="display-font text-3xl">Inventory</h1>
-      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        Stock by warehouse. Low / out-of-stock counts include active products only.
-        Low stock is 1–5 units. Out of stock is qty 0.
-      </p>
       <form className="mt-6 flex flex-wrap gap-2">
         <input className="field max-w-xs" name="q" defaultValue={q} placeholder="Search SKU or name" />
         <select className="field max-w-48" name="warehouse" defaultValue={warehouse ?? ""}>

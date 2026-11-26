@@ -195,17 +195,9 @@ export function OpsSettingsHub() {
             />
             <span>
               <strong>Enable checkout</strong>
-              <span className="mt-1 block text-xs text-muted-foreground">
-                When off, the cart Checkout button is disabled and anyone who opens /checkout is
-                sent back to the cart. Turn on when you are ready to take orders.
-              </span>
             </span>
           </label>
           <h3 className="text-base font-medium">Order amount limits</h3>
-          <p className="text-sm text-muted-foreground">
-            Customers are blocked on cart and checkout unless the charged merchandise (after
-            discounts) stays in range. Shipping can be included below.
-          </p>
           <label className="flex items-start gap-2 text-sm">
             <input
               type="checkbox"
@@ -258,10 +250,6 @@ export function OpsSettingsHub() {
       {tab === "shipping" ? (
         <form onSubmit={onShipping} className="tile mt-6 space-y-4">
           <h2 className="text-lg">Checkout shipping fees</h2>
-          <p className="text-sm text-muted-foreground">
-            Named flat-rate options shown on cart and checkout. Leave empty to fall back to $20
-            standard shipping.
-          </p>
           {fees.length === 0 ? (
             <p className="text-sm text-muted-foreground">No options yet — click Add option.</p>
           ) : null}
@@ -352,14 +340,6 @@ export function OpsSettingsHub() {
         <div className="tile mt-6 max-w-xl space-y-4">
           <h2 className="text-lg">Order numbers</h2>
           <p className="text-sm text-muted-foreground">
-            New orders use calendar year + warehouse + a 4-digit counter:{" "}
-            <code>YYYYW1NNNN</code> / <code>YYYYW2NNNN</code>. Each warehouse counts 0001–1000,
-            then resets. Counters also start over each calendar year.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Examples: <code>2026W10001</code>, <code>2026W20042</code>
-          </p>
-          <p className="text-sm text-muted-foreground">
             Next preview: <code>{orderNumbering.preview}</code>
           </p>
         </div>
@@ -375,10 +355,6 @@ export function OpsSettingsHub() {
             }}
           >
             <h2 className="text-lg">Affiliate defaults</h2>
-            <p className="text-sm text-muted-foreground">
-              Applied when an affiliate application is approved (or when an account is first marked
-              affiliate).
-            </p>
             <label className="text-sm">
               Payout type
               <select

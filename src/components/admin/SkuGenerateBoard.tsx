@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { ApiCategory } from "@/lib/api-types";
 
@@ -78,13 +77,6 @@ export function SkuGenerateBoard({ categories }: { categories: ApiCategory[] }) 
   return (
     <div className="mt-8 space-y-6">
       <div className="tile max-w-3xl space-y-4">
-        <p className="text-sm text-muted-foreground">
-          Format: <span className="font-mono">IP-{"{ABBR}"}-001</span>. Set abbreviations on{" "}
-          <Link href="/admin/categories" className="text-signal underline">
-            Categories
-          </Link>{" "}
-          first (Oils → OILS, Peptides → PEP, Aminos → AMNO, Orals → ORAL, PCT → PCTM).
-        </p>
         <label className="grid max-w-md gap-1 text-sm">
           Category
           <select

@@ -177,7 +177,7 @@ def postage_charge_view(request):
 @api_view(["POST"])
 @permission_classes([IsPortalStaff])
 def postage_rates_view(request, pk):
-    """GreatLife step 1: quote rates before create-purchase."""
+    """Step 1: quote rates before create-purchase."""
     order = _order_for_postage(request, pk)
     if not order:
         return Response({"error": "Not found."}, status=404)

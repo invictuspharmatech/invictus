@@ -49,11 +49,6 @@ function BtcPaySettingsFormInner({ settings }: { settings: ApiBtcPaySettings }) 
     <div className="space-y-6">
       <div className="tile grid max-w-3xl gap-4">
         <h2 className="text-lg">BTCPay Server Payments Settings</h2>
-        <p className="text-sm text-muted-foreground">
-          GreatLife-style setup: enter your BTCPay URL, connect or paste API key + store ID, then
-          create the webhook (or add it manually in BTCPay and paste the secret). Invoice create uses
-          the same Greenfield API pattern as GreatLife.
-        </p>
 
         <label className="grid gap-1 text-sm">
           BTCPay Server URL
@@ -69,10 +64,6 @@ function BtcPaySettingsFormInner({ settings }: { settings: ApiBtcPaySettings }) 
 
         <div className="rounded border border-border bg-muted/20 p-4">
           <h3 className="text-sm font-medium">Setup Wizard</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Connect opens BTCPay Authorize app with invoice + webhook permissions pre-selected. Pick
-            one store and approve.
-          </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               className="gold-btn"
@@ -343,12 +334,6 @@ function BtcPaySettingsFormInner({ settings }: { settings: ApiBtcPaySettings }) 
 
       <div className="tile grid max-w-3xl gap-4">
         <h2 className="text-lg">Failover BTCPay (optional)</h2>
-        <p className="text-sm text-muted-foreground">
-          Connect a second BTCPay Server without changing the primary connection. Checkout tries
-          primary first; if invoice create fails for any reason (timeout, 5xx, Cloudflare 403/1010,
-          permission-looking blocks, etc.), it retries on this failover. If both fail, shoppers see
-          the same error as today.
-        </p>
         <label className="flex items-start gap-2 text-sm">
           <input
             className="mt-1"

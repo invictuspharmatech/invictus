@@ -1,6 +1,6 @@
-"""Customer-facing money math, matching Great Life checkout/analytics.
+"""Customer-facing money math for checkout and analytics.
 
-Great Life charges one order:
+One order is charged as:
   total_amount = subtotal + shipping - discounts
   merchandise  = total_amount - shipping  (never below zero)
   invoice      = total_amount
@@ -26,7 +26,7 @@ def money(value) -> float:
 
 
 def selling_triplet(grand_total, shipping_total) -> dict[str, float]:
-    """Great Life analytics: merch = paid total minus shipping actually collected."""
+    """Analytics: merch = paid total minus shipping actually collected."""
     grand = money(grand_total)
     shipping = money(min(max(money(shipping_total), 0), max(grand, 0)))
     return {
@@ -114,7 +114,7 @@ def customer_checkout_totals(
 
 
 def affiliate_commission(merchandise: float, *, commission_type: str, rate: float) -> float:
-    """Great Life: percentage of merchandise, or a fixed amount capped at merchandise."""
+    """Percentage of merchandise, or a fixed amount capped at merchandise."""
     merch = money(merchandise)
     amount = money(rate)
     if amount <= 0 or merch <= 0:

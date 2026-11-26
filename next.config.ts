@@ -6,13 +6,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   images: {
     unoptimized: true,
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "greatlifepharma.com",
-        pathname: "/**",
-      },
-    ],
+    remotePatterns: [],
   },
   // Local/dev: serve Django MEDIA through Next. Live nginx already mounts ./data/media at /media/.
   async rewrites() {

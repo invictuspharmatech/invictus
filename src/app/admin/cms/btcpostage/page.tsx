@@ -10,11 +10,6 @@ export default async function BtcPostagePage() {
   return (
     <div>
       <h1 className="display-font text-3xl">Bitcoin Postage</h1>
-      <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-        Credits and labels from bitcoinpostage.info. Configure one API account per warehouse — label
-        creation uses the account linked to the order&apos;s warehouse. Keep sender addresses here for
-        reuse.
-      </p>
       <div className="mt-8">
         <BtcPostageBoard settings={settings} />
       </div>

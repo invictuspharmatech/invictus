@@ -13,7 +13,7 @@ from catalog.models import Category, Product, ProductCategory
 from orders.models import Coupon, Order, OrderItem
 from orders.status import COMPLETED_LIKE, PAID_LIKE, REVENUE_ELIGIBLE
 
-# Great Life revenueEligible = processing + completed.
+# Revenue-eligible orders: processing + completed.
 COMPLETED_STATUSES = list(COMPLETED_LIKE)
 OUT_OF_STOCK_STATUSES = ("outofstock", "out_of_stock")
 

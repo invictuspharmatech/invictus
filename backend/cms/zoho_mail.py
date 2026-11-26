@@ -1,4 +1,4 @@
-"""Zoho Mail OAuth + REST helpers (AU defaults, same surface as PurePharma/GreatLife)."""
+"""Zoho Mail OAuth + REST helpers (AU datacenter defaults)."""
 
 from __future__ import annotations
 

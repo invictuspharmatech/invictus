@@ -1,4 +1,4 @@
-"""Peptide syringe math — same formulas as Great Life's peptide calculator.
+"""Peptide syringe math for the storefront calculator.
 
 MG vials work with mg or mcg doses:
   ml = (dose_mcg / (vial_mg * 1000)) * water_ml

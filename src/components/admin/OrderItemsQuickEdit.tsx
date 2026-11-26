@@ -136,10 +136,6 @@ export function OrderItemsQuickEdit({
           </button>
         </div>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Change quantities, remove lines, or add a product from the catalog. Stock updates when you
-        save or add.
-      </p>
       {error ? <p className="mt-2 text-sm text-brand-red">{error}</p> : null}
 
       <ul className="mt-3 space-y-2">

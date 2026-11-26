@@ -2,8 +2,7 @@ export const SITE_NAME = "Invictus Pharma";
 export const MIN_ORDER_USD = 100;
 export const SHIPPING_USD = 20;
 export const FIRST_ORDER_AFFILIATE_DISCOUNT = 0.1;
-export const IMAGE_ORIGIN =
-  process.env.IMAGE_ORIGIN ?? "https://greatlifepharma.com";
+export const IMAGE_ORIGIN = process.env.IMAGE_ORIGIN ?? "";
 
 export const WAREHOUSE_1_CATEGORIES = ["peptides-glps", "aminos", "peptides"];
 

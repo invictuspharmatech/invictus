@@ -175,11 +175,11 @@ def _option(options: dict, *keys: str, default: str = "") -> str:
 
 
 CREATE_PURCHASE_PATH = "/create-purchase"
-# Great Life / WooCommerce plugin: POST https://bitcoinpostage.info/api/create-purchase
+# WooCommerce-compatible plugin path: POST https://bitcoinpostage.info/api/create-purchase
 BTCPOSTAGE_USER_AGENT = (
     "BitcoinPostage-WooCommerce-Plugin/1.09 (compatible; InvictusPharma)"
 )
-# Upstream often exceeds 60s (Great Life uses 300s).
+# Upstream often exceeds 60s; allow up to 300s.
 HTTP_TIMEOUT_SECONDS = 300
 FLAT_RATE_TYPES = frozenset(
     {
@@ -223,7 +223,7 @@ def _truthy(value) -> bool:
 
 
 def _resolve_usps_test_mode(options: dict) -> bool:
-    """Match PurePharma: only honor explicit test_mode / testMode flags for USPS."""
+    """Only honor explicit test_mode / testMode flags for USPS."""
     if "test_mode" in options:
         return _truthy(options.get("test_mode"))
     if "testMode" in options:
@@ -366,7 +366,7 @@ def _post_form(url: str, form: dict) -> Any:
     data = _parse_json_payload(body)
     if data is None:
         raise BitcoinPostageError(_error_detail(200, url, body))
-    # get-rates returns a bare list of quotes (GreatLife parses JSON.parse(response) as array).
+    # get-rates returns a bare list of quotes (parse response as array).
     if isinstance(data, list):
         return data
     if not isinstance(data, dict):
@@ -475,11 +475,11 @@ def _build_label_form(
     for_rates: bool = False,
 ) -> tuple[dict, dict, str, str]:
     """
-    Build the GreatLife WooCommerce create-purchase / get-rates form.
+    Build the WooCommerce-compatible create-purchase / get-rates form.
 
-    GreatLife always calls get-rates first (service empty), then create-purchase
-    with the exact service code returned by a rate. Guessing GroundAdvantage
-    against create-purchase is what triggers "No valid price quotes found."
+    Always call get-rates first (service empty), then create-purchase with the
+    exact service code returned by a rate. Guessing GroundAdvantage against
+    create-purchase is what triggers "No valid price quotes found."
     """
     warehouse = (order.warehouse or "").strip().upper()
     creds = credentials(warehouse)
@@ -499,7 +499,7 @@ def _build_label_form(
         dims = _flat_rate_dimensions(package_type)
         width, height, depth = dims["width"], dims["height"], dims["depth"]
     else:
-        # GreatLife get-rates uses empty service; create-purchase requires the chosen rate.
+        # get-rates uses empty service; create-purchase requires the chosen rate.
         service = _option(options, "service", default="")
         width = _option(options, "width", "input_width")
         height = _option(options, "height", "input_height")
@@ -508,7 +508,7 @@ def _build_label_form(
         service = ""
     elif not service:
         raise BitcoinPostageError(
-            "Select a postage rate/service first (same as GreatLife: Get rates → Create label)."
+            "Select a postage rate/service first (Get rates → Create label)."
         )
 
     lbs, oz = _split_weight(options)
@@ -567,7 +567,7 @@ def _build_label_form(
     from_phone = _option(
         options, "fromPhone", "from_phone", default=sender.from_phone if sender else ""
     )
-    # GreatLife plugin posts from_apt; API docs also accept from_street2 — send both.
+    # Plugin posts from_apt; API docs also accept from_street2 — send both.
     form = {
         **_auth_form(creds),
         "order_id": order.order_number or str(order.id),
@@ -597,7 +597,7 @@ def _build_label_form(
         "to_commercial_address": "true"
         if _truthy(_option(options, "toCommercialAddress", "to_commercial_address", default="false"))
         else "false",
-        # Mirror GreatLife input_* → width/height/depth mapping.
+        # Mirror input_* → width/height/depth mapping.
         "input_width": width,
         "input_height": height,
         "input_length": depth,
@@ -615,7 +615,7 @@ def _build_label_form(
     if carrier == "usps":
         form["packagetype_usps"] = package_type
         # USPS only. API: include test_mode=true to skip credit withdrawal; omit when off.
-        # GreatLife/PurePharma send the string "true" (not "1" / not JSON bool on the wire).
+        # Send the string "true" (not "1" / not JSON bool on the wire).
         if _resolve_usps_test_mode(options):
             form["test_mode"] = "true"
     elif carrier == "fedex":
@@ -641,7 +641,7 @@ def _normalize_rates_payload(data: Any) -> list[dict]:
 
 
 def get_rates(order: Order, options: dict) -> list[dict]:
-    """GreatLife step 1: POST /api/get-rates with empty service, return quote rows."""
+    """Step 1: POST /api/get-rates with empty service, return quote rows."""
     form, creds, _, _ = _build_label_form(order, options, for_rates=True)
     result = _post_form(f"{creds['api_url']}/get-rates", form)
     rates = _normalize_rates_payload(result)
@@ -686,7 +686,7 @@ def create_label(order: Order, options: dict) -> ShippingLabel:
     )
     from orders.complete_on_label import mark_completed_with_tracking, maybe_send_completed_mail
 
-    # GreatLife: label/tracking completion marks the order completed and emails the customer.
+    # Label/tracking completion marks the order completed and emails the customer.
     previous = mark_completed_with_tracking(order, tracking=tracking or "")
     maybe_send_completed_mail(order, previous)
     return label

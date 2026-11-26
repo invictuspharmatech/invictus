@@ -194,9 +194,6 @@ export function CreateOrderBoard() {
   return (
     <div>
       <h1 className="display-font text-3xl">Create order</h1>
-      <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-        Place an order for a customer. Gift cards and store credit are not used here.
-      </p>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <section className="tile space-y-3">

@@ -1232,9 +1232,6 @@ export function AdminProductsTable({
                 {dirtyInventory.length} draft
                 {dirtyInventory.length === 1 ? "" : "s"} ready
               </p>
-              <p className="hidden text-xs text-muted-foreground sm:block">
-                Search and edit freely — changes stay until you update all or discard.
-              </p>
               {inventoryError ? (
                 <p className="mt-1 text-sm text-brand-red">{inventoryError}</p>
               ) : null}

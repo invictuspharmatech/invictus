@@ -10,9 +10,6 @@ export default async function NewCouponPage() {
   return (
     <div>
       <h1 className="display-font text-3xl">Add coupon</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Set total and per-customer usage limits, and which codes may stack together.
-      </p>
       <CouponForm allCoupons={allCoupons} />
     </div>
   );

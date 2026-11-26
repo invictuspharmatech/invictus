@@ -128,10 +128,9 @@ export function ComingSoonSettings() {
             onChange={(event) => setForm((prev) => ({ ...prev, launchAtLocal: event.target.value }))}
             required
           />
-          <span className="text-xs text-muted-foreground">
-            Countdown and launch copy use this Eastern wall-clock time.
-            {preview?.launchDisplay ? ` Preview: ${preview.launchDisplay}` : ""}
-          </span>
+          {preview?.launchDisplay ? (
+            <span className="text-xs text-muted-foreground">Preview: {preview.launchDisplay}</span>
+          ) : null}
         </label>
 
         <label className="grid gap-1 text-sm">
@@ -198,19 +197,12 @@ export function ComingSoonSettings() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-lg">Launch notify list</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Users who created an account / signed in and opted in for the launch email.{" "}
-              {count} total.
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{count} total.</p>
           </div>
           <a className="ghost-btn" href="/admin/email">
             Open bulk email
           </a>
         </div>
-        <p className="text-xs text-muted-foreground">
-          In Bulk Email, check <strong>Launch notify subscribers</strong>, preview, then send when
-          you go live.
-        </p>
         {subscribers.length === 0 ? (
           <p className="text-sm text-muted-foreground">No subscribers yet.</p>
         ) : (

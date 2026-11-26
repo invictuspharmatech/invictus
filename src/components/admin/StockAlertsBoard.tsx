@@ -59,9 +59,6 @@ export function StockAlertsBoard() {
   return (
     <div>
       <h1 className="display-font text-3xl">Stock alerts</h1>
-      <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-        Customers can subscribe on out-of-stock products. When stock returns, a batch emails them.
-      </p>
       <div className="mt-6 flex gap-2">
         <button type="button" className={tab === "batches" ? "gold-btn" : "ghost-btn"} onClick={() => setTab("batches")}>
           Batches

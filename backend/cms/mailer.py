@@ -206,18 +206,17 @@ def order_context(order) -> dict[str, Any]:
         if order_may_pay(primary):
             pay_now_url = checkout_url(primary)
             safe_url = escape(pay_now_url, quote=True)
-            # Same pattern as GreatLife: branded button, no raw URL text in the body.
+            # Branded button; no raw URL text in the body.
             pay_now_html = (
                 '<div style="margin:20px 0 16px;padding:16px 18px;border-radius:12px;'
                 "background:rgba(139,26,26,0.08);border:1px solid rgba(196,160,106,0.45);\">"
                 '<p style="margin:0 0 12px;line-height:1.5;color:#610c0d;font-size:15px;font-weight:600;">'
                 "Pay with Bitcoin</p>"
                 '<p style="margin:0 0 14px;line-height:1.55;color:#3a1414;font-size:14px;">'
-                "Open the invoice on our site and complete payment there "
-                "(no raw payment URL in this email).</p>"
+                "Click the Pay Now button to return to your orders payment invoice.</p>"
                 f'<a href="{safe_url}" style="display:inline-block;background:#8B1A1A;'
                 "color:#ffffff!important;text-decoration:none;padding:12px 22px;"
-                'border-radius:10px;font-weight:600;font-size:14px;">Pay now</a>'
+                'border-radius:10px;font-weight:600;font-size:14px;">Pay Now</a>'
                 "</div>"
             )
     except Exception:

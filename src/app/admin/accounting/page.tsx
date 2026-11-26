@@ -50,11 +50,6 @@ export default async function AccountingPage() {
   return (
     <div>
       <h1 className="display-font text-2xl sm:text-3xl">Accounting</h1>
-      <p className="mt-1 max-w-3xl text-xs text-muted-foreground sm:text-sm">
-        Counts continuously until you use Reset all — nothing clears at midnight. Merchandise
-        splits exclude shipping. Manual total received has shipping-since-reset subtracted before
-        shares; Auto uses order merchandise.
-      </p>
       <AccountingBoard
         tiles={tiles}
         period={PERIOD}

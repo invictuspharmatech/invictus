@@ -244,9 +244,6 @@ export function OrderSummaryBoard({
             </label>
           ))}
         </div>
-        <p className="md:col-span-4 text-xs text-muted-foreground">
-          Dates are selectable from {SUMMARY_DATE_MIN} through today ({maxDate}). Future days are locked.
-        </p>
       </div>
 
       {error ? <p className="mt-4 text-sm text-brand-red print:hidden">{error}</p> : null}

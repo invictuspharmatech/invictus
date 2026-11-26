@@ -13,7 +13,6 @@ export default async function CmsPagesPage() {
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="display-font text-3xl">Pages</h1>
-          <p className="mt-2 text-sm text-muted-foreground">HTML pages rendered on the storefront.</p>
         </div>
         <Link href="/admin/cms/pages/new" className="gold-btn">
           New page

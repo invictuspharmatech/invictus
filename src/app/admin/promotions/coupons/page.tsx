@@ -32,10 +32,6 @@ export default async function AdminCouponsPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="display-font text-3xl">Coupons</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Codes shoppers can enter at checkout. Supports per-customer limits and stacking
-            partners (GreatLife-style).
-          </p>
         </div>
         <Link href="/admin/promotions/coupons/new" className="gold-btn">
           Add coupon

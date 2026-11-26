@@ -52,11 +52,6 @@ export function ImportCsvModal({
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
       <div className="tile max-w-lg w-full">
         <h2 className="text-lg">Import {kind} CSV</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {kind === "products"
-            ? "Accepts WooCommerce-style columns (post_title, sku, regular_price, stock) or an Invictus export."
-            : "Requires a name column. Description and sort order are optional."}
-        </p>
         <input
           className="mt-4 block"
           type="file"

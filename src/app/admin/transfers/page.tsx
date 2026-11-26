@@ -21,11 +21,6 @@ export default async function TransfersPage() {
   return (
     <div>
       <h1 className="display-font text-3xl">Transfers</h1>
-      <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-        Request stock or order lines from the other warehouse. Warehouse staff only see their own
-        counts. Accepting a request moves inventory and, for orders, moves analytics and shipping
-        with the items.
-      </p>
       <TransferBoard
         stockTransfers={stockTransfers}
         fulfillmentRequests={fulfillmentRequests}
