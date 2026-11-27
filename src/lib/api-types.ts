@@ -413,6 +413,7 @@ export type ApiDashboardOverview = {
   ordersRefunded?: number;
   ordersPartiallyFilled?: number;
   salesThisYear?: number;
+  zohoInboxUnread?: number;
   dashboardTiles?: ApiDashboardTile[];
   warehouses: ApiWarehouseCard[];
   orders: ApiOrder[];

@@ -366,6 +366,14 @@ def smtp_connection(profile: SmtpProfile):
     )
 
 
+def _reply_to_header(reply_to: str | None, reply_to_name: str | None = None) -> list[str] | None:
+    email = (reply_to or "").strip()
+    if not email or "@" not in email:
+        return None
+    name = (reply_to_name or "").strip()
+    return [formataddr((name, email)) if name else email]
+
+
 def _deliver(
     settings: EmailSettings,
     profile: SmtpProfile,
@@ -374,11 +382,14 @@ def _deliver(
     subject: str,
     html_body: str,
     reply_to: str | None = None,
+    reply_to_name: str | None = None,
+    from_name: str | None = None,
 ) -> int:
     from_email = profile.from_email or profile.username
     if not from_email:
         raise ValueError("From email is required.")
-    sender = formataddr((profile.from_name or SITE_NAME, from_email))
+    # Optional from_name override (e.g. contact submitter) while keeping SMTP envelope address.
+    sender = formataddr(((from_name or profile.from_name or SITE_NAME).strip(), from_email))
     wrapped = wrap_email_body(plain_to_html(html_body), settings.wrapper_html)
     text_body = html_to_text(wrapped)
     message = EmailMultiAlternatives(
@@ -386,7 +397,7 @@ def _deliver(
         body=text_body,
         from_email=sender,
         to=to,
-        reply_to=[reply_to] if reply_to else None,
+        reply_to=_reply_to_header(reply_to, reply_to_name),
         connection=smtp_connection(profile),
     )
     message.attach_alternative(wrapped, "text/html")
@@ -401,6 +412,8 @@ def send_message(
     html_body: str,
     channel: SmtpChannel = "transactional",
     reply_to: str | None = None,
+    reply_to_name: str | None = None,
+    from_name: str | None = None,
 ) -> int:
     if not to:
         return 0
@@ -418,6 +431,8 @@ def send_message(
                 subject=subject,
                 html_body=html_body,
                 reply_to=reply_to,
+                reply_to_name=reply_to_name,
+                from_name=from_name,
             )
         except Exception as exc:
             last_error = exc
@@ -438,6 +453,8 @@ def send_event(
     user_email: str | None = None,
     warehouse: str | None = None,
     reply_to: str | None = None,
+    reply_to_name: str | None = None,
+    from_name: str | None = None,
 ) -> None:
     context = {"site_name": SITE_NAME, **(context or {})}
     try:
@@ -470,6 +487,8 @@ def send_event(
             html_body=body,
             channel="transactional",
             reply_to=reply_to,
+            reply_to_name=reply_to_name,
+            from_name=from_name,
         )
     except Exception:
         logger.exception("Failed to send %s email", event_key)

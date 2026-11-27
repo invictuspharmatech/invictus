@@ -21,7 +21,6 @@ from cms.bulk_email import (
     heading_for,
     merge_tokens,
     process_chunk,
-    process_due_batches,
     reconcile_batch,
     save_draft,
     serialize_batch,
@@ -189,7 +188,7 @@ def _get_batch(request, pk) -> BulkEmailBatch | Response:
 @api_view(["GET"])
 @permission_classes([IsStoreStaff])
 def bulk_batch_list_view(request):
-    process_due_batches()
+    # Status polling must not send mail — that race double-delivered promo emails.
     qs = BulkEmailBatch.objects.all()
     if request.user.role != User.Role.SUPERUSER:
         qs = qs.filter(user=request.user)
@@ -221,7 +220,6 @@ def bulk_batch_detail_view(request, pk):
             )
         batch.delete()
         return Response({"ok": True})
-    process_due_batches()
     batch = reconcile_batch(BulkEmailBatch.objects.get(pk=pk))
     return Response(serialize_batch(batch))
 
@@ -330,7 +328,12 @@ def bulk_batch_resume_view(request, pk):
             {"error": "This batch cannot be resumed because message templates were not stored."},
             status=400,
         )
-    pending = batch.recipients.filter(status=BulkEmailRecipient.Status.PENDING).count()
+    pending = batch.recipients.filter(
+        status__in=[
+            BulkEmailRecipient.Status.PENDING,
+            BulkEmailRecipient.Status.SENDING,
+        ]
+    ).count()
     if pending == 0:
         return Response({"error": "No pending recipients remain for this batch."}, status=400)
     if batch.status not in (
@@ -340,6 +343,9 @@ def bulk_batch_resume_view(request, pk):
         BulkEmailBatch.Status.INTERRUPTED,
     ):
         return Response({"error": "This batch cannot be started from its current status."}, status=400)
+    BulkEmailRecipient.objects.filter(
+        batch=batch, status=BulkEmailRecipient.Status.SENDING
+    ).update(status=BulkEmailRecipient.Status.PENDING, processed_at=None)
     BulkEmailBatch.objects.filter(pk=batch.pk).update(
         status=BulkEmailBatch.Status.RUNNING,
         next_send_at=timezone.now(),

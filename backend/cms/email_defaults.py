@@ -141,13 +141,14 @@ DEFAULT_TEMPLATES = [
     {
         "event_key": "contact_received",
         "name": "Contact form",
-        "description": "Sent when someone submits the contact page. Use Custom list for the inbox (e.g. admin@…). Admin checkbox emails every admin/superuser account.",
+        "description": "Sent when someone submits the contact page. Use Custom list for the inbox (e.g. admin@…). Reply-To is the submitter so inbox Reply reaches them. Admin checkbox emails every admin/superuser account.",
         "subject": "Contact: {{subject}}",
         "body": """<p>From: {{user_name}} ({{user_email}})</p>
+<p>Email: {{user_email}}</p>
 <p>Subject: {{subject}}</p>
 <p>{{message}}</p>""",
         "notify_admin": False,
-        "notify_user": True,
+        "notify_user": False,
         "notify_warehouse_manager": False,
         "sort_order": 60,
     },

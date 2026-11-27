@@ -11,6 +11,7 @@ import {
   Clock,
   Gift,
   Layers,
+  Mail,
   Package,
   Pause,
   Redo2,
@@ -55,6 +56,7 @@ const ICON_BY_ID: Record<string, ComponentType<{ className?: string }>> = {
   gift_cards_total: Gift,
   store_credit_available: Wallet,
   top_category_month: Layers,
+  zoho_inbox_unread: Mail,
 };
 
 function tileHint(

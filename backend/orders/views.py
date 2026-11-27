@@ -435,6 +435,8 @@ def contact_view(request):
         subject=subject,
         message=message,
     )
+    # Same pattern as GreatLife: keep SMTP From for SPF/DMARC, but set Reply-To
+    # (and From display name) to the submitter so inbox Reply goes to the customer.
     send_event(
         "contact_received",
         {
@@ -445,6 +447,8 @@ def contact_view(request):
         },
         user_email=email,
         reply_to=email,
+        reply_to_name=name,
+        from_name=name,
     )
     return Response({"ok": True})
 
@@ -1048,7 +1052,14 @@ def admin_overview_view(request):
             "storeCreditAvailable": 0,
             "warehouses": warehouses,
             "orders": OrderSerializer(orders, many=True).data,
+            "zohoInboxUnread": 0,
         }
+    try:
+        from cms import zoho_mail
+
+        payload["zohoInboxUnread"] = zoho_mail.inbox_unread_count()
+    except Exception:
+        payload["zohoInboxUnread"] = 0
     payload["dashboardTiles"] = resolve_tiles(payload)
     return Response(payload)
 

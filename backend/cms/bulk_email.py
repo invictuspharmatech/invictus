@@ -7,6 +7,7 @@ from datetime import timedelta
 from html import escape
 from typing import Any
 
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Count, F, Q
 from django.utils import timezone
@@ -193,7 +194,9 @@ def wrapped_inner_html(title: str, body: str) -> str:
 def serialize_batch(batch: BulkEmailBatch) -> dict[str, Any]:
     counts = batch.recipients.values("status").annotate(total=Count("id"))
     tally = {row["status"]: row["total"] for row in counts}
-    pending = tally.get(BulkEmailRecipient.Status.PENDING, 0)
+    pending = tally.get(BulkEmailRecipient.Status.PENDING, 0) + tally.get(
+        BulkEmailRecipient.Status.SENDING, 0
+    )
     sent = tally.get(BulkEmailRecipient.Status.SENT, 0)
     failed = tally.get(BulkEmailRecipient.Status.FAILED, 0)
     has_rows = pending + sent + failed > 0
@@ -256,8 +259,14 @@ def can_access_batch(actor: User, batch: BulkEmailBatch) -> bool:
     return actor.role == User.Role.SUPERUSER or batch.user_id == actor.id
 
 
+def _open_recipient_q():
+    return Q(status=BulkEmailRecipient.Status.PENDING) | Q(
+        status=BulkEmailRecipient.Status.SENDING
+    )
+
+
 def reconcile_batch(batch: BulkEmailBatch) -> BulkEmailBatch:
-    pending = batch.recipients.filter(status=BulkEmailRecipient.Status.PENDING).count()
+    pending = batch.recipients.filter(_open_recipient_q()).count()
     sent = batch.recipients.filter(status=BulkEmailRecipient.Status.SENT).count()
     failed = batch.recipients.filter(status=BulkEmailRecipient.Status.FAILED).count()
     update = {"sent_count": sent, "failed_count": failed}
@@ -285,7 +294,43 @@ def send_one(batch: BulkEmailBatch, recipient: BulkEmailRecipient) -> None:
     )
 
 
+def _claim_pending_recipients(batch: BulkEmailBatch, chunk_size: int) -> list[BulkEmailRecipient]:
+    """Mark pending rows as sending before SMTP so concurrent workers skip them."""
+    stale_before = timezone.now() - timedelta(minutes=15)
+    with transaction.atomic():
+        BulkEmailRecipient.objects.filter(
+            batch=batch,
+            status=BulkEmailRecipient.Status.SENDING,
+            processed_at__lt=stale_before,
+        ).update(status=BulkEmailRecipient.Status.PENDING, processed_at=None)
+        claimed = list(
+            BulkEmailRecipient.objects.select_for_update(skip_locked=True)
+            .filter(batch=batch, status=BulkEmailRecipient.Status.PENDING)
+            .order_by("sort_order", "id")[:chunk_size]
+        )
+        if not claimed:
+            return []
+        ids = [row.pk for row in claimed]
+        BulkEmailRecipient.objects.filter(pk__in=ids).update(
+            status=BulkEmailRecipient.Status.SENDING,
+            processed_at=timezone.now(),
+        )
+        return list(BulkEmailRecipient.objects.filter(pk__in=ids).order_by("sort_order", "id"))
+
+
 def process_chunk(batch: BulkEmailBatch) -> int:
+    lock_key = f"bulk_email.lock.{batch.pk}"
+    lock_token = str(uuid.uuid4())
+    if not cache.add(lock_key, lock_token, timeout=180):
+        return 0
+    try:
+        return _process_chunk_locked(batch)
+    finally:
+        if cache.get(lock_key) == lock_token:
+            cache.delete(lock_key)
+
+
+def _process_chunk_locked(batch: BulkEmailBatch) -> int:
     batch = BulkEmailBatch.objects.filter(pk=batch.pk).first()
     if not batch or batch.status != BulkEmailBatch.Status.RUNNING:
         return 0
@@ -297,15 +342,19 @@ def process_chunk(batch: BulkEmailBatch) -> int:
         return 0
     chunk_size = max(1, min(MAX_CHUNK_SIZE, int(batch.chunk_size or 1)))
     gap = max(60, int(batch.interval_seconds or DEFAULT_CHUNK_GAP_SECONDS))
+    # Lease so another worker cannot start a burst while SMTP is still running.
+    BulkEmailBatch.objects.filter(pk=batch.pk, status=BulkEmailBatch.Status.RUNNING).update(
+        next_send_at=timezone.now() + timedelta(seconds=max(gap, 180))
+    )
     attempted = 0
     last_email = batch.last_recipient_email
-    pending = list(
-        batch.recipients.filter(status=BulkEmailRecipient.Status.PENDING).order_by("sort_order", "id")[:chunk_size]
-    )
-    for recipient in pending:
+    for recipient in _claim_pending_recipients(batch, chunk_size):
         current = BulkEmailBatch.objects.filter(pk=batch.pk).first()
         if not current or current.status != BulkEmailBatch.Status.RUNNING:
-            break
+            BulkEmailRecipient.objects.filter(
+                pk=recipient.pk, status=BulkEmailRecipient.Status.SENDING
+            ).update(status=BulkEmailRecipient.Status.PENDING, processed_at=None)
+            continue
         try:
             send_one(current, recipient)
             recipient.status = BulkEmailRecipient.Status.SENT
@@ -325,13 +374,16 @@ def process_chunk(batch: BulkEmailBatch) -> int:
         attempted += 1
         last_email = recipient.email
     if attempted == 0:
+        still_open = batch.recipients.filter(_open_recipient_q()).exists()
         BulkEmailBatch.objects.filter(pk=batch.pk).update(
-            status=BulkEmailBatch.Status.COMPLETED,
-            next_send_at=None,
+            status=(
+                BulkEmailBatch.Status.RUNNING if still_open else BulkEmailBatch.Status.COMPLETED
+            ),
+            next_send_at=(timezone.now() + timedelta(seconds=gap) if still_open else None),
             last_error="",
         )
         return 0
-    has_more = batch.recipients.filter(status=BulkEmailRecipient.Status.PENDING).exists()
+    has_more = batch.recipients.filter(_open_recipient_q()).exists()
     fresh = BulkEmailBatch.objects.get(pk=batch.pk)
     BulkEmailBatch.objects.filter(pk=batch.pk).update(
         last_recipient_email=last_email or "",

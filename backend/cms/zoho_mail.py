@@ -11,7 +11,7 @@ import urllib.parse
 import urllib.request
 import uuid
 from datetime import datetime, timezone
-from html import escape
+from html import escape, unescape
 from typing import Any
 
 from django.conf import settings
@@ -29,6 +29,7 @@ KEY_SENT = "zoho_mail.sent_folder_id"
 KEY_RESOLVED = "zoho_mail.resolved_folder_id"
 KEY_MAILBOX = "zoho_mail.mailbox_address"
 CACHE_ACCESS = "zoho_mail.access_token"
+CACHE_INBOX_UNREAD = "zoho_mail.inbox_unread_count"
 
 
 class ZohoMailError(Exception):
@@ -336,6 +337,43 @@ def mailbox_address() -> str:
     return cfg["from_address"] or _get_setting(KEY_MAILBOX)
 
 
+def inbox_unread_count(*, use_cache: bool = True) -> int:
+    """Unread messages still in Inbox (opened/read and Resolved are excluded)."""
+    if not is_connected():
+        return 0
+    if use_cache:
+        cached = cache.get(CACHE_INBOX_UNREAD)
+        if cached is not None:
+            try:
+                return max(0, int(cached))
+            except (TypeError, ValueError):
+                pass
+    try:
+        aid = account_id()
+        inbox_id = inbox_folder_id()
+        folders_payload = _api("GET", f"/api/accounts/{aid}/folders")
+        folders = folders_payload.get("data") if isinstance(folders_payload, dict) else None
+        if not isinstance(folders, list):
+            folders = []
+        count = 0
+        for folder in folders:
+            if not isinstance(folder, dict):
+                continue
+            fid = str(folder.get("folderId") or folder.get("id") or "")
+            ftype = str(folder.get("folderType") or "")
+            if fid == inbox_id or ftype == "Inbox":
+                try:
+                    count = max(0, int(folder.get("unreadCount") or 0))
+                except (TypeError, ValueError):
+                    count = 0
+                break
+        cache.set(CACHE_INBOX_UNREAD, count, timeout=60)
+        return count
+    except Exception:
+        logger.exception("Zoho inbox unread count failed")
+        return 0
+
+
 def _parse_received_at(raw: Any) -> str | None:
     if raw is None or raw == "":
         return None
@@ -349,15 +387,16 @@ def _parse_received_at(raw: Any) -> str | None:
 
 
 def _map_list_row(row: dict) -> dict[str, Any]:
+    from_address = _decode_mail_text(row.get("fromAddress") or row.get("sender") or "")
     return {
         "id": str(row.get("messageId") or row.get("id") or ""),
         "folderId": str(row.get("folderId") or ""),
         "threadId": str(row.get("threadId") or ""),
-        "subject": str(row.get("subject") or "(no subject)"),
-        "fromAddress": str(row.get("fromAddress") or row.get("sender") or ""),
-        "fromName": str(row.get("sender") or row.get("fromAddress") or ""),
-        "toAddress": str(row.get("toAddress") or ""),
-        "summary": str(row.get("summary") or row.get("snippet") or ""),
+        "subject": _decode_mail_text(row.get("subject") or "(no subject)"),
+        "fromAddress": from_address,
+        "fromName": _decode_mail_text(row.get("sender") or from_address),
+        "toAddress": _decode_mail_text(row.get("toAddress") or ""),
+        "summary": _decode_mail_text(row.get("summary") or row.get("snippet") or ""),
         "hasAttachment": bool(row.get("hasAttachment")),
         "isUnread": str(row.get("status") or "0") == "0",
         "receivedAt": _parse_received_at(row.get("receivedTime") or row.get("sentDateInGMT")),
@@ -411,9 +450,38 @@ def list_messages(
     }
 
 
-def _extract_email(value: str) -> str:
-    match = re.search(r"[\w.+-]+@[\w.-]+\.\w+", value or "")
-    return match.group(0) if match else (value or "").strip()
+def _decode_mail_text(value: str | None) -> str:
+    """Zoho sometimes returns address fields HTML-encoded (&lt;email&gt;)."""
+    text = unescape(str(value or "")).replace("\xa0", " ").strip()
+    # Collapse leftover entity forms if double-encoded once.
+    if "&lt;" in text or "&gt;" in text or "&amp;" in text:
+        text = unescape(text).strip()
+    return text
+
+
+def _extract_email(value: str | None) -> str:
+    text = _decode_mail_text(value)
+    match = re.search(r"[\w.+-]+@[\w.-]+\.\w+", text)
+    return match.group(0) if match else ""
+
+
+def _scrape_customer_email(*blobs: str, own: str = "") -> str:
+    """Find the customer address in contact-form style bodies: From: Name (email@…)."""
+    haystack = _decode_mail_text(" ".join(blobs))
+    plain = re.sub(r"<[^>]+>", " ", haystack)
+    patterns = (
+        r"(?:Email|E-mail|From)\s*:\s*[^@<\n]{0,80}?\(([\w.+-]+@[\w.-]+\.\w+)\)",
+        r"(?:Email|E-mail|From)\s*:\s*[^@<\n]{0,80}?<([\w.+-]+@[\w.-]+\.\w+)>",
+        r"(?:Email|E-mail|From)\s*:\s*([\w.+-]+@[\w.-]+\.\w+)",
+        r"\(([\w.+-]+@[\w.-]+\.\w+)\)",
+    )
+    own_l = (own or "").lower()
+    for pattern in patterns:
+        for match in re.finditer(pattern, plain, re.I):
+            email = match.group(1).strip()
+            if email and email.lower() != own_l and "noreply" not in email.lower():
+                return email
+    return ""
 
 
 def get_message(message_id: str, folder_id: str | None = None) -> dict[str, Any]:
@@ -446,27 +514,25 @@ def get_message(message_id: str, folder_id: str | None = None) -> dict[str, Any]
     header_data = header.get("data") if isinstance(header, dict) else {}
     reply_to = ""
     if isinstance(header_data, dict):
-        reply_to = str(header_data.get("Reply-To") or header_data.get("reply-to") or "")
-    from_address = str(detail.get("fromAddress") or detail.get("sender") or "")
-    summary = str(detail.get("summary") or "")
-    reply_recipient = _extract_email(reply_to) or _extract_email(from_address)
-    own = (mailbox_address() or "").lower()
-    if reply_recipient.lower() in ("", own) or "noreply" in reply_recipient.lower():
-        scraped = re.search(
-            r"(?:Email|E-mail|From)\s*:\s*([\w.+-]+@[\w.-]+\.\w+)",
-            summary + " " + html,
-            re.I,
+        reply_to = _decode_mail_text(
+            header_data.get("Reply-To") or header_data.get("reply-to") or ""
         )
-        if scraped:
-            reply_recipient = scraped.group(1)
+    from_address = _decode_mail_text(detail.get("fromAddress") or detail.get("sender") or "")
+    from_name = _decode_mail_text(detail.get("sender") or from_address)
+    to_address = _decode_mail_text(detail.get("toAddress") or "")
+    summary = _decode_mail_text(detail.get("summary") or "")
+    own = (mailbox_address() or "").lower()
+    reply_recipient = _extract_email(reply_to) or _extract_email(from_address)
+    if reply_recipient.lower() in ("", own) or "noreply" in reply_recipient.lower():
+        reply_recipient = _scrape_customer_email(summary, html, own=own) or reply_recipient
     return {
         "id": str(message_id),
         "folderId": folder,
         "accountId": aid,
-        "subject": str(detail.get("subject") or "(no subject)"),
+        "subject": _decode_mail_text(detail.get("subject") or "(no subject)"),
         "fromAddress": from_address,
-        "fromName": str(detail.get("sender") or from_address),
-        "toAddress": str(detail.get("toAddress") or ""),
+        "fromName": from_name or from_address,
+        "toAddress": to_address,
         "replyToAddress": _extract_email(reply_to),
         "replyRecipient": reply_recipient,
         "summary": summary,

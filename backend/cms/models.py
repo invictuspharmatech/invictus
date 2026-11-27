@@ -233,6 +233,7 @@ class BulkEmailBatch(models.Model):
 class BulkEmailRecipient(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
+        SENDING = "sending", "Sending"
         SENT = "sent", "Sent"
         FAILED = "failed", "Failed"
 
